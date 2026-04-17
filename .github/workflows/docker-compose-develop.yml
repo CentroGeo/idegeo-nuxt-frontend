@@ -82,5 +82,14 @@ jobs:
           docker push ghcr.io/${{ steps.vars.outputs.owner }}/${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.sha }}
 
   deploy:
+    needs: build
     runs-on: [self-hosted, develop]
     if: github.event_name == 'push'
+    environment: develop
+
+    steps:
+      - name: Pull and restart frontend
+        run: |
+          cd ~/opt/sigic
+          docker compose pull frontend-admin frontend-pub
+          docker compose up -d frontend-admin frontend-pub
