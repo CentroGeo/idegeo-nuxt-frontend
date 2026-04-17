@@ -24,6 +24,8 @@ useHead(() => ({
 
     <MainNavegacion />
 
+    <h1>Hola Mundo</h1>
+
     <div class="contenido">
       <slot />
     </div>
