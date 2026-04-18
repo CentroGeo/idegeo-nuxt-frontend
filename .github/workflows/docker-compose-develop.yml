@@ -36,7 +36,7 @@ jobs:
 
   build:
     name: Build SIGIC Nuxt Frontend image (develop)
-    runs-on: [self-hosted, build-develop, idegeo-nuxt-frontend]
+    runs-on: [self-hosted, develop]
     environment: develop
     if: github.event_name == 'push'
 
