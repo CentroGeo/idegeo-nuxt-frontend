@@ -90,6 +90,6 @@ jobs:
     steps:
       - name: Pull and restart frontend
         run: |
-          cd ~/opt/sigic
+          cd /opt/sigic
           docker compose pull frontend-admin frontend-pub
           docker compose up -d frontend-admin frontend-pub
