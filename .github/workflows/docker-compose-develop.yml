@@ -88,6 +88,9 @@ jobs:
     environment: develop
 
     steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_PAULINAPC6_PAT }}" | docker login ghcr.io -u PaulinaPC6 --password-stdin
+
       - name: Pull and restart frontend
         run: |
           cd /opt/sigic
