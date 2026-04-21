@@ -24,10 +24,7 @@ RUN npm install --include=dev --legacy-peer-deps \
 COPY . .
 
 # compilar la aplicación
-RUN npm run build  \
-    # && mv .output/ build_output \
-    # && npm run clean \
-    # && mv build_output/ .output/
+RUN npm run build
 
 
 # 🚀 Final stage
