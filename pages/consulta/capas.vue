@@ -14,7 +14,7 @@ const storeResources = useResourcesConsultaStore();
 const storeSelected = useSelectedResources2Store();
 const config = useRuntimeConfig();
 const { gnoxyFetch } = useGnoxyUrl();
-const { findServer, filteredByServerType } = useResourcesSupplements();
+const { getLayerName, findServer, filteredByServerType } = useResourcesSupplements();
 const route = useRoute();
 const router = useRouter();
 storeConsulta.resourceType = resourceTypeDic.dataLayer;
@@ -248,7 +248,7 @@ onMounted(async () => {
           <SisdaiCapaWms
             v-for="resource in owsLayers"
             :key="`wms-${resource.pk}-${resource.position_}`"
-            :capa="resource.alternate"
+            :capa="getLayerName(resource)"
             :consulta="gnoxyFetch"
             :fuente="findServer(resource)"
             :lado="storeSelected.byPk(resource.pk).lado"
@@ -258,14 +258,15 @@ onMounted(async () => {
             :visible="storeSelected.byPk(resource.pk).visible"
             :estilo="storeSelected.byPk(resource.pk).estilo"
             :cuadro-informativo="
-              (url) => buildLayerInfo(url, resource.alternate, resource.title, resource.sourcetype)
+              (url) =>
+                buildLayerInfo(url, getLayerName(resource), resource.title, resource.sourcetype)
             "
           />
           <SisdaiCapaArcgis
             v-for="resource in arcgisLayers"
             :key="`arcgis-${resource.pk}-${resource.position_}`"
             :fuente="findServer(resource).replace('?', '')"
-            :capa="resource.alternate.split(':')[1]"
+            :capa="getLayerName(resource).split(':')[1]"
             :mosaicos="true"
             :lado="storeSelected.byPk(resource.pk).lado"
             :opacidad="storeSelected.byPk(resource.pk).opacidad"
