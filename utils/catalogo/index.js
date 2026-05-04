@@ -53,17 +53,41 @@ export const catalogosSugeridos = [
     total_resources: 5375,
     title: 'IDE SEDATU',
     descripcion: 'Infraestructura de Datos Espaciales',
-    abstract: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi tempor vehicula blandit. 
-    Aliquam at ante urna. Vestibulum finibus magna nunc, nec consequat justo convallis a. Sed a lorem 
-    nec dui congue vulputate eu ac sem. Vivamus sed urna nisl. Curabitur et tortor nisl. Vestibulum 
-    ac pulvinar arcu, eu tempor erat. Phasellus maximus, neque nec ultricies suscipit, lectus arcu 
-    aliquam libero, eget tincidunt est purus sed orci. Donec facilisis, est posuere luctus malesuada, 
+    abstract: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi tempor vehicula blandit.
+    Aliquam at ante urna. Vestibulum finibus magna nunc, nec consequat justo convallis a. Sed a lorem
+    nec dui congue vulputate eu ac sem. Vivamus sed urna nisl. Curabitur et tortor nisl. Vestibulum
+    ac pulvinar arcu, eu tempor erat. Phasellus maximus, neque nec ultricies suscipit, lectus arcu
+    aliquam libero, eget tincidunt est purus sed orci. Donec facilisis, est posuere luctus malesuada,
     lacus odio auctor purus, sed malesuada mi lacus sed nulla.`,
     tipo: 'GN_WMS',
     etiquetas: 'Etiqueta',
     origen: 'Secretaría de Desarrollo Agrario, Territorial y Urbano',
     origen_url: 'https://www.gob.mx/sedatu',
-    service_url: 'https://ide.sedatu.gob.mx/',
+    service_url: 'https://ide.sedatu.gob.mx/geoserver/geonode/wms',
+  },
+  {
+    id: 5,
+    total_resources: 0,
+    title: 'SITU SEDATU',
+    descripcion: 'Sistema de Información Territorial y Urbano',
+    abstract: `Servicio WMS del Sistema de Información Territorial y Urbano.`,
+    etiquetas: 'Etiqueta',
+    tipo: 'WMS',
+    origen: 'SEDATU',
+    origen_url: 'https://situ.sedatu.gob.mx/',
+    service_url: 'https://situ.sedatu.gob.mx/descargas/geoserver/wms',
+  },
+  {
+    id: 6,
+    total_resources: 0,
+    title: 'Geoportal GITS UNAM',
+    descripcion: 'Geoportal del Grupo de Interacción Territorial y Sistemas (GITS) UNAM',
+    abstract: `Servicio del Geoportal GITS UNAM.`,
+    etiquetas: 'Etiqueta',
+    tipo: 'WMS',
+    origen: 'UNAM',
+    origen_url: 'https://www.gits.igg.unam.mx/geoportal/home',
+    service_url: 'https://www.gits.igg.unam.mx/geoportal/home',
   },
 ];
 

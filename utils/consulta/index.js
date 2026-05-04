@@ -32,8 +32,10 @@ export const categoriesInSpanish = {
   Transportation: 'Transporte',
   'Utilities Communication': 'Servicios Públicos y Comunicación',
   'Sin Clasificar': 'Sin Clasificar',
+  'Catálogo externo': 'Catálogo externo',
 };
 export const categoriesNames = {
+  externalCatalog: 'Catálogo externo',
   biota: 'Biota',
   boundaries: 'Boundaries',
   climatologyMeteorologyAtmosphere: 'Climatology Meteorology Atmosphere',
@@ -56,6 +58,7 @@ export const categoriesNames = {
   utilitiesCommunication: 'Utilities Communication',
 };
 export const categoriesValues = {
+  'Catálogo externo': 'externalCatalog',
   Biota: 'biota',
   Boundaries: 'boundaries',
   'Climatology Meteorology Atmosphere': 'climatologyMeteorologyAtmosphere',
