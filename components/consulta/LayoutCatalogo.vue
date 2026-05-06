@@ -100,7 +100,7 @@ async function buildCategoriesDict() {
   }
   if (Object.keys(categoriesDict.value).length > 0) {
     orderedCategories.value = Object.keys(categoriesDict.value).sort((a, b) =>
-      categoriesInSpanish[a].localeCompare(categoriesInSpanish[b])
+      (categoriesInSpanish[a] ?? a).localeCompare(categoriesInSpanish[b] ?? b)
     );
   } else {
     orderedCategories.value = [];
