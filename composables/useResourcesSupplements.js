@@ -426,6 +426,7 @@ export function useResourcesSupplements() {
 
           data[index] = {
             id: h.harvester_id,
+            service_id: h.id,
             title: h.title,
             status: harvesterStatus,
             total_resources: totalResources,
