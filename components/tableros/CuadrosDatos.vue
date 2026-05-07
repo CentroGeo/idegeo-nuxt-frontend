@@ -13,13 +13,9 @@ const props = defineProps({
 const cuadrosOrdenados = computed(() => [...props.cuadros].sort((a, b) => a.order - b.order));
 
 function obtenerValor(cuadro) {
-  if (!props.datosIndicador?.plot_values) return null;
-
-  const plotValues = props.datosIndicador.plot_values;
-  if (!Array.isArray(plotValues) || plotValues.length === 0) return null;
-
-  const primerRegistro = plotValues[0];
-  return primerRegistro?.[cuadro.field] ?? null;
+  const general = props.datosIndicador?.general_values;
+  if (general && cuadro.field in general) return general[cuadro.field];
+  return null;
 }
 </script>
 
