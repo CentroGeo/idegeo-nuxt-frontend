@@ -60,7 +60,7 @@ watch(owsLayers, (nv) => {
         :nombre="resource.alternate"
         :sin-control="true"
         :sin-control-clases="true"
-        :titulo="idx + resource.title"
+        :titulo="resource.title"
         :estilo="resource.estilo"
         @al-finalizar-carga-simbologia="(v) => (leyendasCargadas[idx] = v)"
       />
