@@ -7,7 +7,7 @@ import {
   SisdaiLeyendaWms,
 } from '@centrogeomx/sisdai-mapas';
 
-defineProps({
+const props = defineProps({
   funcionConsulta: {
     type: Function,
     required: true,
@@ -25,6 +25,13 @@ defineProps({
     default: '',
   },
 });
+
+const { owsLayers } = toRefs(props);
+
+const leyendasCargadas = ref([]);
+watch(owsLayers, (nv) => {
+  leyendasCargadas.value = nv.map(() => false);
+});
 </script>
 
 <template>
@@ -38,9 +45,16 @@ defineProps({
 
       <h2 class="h2">Leyendas</h2>
 
+      <div v-if="leyendasCargadas.every((v) => !v)">
+        <img src="/img/loader.gif" alt="Cargando leyendas" />
+
+        <p>Cargando leyendas</p>
+      </div>
+
       <SisdaiLeyendaWms
-        v-for="resource in owsLayers"
+        v-for="(resource, idx) in owsLayers"
         :key="`capa-wms-${resource.pk}-${resource.position_}`"
+        :class="{ 'no-visible': !leyendasCargadas.every((v) => v) }"
         :consulta="funcionConsulta"
         :fuente="resource.fuente"
         :nombre="resource.alternate"
@@ -48,6 +62,7 @@ defineProps({
         :sin-control-clases="true"
         :titulo="resource.title"
         :estilo="resource.estilo"
+        @al-finalizar-carga-simbologia="(v) => (leyendasCargadas[idx] = v)"
       />
     </div>
   </div>
