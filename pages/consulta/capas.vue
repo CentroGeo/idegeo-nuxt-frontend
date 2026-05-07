@@ -200,12 +200,25 @@ onMounted(async () => {
 const modalDescarga = ref(null);
 const mapaImagen = ref('');
 const tituloDescarga = ref('');
+const leyendasDescarga = ref([]);
 function AbrirModalDescarga() {
-  const elemento = document.querySelectorAll('.mapa .ol-viewport').item(0);
-  html2canvas(elemento, { useCORS: true }).then((canvas) => {
-    mapaImagen.value = canvas.toDataURL('image/png');
-    modalDescarga.value.abrirModal();
-  });
+  leyendasDescarga.value = [];
+  html2canvas(document.querySelectorAll('.mapa .ol-viewport').item(0), { useCORS: true }).then(
+    (canvas) => {
+      mapaImagen.value = canvas.toDataURL('image/png');
+
+      leyendasDescarga.value = owsLayers.value.map((resource) => ({
+        ...resource,
+        fuente: findServer(resource),
+        lado: storeSelected.byPk(resource.pk).lado,
+        opacidad: storeSelected.byPk(resource.pk).opacidad,
+        posicion: storeSelected.byPk(resource.pk).posicion,
+        visible: storeSelected.byPk(resource.pk).visible,
+        estilo: storeSelected.byPk(resource.pk).estilo,
+      }));
+      modalDescarga.value.abrirModal();
+    }
+  );
 }
 function DescargarMapa() {
   const elemento = document.querySelectorAll('.mapa-descarga').item(0);
@@ -307,17 +320,7 @@ function DescargarMapa() {
             </fieldset>
 
             <ConsultaMapaDescarga
-              :ows-layers="
-                owsLayers.map((resource) => ({
-                  ...resource,
-                  fuente: findServer(resource),
-                  lado: storeSelected.byPk(resource.pk).lado,
-                  opacidad: storeSelected.byPk(resource.pk).opacidad,
-                  posicion: storeSelected.byPk(resource.pk).posicion,
-                  visible: storeSelected.byPk(resource.pk).visible,
-                  estilo: storeSelected.byPk(resource.pk).estilo,
-                }))
-              "
+              :ows-layers="leyendasDescarga"
               :funcion-consulta="gnoxyFetch"
               :mapa-imagen="mapaImagen"
               :titulo-descarga="tituloDescarga"
