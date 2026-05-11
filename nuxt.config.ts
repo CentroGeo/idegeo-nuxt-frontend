@@ -19,6 +19,11 @@ export default defineNuxtConfig({
           rel: 'shortcut icon',
           href: 'https://framework-gb.cdn.gob.mx/gm/v3/assets/images/favicon.ico',
         },
+        {
+          rel: 'stylesheet',
+          href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
+          crossorigin: 'anonymous',
+        },
       ],
       meta: [
         { property: 'og:type', content: 'article' },

@@ -11,7 +11,7 @@ const props = defineProps({
 const emit = defineEmits(['creado', 'cerrar']);
 
 const { data: userData } = useAuth();
-const { crearIndicador } = useTableroApi();
+const { crearIndicador, fetchDatasets, fetchDatasetAttributes } = useTableroApi();
 
 const modal = ref(null);
 const paso = ref(1);
@@ -32,6 +32,75 @@ const formulario = reactive({
   use_single_field: true,
   is_histogram: false,
 });
+
+// Dataset search
+const busquedaDataset = ref('');
+const resultadosDataset = ref([]);
+const buscandoDataset = ref(false);
+const datasetSeleccionado = ref(null);
+const atributosDataset = ref([]);
+const cargandoAtributos = ref(false);
+const errorAtributos = ref(false);
+const busquedaInputRef = ref(null);
+
+const GEO_ATTRS = new Set(['the_geom', 'geometry', 'geom', 'wkb_geometry', 'shape']);
+
+let busquedaTimeout = null;
+
+async function buscarDatasets() {
+  if (busquedaDataset.value.length < 2) {
+    resultadosDataset.value = [];
+    return;
+  }
+  if (busquedaTimeout) clearTimeout(busquedaTimeout);
+  busquedaTimeout = setTimeout(async () => {
+    buscandoDataset.value = true;
+    try {
+      const data = await fetchDatasets(busquedaDataset.value);
+      resultadosDataset.value = data?.datasets ?? data?.results ?? [];
+    } catch {
+      resultadosDataset.value = [];
+    } finally {
+      buscandoDataset.value = false;
+      await nextTick();
+      busquedaInputRef.value?.focus();
+    }
+  }, 350);
+}
+
+async function cargarAtributos(pk) {
+  cargandoAtributos.value = true;
+  errorAtributos.value = false;
+  try {
+    const data = await fetchDatasetAttributes(pk);
+    const attrs = data?.dataset?.attribute_set ?? data?.attribute_set ?? [];
+    atributosDataset.value = attrs.filter((a) => !GEO_ATTRS.has(a.attribute));
+  } catch {
+    errorAtributos.value = true;
+    atributosDataset.value = [];
+  } finally {
+    cargandoAtributos.value = false;
+  }
+}
+
+function seleccionarDataset(ds) {
+  datasetSeleccionado.value = ds;
+  formulario.layer = ds.pk;
+  formulario.name = formulario.name || ds.title;
+  resultadosDataset.value = [];
+  busquedaDataset.value = '';
+  atributosDataset.value = [];
+  cargarAtributos(ds.pk);
+}
+
+function limpiarDataset() {
+  datasetSeleccionado.value = null;
+  formulario.layer = '';
+  formulario.layer_id_field = '';
+  formulario.field_one = '';
+  formulario.field_two = '';
+  atributosDataset.value = [];
+}
 
 async function guardar() {
   error.value = '';
@@ -112,47 +181,137 @@ watch(
               <textarea id="ind-info" v-model="formulario.info_text" rows="2" />
             </div>
 
+            <!-- Dataset search -->
             <div class="m-b-2">
-              <label for="ind-layer">ID de la capa (Dataset de GeoNode)</label>
-              <input
-                id="ind-layer"
-                v-model="formulario.layer"
-                type="number"
-                placeholder="Ej: 42"
-                required
-              />
-              <p class="formulario-ayuda">
-                Identificador numérico del dataset asociado. Se puede obtener desde la URL del
-                dataset en GeoNode.
+              <label>Capa de datos</label>
+              <div v-if="datasetSeleccionado" class="dataset-seleccionado">
+                <span>{{ datasetSeleccionado.title }}</span>
+                <button
+                  type="button"
+                  class="boton boton-chico boton-secundario"
+                  @click="limpiarDataset"
+                >
+                  Cambiar
+                </button>
+              </div>
+              <div v-else class="dataset-buscador">
+                <input
+                  ref="busquedaInputRef"
+                  v-model="busquedaDataset"
+                  type="text"
+                  placeholder="Escribe para buscar capa..."
+                  autocomplete="off"
+                  @input="buscarDatasets"
+                  @keydown.enter.prevent
+                  @keydown.stop
+                  @keyup.stop
+                  @keypress.stop
+                />
+                <p v-show="buscandoDataset" class="formulario-ayuda">Buscando...</p>
+                <ul
+                  v-show="!buscandoDataset && resultadosDataset.length > 0"
+                  class="dataset-resultados"
+                >
+                  <li
+                    v-for="ds in resultadosDataset"
+                    :key="ds.pk"
+                    @mousedown.prevent="seleccionarDataset(ds)"
+                  >
+                    {{ ds.title }}
+                    <span class="formulario-ayuda">ID: {{ ds.pk }}</span>
+                  </li>
+                </ul>
+                <p
+                  v-show="
+                    !buscandoDataset &&
+                    resultadosDataset.length === 0 &&
+                    busquedaDataset.length >= 2
+                  "
+                  class="formulario-ayuda"
+                >
+                  Sin resultados.
+                </p>
+              </div>
+            </div>
+
+            <!-- Field pickers (available once a dataset is selected) -->
+            <template v-if="datasetSeleccionado">
+              <p v-if="cargandoAtributos" class="formulario-ayuda">Cargando campos...</p>
+
+              <p v-else-if="errorAtributos" class="formulario-ayuda color-error">
+                No se pudieron cargar los campos automáticamente. Escríbelos manualmente.
               </p>
-            </div>
 
-            <div class="m-b-2">
-              <label for="ind-field-id">Campo ID de la geometría</label>
-              <input
-                id="ind-field-id"
-                v-model="formulario.layer_id_field"
-                type="text"
-                placeholder="Ej: cve_mun"
-                required
-              />
-            </div>
+              <div class="m-b-2">
+                <label for="ind-field-id">Campo ID de la geometría</label>
+                <select
+                  v-if="atributosDataset.length"
+                  id="ind-field-id"
+                  v-model="formulario.layer_id_field"
+                  required
+                >
+                  <option value="" disabled>Selecciona un campo</option>
+                  <option v-for="a in atributosDataset" :key="a.attribute" :value="a.attribute">
+                    {{ a.attribute }}
+                  </option>
+                </select>
+                <input
+                  v-else
+                  id="ind-field-id"
+                  v-model="formulario.layer_id_field"
+                  type="text"
+                  placeholder="Ej: cve_mun"
+                  :disabled="cargandoAtributos"
+                  required
+                />
+              </div>
 
-            <div class="m-b-2">
-              <label for="ind-field-one">Campo principal a visualizar</label>
-              <input
-                id="ind-field-one"
-                v-model="formulario.field_one"
-                type="text"
-                placeholder="Ej: poblacion_total"
-                required
-              />
-            </div>
+              <div class="m-b-2">
+                <label for="ind-field-one">Campo principal a visualizar</label>
+                <select
+                  v-if="atributosDataset.length"
+                  id="ind-field-one"
+                  v-model="formulario.field_one"
+                  required
+                >
+                  <option value="" disabled>Selecciona un campo</option>
+                  <option v-for="a in atributosDataset" :key="a.attribute" :value="a.attribute">
+                    {{ a.attribute }} ({{ a.attribute_type }})
+                  </option>
+                </select>
+                <input
+                  v-else
+                  id="ind-field-one"
+                  v-model="formulario.field_one"
+                  type="text"
+                  placeholder="Ej: poblacion_total"
+                  :disabled="cargandoAtributos"
+                  required
+                />
+              </div>
 
-            <div class="m-b-2">
-              <label for="ind-field-two">Campo secundario (opcional)</label>
-              <input id="ind-field-two" v-model="formulario.field_two" type="text" />
-            </div>
+              <div class="m-b-2">
+                <label for="ind-field-two">Campo secundario (opcional)</label>
+                <select
+                  v-if="atributosDataset.length"
+                  id="ind-field-two"
+                  v-model="formulario.field_two"
+                >
+                  <option value="">— ninguno —</option>
+                  <option v-for="a in atributosDataset" :key="a.attribute" :value="a.attribute">
+                    {{ a.attribute }} ({{ a.attribute_type }})
+                  </option>
+                </select>
+                <input
+                  v-else
+                  id="ind-field-two"
+                  v-model="formulario.field_two"
+                  type="text"
+                  placeholder="Opcional"
+                  :disabled="cargandoAtributos"
+                />
+              </div>
+            </template>
           </section>
 
           <section v-show="paso === 2">
@@ -211,7 +370,7 @@ watch(
 
             <ul>
               <li><b>Nombre:</b> {{ formulario.name }}</li>
-              <li><b>Capa:</b> {{ formulario.layer }}</li>
+              <li><b>Capa:</b> {{ datasetSeleccionado?.title || formulario.layer }}</li>
               <li><b>Campo ID:</b> {{ formulario.layer_id_field }}</li>
               <li><b>Campo 1:</b> {{ formulario.field_one }}</li>
               <li><b>Método:</b> {{ formulario.category_method }}</li>
@@ -249,3 +408,52 @@ watch(
     </SisdaiModal>
   </ClientOnly>
 </template>
+
+<style lang="scss" scoped>
+.dataset-seleccionado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 6px 10px;
+  border: 1px solid var(--color-borde, #ccc);
+  border-radius: 4px;
+  background: var(--color-fondo-2, #f5f5f5);
+}
+
+.dataset-buscador {
+  position: relative;
+
+  input {
+    width: 100%;
+  }
+}
+
+.dataset-resultados {
+  position: absolute;
+  z-index: 100;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--color-borde, #ccc);
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+
+  li {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    &:hover {
+      background: var(--color-primario-suave, #f0e4e8);
+    }
+  }
+}
+</style>

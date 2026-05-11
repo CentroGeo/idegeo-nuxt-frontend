@@ -3,7 +3,7 @@ import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/S
 
 const { data: userData } = useAuth();
 const route = useRoute();
-const { fetchSitio, crearSitio, actualizarSitio } = useTableroApi();
+const { fetchSitio, crearSitio, actualizarSitio, togglePublic } = useTableroApi();
 
 const idRuta = computed(() => route.params.sitio);
 const esNuevo = computed(() => idRuta.value === 'nuevo');
@@ -23,7 +23,25 @@ const sitio = reactive({
   url: '',
   title: '',
   info_text: '',
+  is_public: true,
 });
+
+const togglandoPublico = ref(false);
+
+async function togglearPublico() {
+  if (!sitio.id) return;
+  togglandoPublico.value = true;
+  try {
+    const data = await togglePublic(sitio.id, userData.value?.accessToken);
+    if (data && typeof data.is_public === 'boolean') {
+      sitio.is_public = data.is_public;
+    }
+  } catch (e) {
+    console.error('Error al cambiar visibilidad:', e);
+  } finally {
+    togglandoPublico.value = false;
+  }
+}
 
 const cargandoSitio = ref(false);
 
@@ -40,6 +58,7 @@ async function cargarSitio() {
       sitio.url = datos.url || '';
       sitio.title = datos.title || '';
       sitio.info_text = datos.info_text || '';
+      sitio.is_public = datos.is_public ?? true;
     }
   } catch (e) {
     console.error('Error al cargar sitio:', e);
@@ -108,6 +127,37 @@ cargarSitio();
       :titulo="esNuevo ? 'Nuevo tablero' : `Editar tablero: ${sitio.name}`"
       volver="/tableros"
     />
+
+    <div v-if="!esNuevo && sitio.id" class="flex brecha-2 m-b-3">
+      <NuxtLink
+        :to="`/tableros/${sitio.id}`"
+        class="boton boton-secundario boton-chico"
+        target="_blank"
+      >
+        <span class="pictograma-visualizar m-r-1" />
+        Ver tablero
+      </NuxtLink>
+
+      <button
+        type="button"
+        class="boton boton-chico"
+        :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
+        :disabled="togglandoPublico"
+        @click="togglearPublico"
+      >
+        <span
+          :class="sitio.is_public ? 'pictograma-ojo' : 'pictograma-ojo-cerrado'"
+          class="m-r-1"
+        />
+        {{
+          togglandoPublico
+            ? 'Cambiando...'
+            : sitio.is_public
+              ? 'Público — hacer privado'
+              : 'Privado — hacer público'
+        }}
+      </button>
+    </div>
 
     <GeocontenidosLoader v-if="cargandoSitio" mensaje="Cargando tablero..." />
 

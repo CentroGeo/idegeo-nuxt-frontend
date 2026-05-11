@@ -1,7 +1,6 @@
 <script setup>
-const { status } = useAuth();
-const { fetchSitios, eliminarSitio } = useTableroApi();
-const { data: userData } = useAuth();
+const { status, data: userData } = useAuth();
+const { fetchSitios, eliminarSitio, togglePublic } = useTableroApi();
 
 const estaLogueado = computed(() => status.value === 'authenticated');
 
@@ -30,6 +29,18 @@ async function borrarSitio(id) {
   }
 }
 
+async function togglearPublico(sitio) {
+  try {
+    const data = await togglePublic(sitio.id, userData.value?.accessToken);
+    if (data && typeof data.is_public === 'boolean') {
+      sitio.is_public = data.is_public;
+    }
+  } catch (e) {
+    console.error('Error al cambiar visibilidad:', e);
+    alert('No se pudo cambiar la visibilidad del tablero.');
+  }
+}
+
 function formatearFecha(fecha) {
   if (!fecha) return '—';
   return new Date(fecha).toLocaleDateString('es-MX', {
@@ -55,14 +66,16 @@ cargarSitios();
         mapas, gráficas y tarjetas de resumen, organizados en grupos y subgrupos.
       </p>
 
-      <NuxtLink
-        v-if="estaLogueado"
-        to="/geocontenidos/tableros/nuevo"
-        class="boton boton-primario m-b-4"
-      >
-        <span class="pictograma-agregar m-r-1" />
-        Crear Tablero
-      </NuxtLink>
+      <div v-if="estaLogueado" class="flex brecha-2 m-b-4">
+        <NuxtLink to="/geocontenidos/tableros/nuevo" class="boton boton-primario">
+          <span class="pictograma-agregar m-r-1" />
+          Crear Tablero
+        </NuxtLink>
+        <NuxtLink to="/geocontenidos/importar-datos" class="boton boton-secundario">
+          <span class="pictograma-archivo-subir m-r-1" />
+          Desde mis datos
+        </NuxtLink>
+      </div>
     </div>
 
     <GeocontenidosLoader v-if="estaCargando" />
@@ -75,7 +88,7 @@ cargarSitios();
 
             <p v-if="sitio.subtitle" class="tarjeta-etiqueta">{{ sitio.subtitle }}</p>
 
-            <p class="tarjeta-etiqueta">Creado: {{ formatearFecha(sitio.created_at) }}</p>
+            <p class="tarjeta-etiqueta">Creado: {{ formatearFecha(sitio.created) }}</p>
           </div>
 
           <div class="tarjeta-pie flex">
@@ -98,12 +111,22 @@ cargarSitios();
             </NuxtLink>
 
             <template v-if="estaLogueado">
+              <button
+                class="boton boton-chico"
+                :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
+                :title="sitio.is_public ? 'Hacer privado' : 'Hacer público'"
+                @click="togglearPublico(sitio)"
+              >
+                <i :class="sitio.is_public ? 'fas fa-eye' : 'fas fa-eye-slash'" class="m-r-1" />
+                {{ sitio.is_public ? 'Público' : 'Privado' }}
+              </button>
+
               <NuxtLink
                 class="boton boton-chico boton-secundario"
                 :to="`/geocontenidos/tableros/${sitio.id}`"
               >
                 <span class="pictograma-editar m-r-1" />
-                Editar tablero
+                Editar
               </NuxtLink>
 
               <button class="boton boton-chico boton-primario" @click="borrarSitio(sitio.id)">

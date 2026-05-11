@@ -17,21 +17,38 @@ export function useTableroApi() {
   async function jsonRequest(url: string, method: string, body: unknown, token?: string | null) {
     const respuesta = await gnoxyFetch(url, {
       method,
-      headers: authHeaders(token, { 'Content-Type': 'application/json' }),
+      headers: authHeaders(token, {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (respuesta.status === 204) return null;
-    return respuesta.json();
+    const text = await respuesta.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(
+        `Respuesta inesperada del servidor (${respuesta.status}): ${text.slice(0, 100)}`
+      );
+    }
   }
 
   async function formRequest(url: string, method: string, form: FormData, token?: string | null) {
     const respuesta = await gnoxyFetch(url, {
       method,
-      headers: authHeaders(token),
+      headers: authHeaders(token, { Accept: 'application/json' }),
       body: form,
     });
     if (respuesta.status === 204) return null;
-    return respuesta.json();
+    const text = await respuesta.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(
+        `Respuesta inesperada del servidor (${respuesta.status}): ${text.slice(0, 100)}`
+      );
+    }
   }
 
   async function deleteRequest(url: string, token?: string | null) {
@@ -65,6 +82,18 @@ export function useTableroApi() {
 
     eliminarSitio: (id: number, token?: string | null) =>
       deleteRequest(`${baseUrl}/sites/${id}/`, token),
+
+    togglePublic: (id: number, token?: string | null) =>
+      jsonRequest(`${baseUrl}/sites/${id}/toggle-public/`, 'POST', {}, token),
+
+    // ---------- GeoNode datasets ----------
+    fetchDatasets: (search: string) =>
+      fetchJson(
+        `${config.public.geonodeApi}/datasets/?filter{title.icontains}=${encodeURIComponent(search)}&page_size=20`
+      ),
+
+    fetchDatasetAttributes: (id: number) =>
+      fetchJson(`${config.public.geonodeApi}/datasets/${id}/`),
 
     // ---------- Site configuration ----------
     fetchConfigSitio: (siteId: number) => fetchJson(`${baseUrl}/site-configs/${siteId}/`),

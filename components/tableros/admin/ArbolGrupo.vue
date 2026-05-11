@@ -25,6 +25,7 @@ const {
 const expandido = ref(true);
 const mostrarFormSubgrupo = ref(false);
 const nuevoSubgrupo = reactive({ name: '', info_text: '', icon: '' });
+const errorSubgrupo = ref('');
 const detalle = ref(null);
 const cargandoDetalle = ref(false);
 
@@ -59,20 +60,27 @@ async function cargarDetalle() {
 
 async function agregarSubgrupo() {
   if (!nuevoSubgrupo.name) return;
+  errorSubgrupo.value = '';
   const form = new FormData();
   form.append('group', String(props.grupo.id));
   form.append('name', nuevoSubgrupo.name);
   if (nuevoSubgrupo.info_text) form.append('info_text', nuevoSubgrupo.info_text);
   if (nuevoSubgrupo.icon) form.append('icon', nuevoSubgrupo.icon);
 
-  const data = await crearSubgrupo(form, userData.value?.accessToken);
-  if (data?.id) {
-    nuevoSubgrupo.name = '';
-    nuevoSubgrupo.info_text = '';
-    nuevoSubgrupo.icon = '';
-    mostrarFormSubgrupo.value = false;
-    await cargarDetalle();
-    emit('cambio');
+  try {
+    const data = await crearSubgrupo(form, userData.value?.accessToken);
+    if (data?.id) {
+      nuevoSubgrupo.name = '';
+      nuevoSubgrupo.info_text = '';
+      nuevoSubgrupo.icon = '';
+      mostrarFormSubgrupo.value = false;
+      await cargarDetalle();
+      emit('cambio');
+    } else {
+      errorSubgrupo.value = data?.detail || JSON.stringify(data) || 'Error al crear subgrupo.';
+    }
+  } catch (e) {
+    errorSubgrupo.value = e?.message || 'Error al crear subgrupo.';
   }
 }
 
@@ -145,16 +153,19 @@ onMounted(cargarDetalle);
     </header>
 
     <div v-if="expandido" class="arbol-grupo__drop" @dragover.prevent @drop.prevent="onDropGrupo">
-      <form v-if="mostrarFormSubgrupo" class="arbol-grupo__form" @submit.prevent="agregarSubgrupo">
-        <input
-          v-model="nuevoSubgrupo.name"
-          type="text"
-          placeholder="Nombre del subgrupo"
-          required
-        />
-        <input v-model="nuevoSubgrupo.icon" type="text" placeholder="Icono (clase Font Awesome)" />
-        <input type="submit" class="boton boton-primario boton-chico" value="Crear" />
-      </form>
+      <div v-if="mostrarFormSubgrupo">
+        <form class="arbol-grupo__form" @submit.prevent="agregarSubgrupo">
+          <input
+            v-model="nuevoSubgrupo.name"
+            type="text"
+            placeholder="Nombre del subgrupo"
+            required
+          />
+          <TablerosAdminPickerIcono v-model="nuevoSubgrupo.icon" />
+          <input type="submit" class="boton boton-primario boton-chico" value="Crear" />
+        </form>
+        <p v-if="errorSubgrupo" class="formulario-ayuda color-error">{{ errorSubgrupo }}</p>
+      </div>
 
       <div v-if="cargandoDetalle">Cargando...</div>
 
