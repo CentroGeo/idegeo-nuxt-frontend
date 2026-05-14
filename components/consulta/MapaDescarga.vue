@@ -37,7 +37,7 @@ function CargaCompleta(idx, v) {
   leyendasCargadas.value[idx] = v;
   console.log(
     toRaw(leyendasCargadas.value),
-    leyendasCargadas.value.some((v) => v === false),
+    leyendasCargadas.value.some((v) => !v),
     !leyendasCargadas.value.every((v) => v)
   );
 }
@@ -54,7 +54,7 @@ function CargaCompleta(idx, v) {
 
       <h2 class="h2">Leyendas</h2>
 
-      <div v-if="leyendasCargadas.some((v) => v === false)">
+      <div v-if="leyendasCargadas.some((v) => !v)">
         <img src="/img/loader.gif" alt="Cargando leyendas" />
 
         <p>Cargando leyendas</p>
