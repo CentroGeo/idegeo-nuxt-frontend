@@ -209,7 +209,7 @@ function AbrirModalDescarga() {
 
       leyendasDescarga.value = owsLayers.value.map((resource) => ({
         ...resource,
-        fuente: findServer(resource),
+        fuente: findServer(resource).replace('?', ''),
         lado: storeSelected.byPk(resource.pk).lado,
         opacidad: storeSelected.byPk(resource.pk).opacidad,
         posicion: storeSelected.byPk(resource.pk).posicion,
