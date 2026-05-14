@@ -32,6 +32,15 @@ const leyendasCargadas = ref([]);
 watch(owsLayers, (nv) => {
   leyendasCargadas.value = nv.map(() => false);
 });
+
+function CargaCompleta(idx, v) {
+  leyendasCargadas.value[idx] = v;
+  console.log(
+    toRaw(leyendasCargadas.value),
+    leyendasCargadas.value.some((v) => v === false),
+    !leyendasCargadas.value.every((v) => v)
+  );
+}
 </script>
 
 <template>
@@ -45,7 +54,7 @@ watch(owsLayers, (nv) => {
 
       <h2 class="h2">Leyendas</h2>
 
-      <div v-if="leyendasCargadas.every((v) => !v)">
+      <div v-if="leyendasCargadas.some((v) => v === false)">
         <img src="/img/loader.gif" alt="Cargando leyendas" />
 
         <p>Cargando leyendas</p>
@@ -62,7 +71,7 @@ watch(owsLayers, (nv) => {
         :sin-control-clases="true"
         :titulo="resource.title"
         :estilo="resource.estilo"
-        @al-finalizar-carga-simbologia="(v) => (leyendasCargadas[idx] = v)"
+        @al-finalizar-carga-simbologia="(v) => CargaCompleta(idx, v)"
       />
     </div>
   </div>
