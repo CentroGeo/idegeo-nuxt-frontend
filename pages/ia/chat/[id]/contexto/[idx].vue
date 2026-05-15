@@ -2466,7 +2466,8 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-              <div class="columna-8">
+              <!-- COMENTADO: Botón Análisis espacial -->
+              <!-- <div class="columna-8">
                 <div class="fondo-color-neutro borde-redondeado-8">
                   <div class="flex p-2" style="row-gap: 8px">
                     <div class="columna-16">
@@ -2491,8 +2492,9 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="columna-8">
+              </div> -->
+              <!-- COMENTADO: Botón Herramienta -->
+              <!-- <div class="columna-8">
                 <div class="fondo-color-neutro borde-redondeado-8">
                   <div class="flex p-2" style="row-gap: 8px">
                     <div class="columna-16">
@@ -2516,7 +2518,7 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>

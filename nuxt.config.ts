@@ -5,6 +5,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 const originEnvKey = isDev ? undefined : 'NUXT_AUTH_ORIGIN';
 
 const metaImg = process.env.NUXT_APP_BASE_URL + 'img/icono_sigic.png';
+const metaTitle = 'SIGIC | Sistema Integral de Gestión de Información Científica';
 const metaDescription =
   'Sistema Integral de Gestión de Información Científica. Integra, visualiza y aprovecha el conocimiento científico de México.';
 
@@ -14,6 +15,11 @@ export default defineNuxtConfig({
   app: {
     baseURL: '/',
     head: {
+      htmlAttrs: {
+        lang: 'es-MX',
+      },
+
+      title: metaTitle,
       link: [
         {
           rel: 'shortcut icon',
@@ -26,8 +32,10 @@ export default defineNuxtConfig({
         },
       ],
       meta: [
-        { property: 'og:type', content: 'article' },
-        { property: 'og:title', content: 'SIGIC' },
+        { name: 'description', content: metaDescription },
+
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: metaTitle },
         {
           property: 'og:description',
           content: metaDescription,
@@ -37,7 +45,7 @@ export default defineNuxtConfig({
           content: metaImg,
         },
         { name: 'twitter:card', content: 'summary' },
-        { name: 'twitter:title', content: 'SIGIC' },
+        { name: 'twitter:title', content: metaTitle },
         {
           name: 'twitter:description',
           content: metaDescription,
