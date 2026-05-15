@@ -74,10 +74,10 @@ export function useTableroApi() {
       jsonRequest(`${baseUrl}/sites/`, 'POST', datos, token),
 
     actualizarSitio: async (id: number, datos: unknown, token?: string | null) => {
-      // SiteUpdateSerializer no devuelve `id`, lo inyectamos para que el caller
-      // pueda detectar éxito con `data?.id`
       const data = await jsonRequest(`${baseUrl}/sites/${id}/`, 'PATCH', datos, token);
-      return data ? { id, ...data } : null;
+      // Inyectar id solo en respuestas exitosas; DRF usa 'detail' en errores (4xx/5xx)
+      if (!data || (data as Record<string, unknown>).detail) return data;
+      return { id, ...data };
     },
 
     eliminarSitio: (id: number, token?: string | null) =>
