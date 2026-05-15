@@ -28,6 +28,8 @@ function sincronizar() {
 
 watch(() => props.sitio, sincronizar, { deep: true, immediate: true });
 
+const errorUrl = ref('');
+
 function slugify(texto) {
   return (texto || '')
     .toLowerCase()
@@ -35,6 +37,27 @@ function slugify(texto) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
+}
+
+function validarUrl() {
+  const v = form.url.trim();
+  if (!v) {
+    errorUrl.value = '';
+    return;
+  }
+  if (v.startsWith('/') || v.endsWith('/')) {
+    errorUrl.value = "La URL no puede comenzar ni terminar con '/'.";
+    return;
+  }
+  if (/\/\//.test(v)) {
+    errorUrl.value = "La URL no puede tener '//' consecutivos.";
+    return;
+  }
+  if (!/^[a-z0-9_\-/]+$/.test(v)) {
+    errorUrl.value = 'Solo letras min\u00fasculas, n\u00fameros, guiones, guiones bajos y /';
+    return;
+  }
+  errorUrl.value = '';
 }
 
 const nombre = computed({
@@ -52,6 +75,8 @@ function abrirModalVisual() {
 }
 
 function alSubmit() {
+  validarUrl();
+  if (errorUrl.value) return;
   emit('actualizar', { ...form });
   emit('guardar');
 }
@@ -79,10 +104,15 @@ function alSubmit() {
           id="tab-identidad-url"
           v-model="form.url"
           type="text"
-          placeholder="observatorio-regional-2026"
+          placeholder="mi-tablero o categoria/mi-tablero"
           required
+          @input="validarUrl"
         />
-        <p class="formulario-ayuda">Ruta pública del tablero: /tableros/{{ form.url || '...' }}</p>
+        <p v-if="errorUrl" class="formulario-ayuda color-error">{{ errorUrl }}</p>
+        <p v-else class="formulario-ayuda">
+          Ruta pública: <strong>/tableros/{{ form.url || '...' }}</strong> &nbsp;·&nbsp; Puede
+          incluir <code>/</code> para sub-rutas: ej. <code>datos/posgrados</code>
+        </p>
       </div>
 
       <div class="m-b-3">

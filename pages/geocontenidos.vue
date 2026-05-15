@@ -59,6 +59,10 @@ const ruta = '/geocontenidos';
                       ruta: `${ruta}/tableros`,
                     },
                     {
+                      nombre: 'Importar datos',
+                      ruta: `${ruta}/importar-datos`,
+                    },
+                    {
                       nombre: 'Micrositios',
                       // ruta: '/geocontenidos/micrositios',
                     },

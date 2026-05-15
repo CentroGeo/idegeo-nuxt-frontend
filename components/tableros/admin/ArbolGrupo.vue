@@ -16,6 +16,8 @@ const { data: userData } = useAuth();
 const {
   crearSubgrupo,
   eliminarSubgrupo,
+  actualizarGrupo,
+  actualizarSubgrupo,
   actualizarIndicador,
   fetchSubgrupos,
   fetchIndicadoresPorGrupo,
@@ -28,6 +30,14 @@ const nuevoSubgrupo = reactive({ name: '', info_text: '', icon: '' });
 const errorSubgrupo = ref('');
 const detalle = ref(null);
 const cargandoDetalle = ref(false);
+
+const editandoGrupo = ref(false);
+const formularioGrupo = reactive({ name: '', description: '' });
+const guardandoGrupo = ref(false);
+
+const subgrupoEditandoId = ref(null);
+const formularioSubgrupo = reactive({ name: '', icon: '' });
+const guardandoSubgrupo = ref(false);
 
 async function cargarDetalle() {
   cargandoDetalle.value = true;
@@ -98,7 +108,7 @@ async function onDropGrupo(ev) {
   if (!indicadorId) return;
   await actualizarIndicador(
     Number(indicadorId),
-    { group: props.grupo.id, subgroup: null, site: null },
+    { group: props.grupo.id, subgroup: null },
     userData.value?.accessToken
   );
   await cargarDetalle();
@@ -110,7 +120,7 @@ async function onDropSubgrupo(ev, subgrupoId) {
   if (!indicadorId) return;
   await actualizarIndicador(
     Number(indicadorId),
-    { subgroup: subgrupoId, group: null, site: null },
+    { subgroup: subgrupoId, group: null },
     userData.value?.accessToken
   );
   await cargarDetalle();
@@ -120,11 +130,55 @@ async function onDropSubgrupo(ev, subgrupoId) {
 async function desasignar(indicadorId) {
   await actualizarIndicador(
     indicadorId,
-    { group: null, subgroup: null, site: props.grupo.site },
+    { group: null, subgroup: null },
     userData.value?.accessToken
   );
   await cargarDetalle();
   emit('cambio');
+}
+
+function abrirEdicionGrupo() {
+  formularioGrupo.name = props.grupo.name || '';
+  formularioGrupo.description = props.grupo.description || '';
+  editandoGrupo.value = true;
+}
+
+async function guardarGrupo() {
+  if (!formularioGrupo.name) return;
+  guardandoGrupo.value = true;
+  try {
+    await actualizarGrupo(props.grupo.id, formularioGrupo, userData.value?.accessToken);
+    editandoGrupo.value = false;
+    emit('cambio');
+  } catch (e) {
+    console.error('Error al actualizar grupo:', e);
+  } finally {
+    guardandoGrupo.value = false;
+  }
+}
+
+function abrirEdicionSubgrupo(sg) {
+  formularioSubgrupo.name = sg.name || '';
+  formularioSubgrupo.icon = sg.icon || '';
+  subgrupoEditandoId.value = sg.id;
+}
+
+async function guardarSubgrupo(sgId) {
+  if (!formularioSubgrupo.name) return;
+  guardandoSubgrupo.value = true;
+  const form = new FormData();
+  form.append('name', formularioSubgrupo.name);
+  if (formularioSubgrupo.icon) form.append('icon', formularioSubgrupo.icon);
+  try {
+    await actualizarSubgrupo(sgId, form, userData.value?.accessToken);
+    subgrupoEditandoId.value = null;
+    await cargarDetalle();
+    emit('cambio');
+  } catch (e) {
+    console.error('Error al actualizar subgrupo:', e);
+  } finally {
+    guardandoSubgrupo.value = false;
+  }
 }
 
 onMounted(cargarDetalle);
@@ -136,9 +190,18 @@ onMounted(cargarDetalle);
       <button type="button" class="arbol-grupo__toggle" @click="expandido = !expandido">
         <span>{{ expandido ? '▼' : '▶' }}</span>
         <strong>{{ grupo.name }}</strong>
+        <span v-if="grupo.description" class="arbol-grupo__desc">{{ grupo.description }}</span>
       </button>
 
       <div class="arbol-grupo__acciones">
+        <button
+          type="button"
+          class="boton boton-secundario boton-chico"
+          title="Editar grupo"
+          @click="abrirEdicionGrupo"
+        >
+          <span class="pictograma-editar" />
+        </button>
         <button
           type="button"
           class="boton boton-secundario boton-chico"
@@ -151,6 +214,32 @@ onMounted(cargarDetalle);
         </button>
       </div>
     </header>
+
+    <div v-if="editandoGrupo" class="arbol-grupo__edit-form">
+      <form @submit.prevent="guardarGrupo">
+        <input v-model="formularioGrupo.name" type="text" placeholder="Nombre del grupo" required />
+        <input
+          v-model="formularioGrupo.description"
+          type="text"
+          placeholder="Descripción (opcional)"
+        />
+        <div class="arbol-grupo__edit-acciones">
+          <button
+            type="button"
+            class="boton boton-secundario boton-chico"
+            @click="editandoGrupo = false"
+          >
+            Cancelar
+          </button>
+          <input
+            type="submit"
+            class="boton boton-primario boton-chico"
+            :value="guardandoGrupo ? 'Guardando...' : 'Guardar'"
+            :disabled="guardandoGrupo"
+          />
+        </div>
+      </form>
+    </div>
 
     <div v-if="expandido" class="arbol-grupo__drop" @dragover.prevent @drop.prevent="onDropGrupo">
       <div v-if="mostrarFormSubgrupo">
@@ -193,15 +282,49 @@ onMounted(cargarDetalle);
             @drop.prevent="onDropSubgrupo($event, sg.id)"
           >
             <header>
-              <span v-if="sg.icon" :class="sg.icon" />
-              <strong>{{ sg.name }}</strong>
-              <button
-                type="button"
-                class="boton boton-primario boton-chico"
-                @click="borrarSubgrupo(sg.id)"
-              >
-                <span class="pictograma-eliminar" />
-              </button>
+              <template v-if="subgrupoEditandoId === sg.id">
+                <form class="arbol-grupo__subgrupo-form" @submit.prevent="guardarSubgrupo(sg.id)">
+                  <input
+                    v-model="formularioSubgrupo.name"
+                    type="text"
+                    placeholder="Nombre del subgrupo"
+                    required
+                  />
+                  <TablerosAdminPickerIcono v-model="formularioSubgrupo.icon" />
+                  <input
+                    type="submit"
+                    class="boton boton-primario boton-chico"
+                    :value="guardandoSubgrupo ? '...' : 'Guardar'"
+                    :disabled="guardandoSubgrupo"
+                  />
+                  <button
+                    type="button"
+                    class="boton boton-secundario boton-chico"
+                    @click="subgrupoEditandoId = null"
+                  >
+                    Cancelar
+                  </button>
+                </form>
+              </template>
+              <template v-else>
+                <span v-if="sg.icon" :class="sg.icon" />
+                <strong>{{ sg.name }}</strong>
+                <button
+                  type="button"
+                  class="boton boton-secundario boton-chico"
+                  title="Editar subgrupo"
+                  @click="abrirEdicionSubgrupo(sg)"
+                >
+                  <span class="pictograma-editar" />
+                </button>
+                <button
+                  type="button"
+                  class="boton boton-primario boton-chico"
+                  @click="borrarSubgrupo(sg.id)"
+                >
+                  <span class="pictograma-eliminar" />
+                </button>
+              </template>
             </header>
             <ul v-if="sg.indicators?.length">
               <li v-for="ind in sg.indicators" :key="ind.id">
@@ -284,6 +407,30 @@ onMounted(cargarDetalle);
     margin: 0;
   }
 
+  &__desc {
+    font-size: 0.75rem;
+    color: var(--color-neutro-5, #888);
+    font-weight: normal;
+  }
+
+  &__edit-form {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px dashed var(--color-neutro-2, #e0e0e0);
+    background: var(--color-fondo-2, #fafafa);
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+
+  &__edit-acciones {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
   &__subgrupo {
     margin-top: 0.5rem;
     padding: 0.5rem;
@@ -297,6 +444,7 @@ onMounted(cargarDetalle);
       align-items: center;
       gap: 0.5rem;
       margin-bottom: 0.4rem;
+      flex-wrap: wrap;
     }
 
     ul {
@@ -307,6 +455,19 @@ onMounted(cargarDetalle);
 
     li {
       padding: 0.25rem 0;
+    }
+  }
+
+  &__subgrupo-form {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    width: 100%;
+
+    input[type='text'] {
+      flex: 1;
+      min-width: 120px;
     }
   }
 }

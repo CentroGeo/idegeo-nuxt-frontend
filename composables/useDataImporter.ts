@@ -10,10 +10,13 @@ export interface ColumnSchema {
 
 export interface StyleSpec {
   col: string;
-  type: 'categorical' | 'graduated';
+  type: 'categorical' | 'graduated' | 'graduated_size';
   palette: string;
   n_classes?: number;
   classification?: 'quantile' | 'equal_interval';
+  label?: string;
+  size_min?: number;
+  size_max?: number;
 }
 
 export interface GeoNodeCategory {
@@ -48,6 +51,7 @@ export interface CreateTableroPayload {
   layer_category?: string;
   layer_attribution?: string;
   style_specs?: StyleSpec[];
+  default_style_col?: string;
 }
 
 export function useDataImporter() {
@@ -113,7 +117,14 @@ export function useDataImporter() {
       geo_field_join?: string;
     },
     token?: string | null
-  ): Promise<{ ok: boolean; matched?: number; total?: number; geojson?: string; error?: string }> {
+  ): Promise<{
+    ok: boolean;
+    matched?: number;
+    sample_size?: number;
+    total?: number;
+    geojson?: string;
+    error?: string;
+  }> {
     const resp = await gnoxyFetch(`${baseUrl}/${jobId}/geo-preview/`, {
       method: 'POST',
       headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
@@ -137,6 +148,23 @@ export function useDataImporter() {
     }
   }
 
+  async function finalizeLayer(
+    jobId: number,
+    payload: CreateTableroPayload,
+    token?: string | null
+  ): Promise<{ dataset_id: number; alternate: string | null }> {
+    const resp = await gnoxyFetch(`${baseUrl}/${jobId}/finalize-layer/`, {
+      method: 'POST',
+      headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Error ${resp.status} finalizando capa`);
+    }
+    return resp.json();
+  }
+
   async function createTablero(
     jobId: number,
     payload: CreateTableroPayload,
@@ -156,12 +184,12 @@ export function useDataImporter() {
 
   async function fetchCategories(token?: string | null): Promise<GeoNodeCategory[]> {
     try {
-      const resp = await gnoxyFetch(`${config.public.geonodeApi}/categories/?page_size=100`, {
+      const resp = await gnoxyFetch(`${baseUrl.replace('/jobs', '')}/categories/`, {
         headers: authHeaders(token),
       });
       if (!resp.ok) return [];
       const data = await resp.json();
-      return data.objects ?? data.results ?? [];
+      return Array.isArray(data) ? data : (data.categories ?? data.results ?? []);
     } catch {
       return [];
     }
@@ -173,6 +201,7 @@ export function useDataImporter() {
     updateSchema,
     previewGeo,
     importToGeonode,
+    finalizeLayer,
     createTablero,
     fetchCategories,
   };

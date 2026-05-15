@@ -7,6 +7,7 @@ const props = defineProps({
   categoria: { type: String, default: '' },
   atribucion: { type: String, default: '' },
   categorias: { type: Array, default: () => [] },
+  requeridos: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -20,14 +21,13 @@ const emit = defineEmits([
 
 const LICENCIAS = [
   { value: '', label: 'Sin especificar' },
-  { value: 'CC-BY', label: 'CC BY — Reconocimiento' },
-  { value: 'CC-BY-SA', label: 'CC BY-SA — Reconocimiento-CompartirIgual' },
-  { value: 'CC-BY-NC', label: 'CC BY-NC — Reconocimiento-NoComercial' },
-  { value: 'CC-BY-NC-SA', label: 'CC BY-NC-SA — Reconocimiento-NoComercial-CompartirIgual' },
-  { value: 'CC-BY-ND', label: 'CC BY-ND — Reconocimiento-SinObraDerivada' },
-  { value: 'CC-BY-NC-ND', label: 'CC BY-NC-ND — Reconocimiento-NoComercial-SinObraDerivada' },
-  { value: 'CC0', label: 'CC0 / Dominio Público' },
-  { value: 'propietary', label: 'Propietaria / Restringida' },
+  { value: 'not_specified', label: 'No especificado(a)' },
+  { value: 'varied_original', label: 'Varios / Original' },
+  { value: 'varied_derived', label: 'Varios / Derivados(as)' },
+  { value: 'public_domain', label: 'Dominio público' },
+  { value: 'public_domain_usg', label: 'Dominio público / Gobierno de EUA' },
+  { value: 'odbl', label: 'Licencia abierta de bases de datos (ODbL)' },
+  { value: 'nextview', label: 'NextView' },
 ];
 </script>
 
@@ -51,7 +51,9 @@ const LICENCIAS = [
     </div>
 
     <div class="campo m-b-3">
-      <label class="etiqueta" for="meta-desc">Resumen / Descripción</label>
+      <label class="etiqueta" for="meta-desc"
+        >Resumen / Descripción <span v-if="props.requeridos" class="texto-error">*</span></label
+      >
       <textarea
         id="meta-desc"
         :value="props.descripcion"
@@ -62,9 +64,11 @@ const LICENCIAS = [
       />
     </div>
 
-    <div class="grid columnas-2 brecha-3 m-b-3">
+    <div class="meta-fila m-b-3">
       <div class="campo">
-        <label class="etiqueta" for="meta-cat">Categoría temática</label>
+        <label class="etiqueta" for="meta-cat"
+          >Categoría temática <span v-if="props.requeridos" class="texto-error">*</span></label
+        >
         <select
           id="meta-cat"
           :value="props.categoria"
@@ -79,7 +83,9 @@ const LICENCIAS = [
       </div>
 
       <div class="campo">
-        <label class="etiqueta" for="meta-lic">Licencia</label>
+        <label class="etiqueta" for="meta-lic"
+          >Licencia <span v-if="props.requeridos" class="texto-error">*</span></label
+        >
         <select
           id="meta-lic"
           :value="props.licencia"
@@ -93,7 +99,7 @@ const LICENCIAS = [
       </div>
     </div>
 
-    <div class="grid columnas-2 brecha-3">
+    <div class="meta-fila">
       <div class="campo">
         <label class="etiqueta" for="meta-attr">Fuente / Atribución</label>
         <input
@@ -123,3 +129,17 @@ const LICENCIAS = [
     </div>
   </section>
 </template>
+
+<style lang="scss" scoped>
+.meta-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  .campo {
+    flex: 1 1 280px;
+    min-width: 0;
+  }
+}
+</style>

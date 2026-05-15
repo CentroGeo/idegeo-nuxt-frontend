@@ -92,25 +92,28 @@ cargarSitios();
           </div>
 
           <div class="tarjeta-pie flex">
-            <div class="fondo-color-acento borde borde-color-secundario borde-redondeado-8 m-t-2">
-              <p class="m-1" style="display: flex; align-items: end; justify-content: center">
-                <span class="pictograma-mapa-generador pictograma-mediano m-r-1" />
-                <span
-                  >URL: <b>/{{ sitio.url || sitio.id }}</b></span
-                >
-              </p>
-            </div>
-
             <NuxtLink
               class="boton boton-chico boton-secundario"
               :to="`/tableros/${sitio.id}`"
               target="_blank"
+              title="Previsualizar tablero"
             >
               <span class="pictograma-ojo-ver m-r-1" />
-              Ver
+              Previsualizar
             </NuxtLink>
 
-            <template v-if="estaLogueado">
+            <NuxtLink
+              v-if="sitio.is_public && sitio.url"
+              class="boton boton-chico boton-secundario"
+              :to="`/tableros/${sitio.url}`"
+              target="_blank"
+              title="Ver URL pública"
+            >
+              <span class="pictograma-compartir m-r-1" />
+              /{{ sitio.url }}
+            </NuxtLink>
+
+            <template v-if="sitio.is_owner">
               <button
                 class="boton boton-chico"
                 :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
@@ -157,6 +160,8 @@ cargarSitios();
     }
     &-pie {
       flex-direction: column;
+      gap: 0.5rem;
+      padding-top: 0.75rem;
       button,
       a {
         display: block;

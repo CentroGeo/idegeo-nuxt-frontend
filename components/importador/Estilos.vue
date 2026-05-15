@@ -3,9 +3,10 @@ const props = defineProps({
   schema: { type: Array, default: () => [] },
   geoStrategy: { type: String, default: 'none' },
   specs: { type: Array, default: () => [] },
+  defaultCol: { type: String, default: '' },
 });
 
-const emit = defineEmits(['update:specs']);
+const emit = defineEmits(['update:specs', 'update:defaultCol']);
 
 const RAMPS = {
   sequential: [
@@ -276,8 +277,48 @@ const RAMPS = {
 
 const GEO_ROLES = new Set(['lat', 'lon', 'state_key', 'mun_key', 'state_name', 'mun_name']);
 
+// Patrón de nombres que sugieren identificador sin valor visual
+const _ID_PATTERN =
+  /^_?id$|_id$|^pk$|^fid$|^ogc_fid$|^folio$|^uuid$|^guid$|^cod(?:igo)?$|^clave$|^cve$|^code$|^num(?:ero)?$|^no(?:_|$)/i;
+
+const RAZONES_DESACTIVADO = {
+  id: 'Parece un identificador — no aporta valor visual',
+  sequential: 'Valores secuenciales (probable ID automático)',
+  low_confidence: 'Tipo de columna incierto',
+  all_unique_text: 'Todos los valores son distintos (probable código único)',
+};
+
+/**
+ * Retorna el motivo por el que la columna debería estar desactivada por defecto,
+ * o null si debe estar activa.
+ */
+function razonDesactivado(col) {
+  const name = (col.name || '').toLowerCase().trim();
+  const type = col.editable_type || col.detected_type;
+  const samples = (col.sample_values || []).map(String).filter(Boolean);
+
+  if (_ID_PATTERN.test(name)) return 'id';
+
+  if (col.confidence === 'low') return 'low_confidence';
+
+  // Enteros secuenciales (auto-increment)
+  if (type === 'entero' && samples.length >= 3) {
+    const nums = samples.map(Number).filter((n) => !isNaN(n));
+    if (nums.length >= 3 && nums.slice(1).every((v, i) => v === nums[i] + 1)) return 'sequential';
+  }
+
+  // Texto con todos los valores distintos (código único, folio libre, etc.)
+  if (type === 'texto' && samples.length >= 4) {
+    const unicos = new Set(samples);
+    if (unicos.size === samples.length) return 'all_unique_text';
+  }
+
+  return null;
+}
+
 const styleableColumns = computed(() =>
   props.schema.filter((col) => {
+    if (!col.name) return false;
     const t = col.editable_type || col.detected_type;
     if (t === 'ignorar' || t === 'fecha' || t === 'booleano') return false;
     if (col.geo_role && GEO_ROLES.has(col.geo_role)) return false;
@@ -287,6 +328,12 @@ const styleableColumns = computed(() =>
 
 const localSpecs = ref({});
 
+const enabledCols = computed(() =>
+  Object.values(localSpecs.value)
+    .filter((s) => s.enabled)
+    .map((s) => s.col)
+);
+
 watch(
   styleableColumns,
   (cols) => {
@@ -295,15 +342,19 @@ watch(
       const t = col.editable_type || col.detected_type;
       const isNumeric = t === 'entero' || t === 'decimal';
       const existing = props.specs.find((s) => s.col === col.name);
+      // Si ya existe una spec guardada por el usuario, la respetamos íntegra.
+      // `enabled: true` porque si estaba en specs es porque el usuario la activó.
+      // Si es nueva, el default de enabled depende de la heurística.
       next[col.name] = existing
         ? { ...existing, enabled: true }
         : {
             col: col.name,
+            label: col.name,
             type: isNumeric ? 'graduated' : 'categorical',
             palette: isNumeric ? 'YlOrRd' : 'Set1',
             n_classes: 5,
             classification: 'quantile',
-            enabled: true,
+            enabled: !razonDesactivado(col),
           };
     });
     localSpecs.value = next;
@@ -318,6 +369,11 @@ function emitSpecs() {
     // eslint-disable-next-line no-unused-vars
     .map(({ enabled, ...rest }) => rest);
   emit('update:specs', specs);
+
+  // If the current defaultCol is no longer enabled, reset to first enabled column
+  if (!enabledCols.value.includes(props.defaultCol)) {
+    emit('update:defaultCol', enabledCols.value[0] ?? '');
+  }
 }
 
 function updateSpec(colName, patch) {
@@ -330,6 +386,28 @@ function availableRamps(colName) {
   if (!spec) return RAMPS.qualitative;
   if (spec.type === 'categorical') return RAMPS.qualitative;
   return [...RAMPS.sequential, ...RAMPS.diverging];
+}
+
+const SEQUENTIAL_NAMES = new Set([
+  'YlOrRd',
+  'YlGnBu',
+  'Blues',
+  'Greens',
+  'Reds',
+  'OrRd',
+  'BuPu',
+  'PuRd',
+]);
+const DIVERGING_NAMES = new Set(['RdYlGn', 'RdBu', 'PuOr', 'BrBG']);
+const QUALITATIVE_NAMES = new Set(['Set1', 'Set2', 'Set3', 'Paired', 'Pastel1']);
+
+function paletteGroups(colName) {
+  const ramps = availableRamps(colName);
+  return [
+    { key: 'Secuenciales', ramps: ramps.filter((r) => SEQUENTIAL_NAMES.has(r.name)) },
+    { key: 'Divergentes', ramps: ramps.filter((r) => DIVERGING_NAMES.has(r.name)) },
+    { key: 'Cualitativas', ramps: ramps.filter((r) => QUALITATIVE_NAMES.has(r.name)) },
+  ].filter((g) => g.ramps.length > 0);
 }
 
 function swatchColors(paletteName) {
@@ -358,21 +436,60 @@ function swatchColors(paletteName) {
       :class="{ deshabilitada: !localSpecs[col.name]?.enabled }"
     >
       <div class="estilo-header">
-        <label class="flex flex-alineacion-central brecha-2 cursor-pointer">
-          <input
-            type="checkbox"
-            :checked="localSpecs[col.name]?.enabled"
-            @change="updateSpec(col.name, { enabled: $event.target.checked })"
-          />
+        <div class="estilo-header-izq">
           <strong>{{ col.name }}</strong>
-          <span class="etiqueta etiqueta-neutro texto-chico">
-            {{ col.editable_type || col.detected_type }}
-          </span>
-        </label>
+          <span class="etiqueta-tipo">{{ col.editable_type || col.detected_type }}</span>
+          <label
+            v-if="localSpecs[col.name]?.enabled"
+            class="radio-defecto"
+            :title="
+              props.defaultCol === col.name
+                ? 'Estilo por defecto'
+                : 'Establecer como estilo por defecto'
+            "
+          >
+            <input
+              type="radio"
+              name="default-style"
+              :value="col.name"
+              :checked="
+                props.defaultCol === col.name || (!props.defaultCol && enabledCols[0] === col.name)
+              "
+              @change="emit('update:defaultCol', col.name)"
+            />
+            <span class="radio-defecto-label">Por defecto</span>
+          </label>
+        </div>
+        <button
+          type="button"
+          class="toggle-estilo"
+          :class="{ activo: localSpecs[col.name]?.enabled }"
+          :aria-pressed="localSpecs[col.name]?.enabled"
+          :aria-label="`${localSpecs[col.name]?.enabled ? 'Excluir' : 'Incluir'} estilo para ${col.name}`"
+          @click="updateSpec(col.name, { enabled: !localSpecs[col.name]?.enabled })"
+        >
+          {{ localSpecs[col.name]?.enabled ? '✓ Incluido' : 'Excluido' }}
+        </button>
       </div>
+
+      <p v-if="!localSpecs[col.name]?.enabled && razonDesactivado(col)" class="hint-desactivado">
+        {{ RAZONES_DESACTIVADO[razonDesactivado(col)] }}
+      </p>
 
       <template v-if="localSpecs[col.name]?.enabled">
         <div class="estilo-controles">
+          <div class="campo-chico campo-etiqueta-estilo">
+            <label class="etiqueta-chica" :for="`lbl-${col.name}`">Etiqueta visible</label>
+            <input
+              :id="`lbl-${col.name}`"
+              type="text"
+              class="campo-texto campo-texto-chico"
+              :value="localSpecs[col.name]?.label ?? col.name"
+              :placeholder="col.name"
+              @input="updateSpec(col.name, { label: $event.target.value || col.name })"
+            />
+          </div>
+
           <div class="campo-chico">
             <label class="etiqueta-chica">Tipo</label>
             <select
@@ -381,7 +498,12 @@ function swatchColors(paletteName) {
               @change="
                 updateSpec(col.name, {
                   type: $event.target.value,
-                  palette: $event.target.value === 'categorical' ? 'Set1' : 'YlOrRd',
+                  palette:
+                    $event.target.value === 'categorical'
+                      ? 'Set1'
+                      : localSpecs[col.name]?.palette === 'Set1'
+                        ? 'YlOrRd'
+                        : (localSpecs[col.name]?.palette ?? 'YlOrRd'),
                 })
               "
             >
@@ -390,12 +512,24 @@ function swatchColors(paletteName) {
                 v-if="['entero', 'decimal'].includes(col.editable_type || col.detected_type)"
                 value="graduated"
               >
-                Graduado
+                Graduado (color)
+              </option>
+              <option
+                v-if="
+                  ['entero', 'decimal'].includes(col.editable_type || col.detected_type) &&
+                  geoStrategy === 'lat_lon'
+                "
+                value="graduated_size"
+              >
+                Graduado (tamaño y color)
               </option>
             </select>
           </div>
 
-          <div v-if="localSpecs[col.name]?.type === 'graduated'" class="campo-chico">
+          <div
+            v-if="['graduated', 'graduated_size'].includes(localSpecs[col.name]?.type)"
+            class="campo-chico"
+          >
             <label class="etiqueta-chica">Clasificación</label>
             <select
               class="campo-texto campo-texto-chico"
@@ -407,7 +541,10 @@ function swatchColors(paletteName) {
             </select>
           </div>
 
-          <div v-if="localSpecs[col.name]?.type === 'graduated'" class="campo-chico">
+          <div
+            v-if="['graduated', 'graduated_size'].includes(localSpecs[col.name]?.type)"
+            class="campo-chico"
+          >
             <label class="etiqueta-chica">Clases</label>
             <select
               class="campo-texto campo-texto-chico"
@@ -422,6 +559,30 @@ function swatchColors(paletteName) {
             </select>
           </div>
 
+          <div v-if="localSpecs[col.name]?.type === 'graduated_size'" class="campo-chico">
+            <label class="etiqueta-chica">Tamaño mín (px)</label>
+            <input
+              type="number"
+              class="campo-texto campo-texto-chico campo-numero"
+              min="3"
+              max="30"
+              :value="localSpecs[col.name]?.size_min ?? 6"
+              @input="updateSpec(col.name, { size_min: Number($event.target.value) })"
+            />
+          </div>
+
+          <div v-if="localSpecs[col.name]?.type === 'graduated_size'" class="campo-chico">
+            <label class="etiqueta-chica">Tamaño máx (px)</label>
+            <input
+              type="number"
+              class="campo-texto campo-texto-chico campo-numero"
+              min="8"
+              max="60"
+              :value="localSpecs[col.name]?.size_max ?? 24"
+              @input="updateSpec(col.name, { size_max: Number($event.target.value) })"
+            />
+          </div>
+
           <div class="campo-chico campo-paleta">
             <label class="etiqueta-chica">Paleta</label>
             <select
@@ -430,30 +591,11 @@ function swatchColors(paletteName) {
               @change="updateSpec(col.name, { palette: $event.target.value })"
             >
               <optgroup
-                v-for="(group, groupKey) in {
-                  Secuenciales: availableRamps(col.name).filter((r) =>
-                    [
-                      'YlOrRd',
-                      'YlGnBu',
-                      'Blues',
-                      'Greens',
-                      'Reds',
-                      'OrRd',
-                      'BuPu',
-                      'PuRd',
-                    ].includes(r.name)
-                  ),
-                  Divergentes: availableRamps(col.name).filter((r) =>
-                    ['RdYlGn', 'RdBu', 'PuOr', 'BrBG'].includes(r.name)
-                  ),
-                  Cualitativas: availableRamps(col.name).filter((r) =>
-                    ['Set1', 'Set2', 'Set3', 'Paired', 'Pastel1'].includes(r.name)
-                  ),
-                }"
-                :key="groupKey"
-                :label="groupKey"
+                v-for="group in paletteGroups(col.name)"
+                :key="group.key"
+                :label="group.key"
               >
-                <option v-for="ramp in group" :key="ramp.name" :value="ramp.name">
+                <option v-for="ramp in group.ramps" :key="ramp.name" :value="ramp.name">
                   {{ ramp.label }}
                 </option>
               </optgroup>
@@ -492,14 +634,104 @@ function swatchColors(paletteName) {
 }
 
 .estilo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
+}
+
+.estilo-header-izq {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  strong {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.radio-defecto {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--color-texto-secundario, #666);
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--color-borde, #ddd);
+  transition:
+    background 0.1s,
+    border-color 0.1s;
+
+  &:has(input:checked) {
+    background: var(--color-primario-claro, #e8f0fe);
+    border-color: var(--color-primario, #005fcc);
+    color: var(--color-primario, #005fcc);
+    font-weight: 600;
+  }
+
+  input[type='radio'] {
+    width: 13px;
+    height: 13px;
+    accent-color: var(--color-primario, #005fcc);
+    margin: 0;
+  }
+}
+
+.etiqueta-tipo {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--color-fondo-secundario, #eee);
+  color: var(--color-texto-secundario, #555);
+}
+
+.toggle-estilo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid currentColor;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  background: transparent;
+  color: var(--color-texto-secundario, #888);
+
+  &.activo {
+    background: var(--color-acento, #2e7d32);
+    border-color: var(--color-acento, #2e7d32);
+    color: #fff;
+  }
+
+  &:not(.activo) {
+    background: transparent;
+    border-color: var(--color-borde, #ccc);
+    color: var(--color-texto-secundario, #888);
+  }
 }
 
 .estilo-controles {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 12px;
+  gap: 16px;
+  padding-top: 4px;
 }
 
 .campo-chico {
@@ -509,7 +741,7 @@ function swatchColors(paletteName) {
 }
 
 .etiqueta-chica {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--color-texto-secundario, #666);
   font-weight: 600;
   text-transform: uppercase;
@@ -517,26 +749,47 @@ function swatchColors(paletteName) {
 }
 
 .campo-texto-chico {
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  height: 32px;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  height: 40px;
+  min-width: 140px;
+}
+
+.campo-etiqueta-estilo {
+  flex: 1 1 200px;
+
+  input {
+    width: 100%;
+  }
+}
+
+.campo-numero {
+  min-width: 80px;
+  max-width: 100px;
 }
 
 .paleta-preview {
   display: flex;
   align-items: center;
-  gap: 1px;
-  margin-bottom: 2px;
+  gap: 2px;
+  margin-bottom: 4px;
 }
 
 .swatch {
   display: inline-block;
-  width: 22px;
-  height: 22px;
-  border-radius: 2px;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
 }
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+.hint-desactivado {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--color-texto-secundario, #888);
+  font-style: italic;
 }
 </style>

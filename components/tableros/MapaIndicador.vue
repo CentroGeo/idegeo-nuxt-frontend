@@ -199,6 +199,8 @@ const globoInformativo = computed(() => {
     list-style: none;
     margin: 0;
     padding: 0 0.75rem 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
   }
 
   &__leyenda-item {

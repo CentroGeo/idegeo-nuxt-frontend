@@ -17,10 +17,13 @@ const props = defineProps({
 const emit = defineEmits(['crear', 'eliminar']);
 
 const { data: userData } = useAuth();
-const { eliminarIndicador } = useTableroApi();
+const { eliminarIndicador, recalcularIndicador } = useTableroApi();
 
 const filtro = ref('');
 const mostrarModalNuevo = ref(false);
+const indicadorEditando = ref(null);
+const recalculandoId = ref(null);
+const mensajeRecalculo = ref('');
 
 const filtrados = computed(() => {
   if (!filtro.value) return props.indicadores;
@@ -37,6 +40,32 @@ async function quitar(id) {
 function alCrear() {
   mostrarModalNuevo.value = false;
   emit('crear');
+}
+
+function alGuardarEdicion() {
+  indicadorEditando.value = null;
+  emit('crear'); // recarga la lista
+}
+
+async function recalcular(ind) {
+  recalculandoId.value = ind.id;
+  mensajeRecalculo.value = '';
+  try {
+    const result = await recalcularIndicador(ind.id, userData.value?.accessToken);
+    if (result?.status === 'ok') {
+      mensajeRecalculo.value = `✓ ${ind.name}: ${result.rangos} rangos calculados`;
+      emit('crear'); // recarga la lista para actualizar el badge
+    } else {
+      mensajeRecalculo.value = `Error: ${result?.error || 'No se pudo recalcular'}`;
+    }
+  } catch (e) {
+    mensajeRecalculo.value = `Error: ${e?.message || 'Error de conexión'}`;
+  } finally {
+    recalculandoId.value = null;
+    setTimeout(() => {
+      mensajeRecalculo.value = '';
+    }, 4000);
+  }
 }
 </script>
 
@@ -83,6 +112,26 @@ function alCrear() {
           <span v-else class="repo-indicadores__estado">sin datos</span>
         </div>
         <div class="repo-indicadores__acciones">
+          <button
+            type="button"
+            class="boton boton-secundario boton-chico"
+            title="Recalcular datos desde el dataset"
+            :disabled="recalculandoId === ind.id"
+            @click="recalcular(ind)"
+          >
+            <span
+              class="pictograma-actualizar"
+              :class="{ 'repo-indicadores__spin': recalculandoId === ind.id }"
+            />
+          </button>
+          <button
+            type="button"
+            class="boton boton-secundario boton-chico"
+            title="Editar indicador"
+            @click="indicadorEditando = ind"
+          >
+            <span class="pictograma-editar" />
+          </button>
           <button type="button" class="boton boton-secundario boton-chico" @click="quitar(ind.id)">
             <span class="pictograma-eliminar" />
           </button>
@@ -90,11 +139,20 @@ function alCrear() {
       </li>
     </ul>
 
+    <p v-if="mensajeRecalculo" class="repo-indicadores__feedback">{{ mensajeRecalculo }}</p>
+
     <TablerosAdminModalNuevoIndicador
       v-if="mostrarModalNuevo"
       :site-id="siteId"
       @creado="alCrear"
       @cerrar="mostrarModalNuevo = false"
+    />
+
+    <TablerosAdminFormularioIndicador
+      v-if="indicadorEditando"
+      :indicador="indicadorEditando"
+      @guardado="alGuardarEdicion"
+      @cerrar="indicadorEditando = null"
     />
   </div>
 </template>
@@ -121,6 +179,8 @@ function alCrear() {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.4rem;
     background: var(--color-fondo-1, #ffffff);
@@ -138,6 +198,21 @@ function alCrear() {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+
+    strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__acciones {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
   }
 
   &__estado {
@@ -150,6 +225,29 @@ function alCrear() {
       background: #2e7d32;
       color: white;
     }
+  }
+
+  &__feedback {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    background: var(--color-fondo-2, #f5f5f5);
+    border: 1px solid var(--color-neutro-2, #e0e0e0);
+  }
+
+  &__spin {
+    display: inline-block;
+    animation: girar 0.8s linear infinite;
+  }
+}
+
+@keyframes girar {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

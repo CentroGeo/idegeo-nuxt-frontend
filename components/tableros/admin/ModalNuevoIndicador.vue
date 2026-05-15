@@ -11,7 +11,8 @@ const props = defineProps({
 const emit = defineEmits(['creado', 'cerrar']);
 
 const { data: userData } = useAuth();
-const { crearIndicador, fetchDatasets, fetchDatasetAttributes } = useTableroApi();
+const { crearIndicador, fetchDatasets, fetchDatasetAttributes, syncDatasetAttributes } =
+  useTableroApi();
 
 const modal = ref(null);
 const paso = ref(1);
@@ -41,13 +42,15 @@ const datasetSeleccionado = ref(null);
 const atributosDataset = ref([]);
 const cargandoAtributos = ref(false);
 const errorAtributos = ref(false);
+const sincronizandoAtributos = ref(false);
+const errorSincronizacion = ref('');
 const busquedaInputRef = ref(null);
 
 const GEO_ATTRS = new Set(['the_geom', 'geometry', 'geom', 'wkb_geometry', 'shape']);
 
 let busquedaTimeout = null;
 
-async function buscarDatasets() {
+function buscarDatasets() {
   if (busquedaDataset.value.length < 2) {
     resultadosDataset.value = [];
     return;
@@ -62,8 +65,6 @@ async function buscarDatasets() {
       resultadosDataset.value = [];
     } finally {
       buscandoDataset.value = false;
-      await nextTick();
-      busquedaInputRef.value?.focus();
     }
   }, 350);
 }
@@ -100,6 +101,34 @@ function limpiarDataset() {
   formulario.field_one = '';
   formulario.field_two = '';
   atributosDataset.value = [];
+  errorSincronizacion.value = '';
+}
+
+async function sincronizarAtributos() {
+  if (!datasetSeleccionado.value) return;
+  sincronizandoAtributos.value = true;
+  errorSincronizacion.value = '';
+  try {
+    const data = await syncDatasetAttributes(
+      datasetSeleccionado.value.pk,
+      userData.value?.accessToken
+    );
+    if (data?.attributes?.length) {
+      atributosDataset.value = data.attributes.filter((a) => !GEO_ATTRS.has(a.attribute));
+    } else if (data?.error === 'wfs_no_disponible') {
+      errorSincronizacion.value =
+        'El servicio WFS remoto no está disponible en este momento. ' +
+        'Inténtalo más tarde o contacta al administrador del recurso.';
+    } else {
+      errorSincronizacion.value =
+        data?.detail || 'No se encontraron atributos en el servicio remoto para esta capa.';
+    }
+  } catch {
+    errorSincronizacion.value =
+      'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.';
+  } finally {
+    sincronizandoAtributos.value = false;
+  }
 }
 
 async function guardar() {
@@ -236,80 +265,89 @@ watch(
 
             <!-- Field pickers (available once a dataset is selected) -->
             <template v-if="datasetSeleccionado">
-              <p v-if="cargandoAtributos" class="formulario-ayuda">Cargando campos...</p>
-
-              <p v-else-if="errorAtributos" class="formulario-ayuda color-error">
-                No se pudieron cargar los campos automáticamente. Escríbelos manualmente.
+              <p v-if="errorAtributos" class="formulario-ayuda color-error">
+                No se pudieron cargar los campos del dataset.
               </p>
+
+              <div
+                v-if="!cargandoAtributos && !errorAtributos && atributosDataset.length === 0"
+                class="sin-atributos-aviso"
+              >
+                <p class="formulario-ayuda">
+                  Este recurso no tiene atributos registrados. Puedes sincronizarlos directamente
+                  desde el servicio de origen.
+                </p>
+                <button
+                  type="button"
+                  class="boton boton-secundario boton-chico"
+                  :disabled="sincronizandoAtributos"
+                  @click="sincronizarAtributos"
+                >
+                  {{ sincronizandoAtributos ? 'Sincronizando...' : 'Sincronizar atributos' }}
+                </button>
+                <p v-if="errorSincronizacion" class="formulario-ayuda color-error m-t-1">
+                  {{ errorSincronizacion }}
+                </p>
+              </div>
 
               <div class="m-b-2">
                 <label for="ind-field-id">Campo ID de la geometría</label>
                 <select
-                  v-if="atributosDataset.length"
                   id="ind-field-id"
                   v-model="formulario.layer_id_field"
+                  :disabled="cargandoAtributos || !atributosDataset.length"
                   required
                 >
-                  <option value="" disabled>Selecciona un campo</option>
+                  <option value="" disabled>
+                    {{
+                      cargandoAtributos
+                        ? 'Cargando campos...'
+                        : !atributosDataset.length
+                          ? 'Sin atributos disponibles'
+                          : 'Selecciona un campo'
+                    }}
+                  </option>
                   <option v-for="a in atributosDataset" :key="a.attribute" :value="a.attribute">
                     {{ a.attribute }}
                   </option>
                 </select>
-                <input
-                  v-else
-                  id="ind-field-id"
-                  v-model="formulario.layer_id_field"
-                  type="text"
-                  placeholder="Ej: cve_mun"
-                  :disabled="cargandoAtributos"
-                  required
-                />
               </div>
 
               <div class="m-b-2">
                 <label for="ind-field-one">Campo principal a visualizar</label>
                 <select
-                  v-if="atributosDataset.length"
                   id="ind-field-one"
                   v-model="formulario.field_one"
+                  :disabled="cargandoAtributos || !atributosDataset.length"
                   required
                 >
-                  <option value="" disabled>Selecciona un campo</option>
+                  <option value="" disabled>
+                    {{
+                      cargandoAtributos
+                        ? 'Cargando campos...'
+                        : !atributosDataset.length
+                          ? 'Sin atributos disponibles'
+                          : 'Selecciona un campo'
+                    }}
+                  </option>
                   <option v-for="a in atributosDataset" :key="a.attribute" :value="a.attribute">
                     {{ a.attribute }} ({{ a.attribute_type }})
                   </option>
                 </select>
-                <input
-                  v-else
-                  id="ind-field-one"
-                  v-model="formulario.field_one"
-                  type="text"
-                  placeholder="Ej: poblacion_total"
-                  :disabled="cargandoAtributos"
-                  required
-                />
               </div>
 
               <div class="m-b-2">
                 <label for="ind-field-two">Campo secundario (opcional)</label>
                 <select
-                  v-if="atributosDataset.length"
                   id="ind-field-two"
                   v-model="formulario.field_two"
+                  :disabled="cargandoAtributos || !atributosDataset.length"
                 >
                   <option value="">— ninguno —</option>
                   <option v-for="a in atributosDataset" :key="a.attribute" :value="a.attribute">
                     {{ a.attribute }} ({{ a.attribute_type }})
                   </option>
                 </select>
-                <input
-                  v-else
-                  id="ind-field-two"
-                  v-model="formulario.field_two"
-                  type="text"
-                  placeholder="Opcional"
-                  :disabled="cargandoAtributos"
-                />
               </div>
             </template>
           </section>
@@ -426,6 +464,17 @@ watch(
   input {
     width: 100%;
   }
+}
+
+.sin-atributos-aviso {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 10px 12px;
+  border: 1px dashed var(--color-borde, #ccc);
+  border-radius: 4px;
+  background: var(--color-fondo-2, #f5f5f5);
+  margin-bottom: 1rem;
 }
 
 .dataset-resultados {

@@ -117,8 +117,9 @@ async function guardar() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   cargarDesdeCuadro();
+  await nextTick();
   modal.value?.abrirModal();
 });
 </script>

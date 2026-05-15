@@ -2,6 +2,8 @@
 definePageMeta({ layout: 'tableros' });
 
 const route = useRoute();
+const { status } = useAuth();
+const estaLogueado = computed(() => status.value === 'authenticated');
 const { fetchSitio, fetchSitioPorUrl, fetchGrupos, fetchDatosSeleccion, fetchDatosIndicador } =
   useTableroApi();
 
@@ -10,6 +12,8 @@ const sitio = reactive({
   datos: null,
   error: null,
 });
+
+const esModoPreview = ref(false); // true cuando se accede por ID numérico
 
 const grupos = ref([]);
 const grupoActivo = ref(null);
@@ -46,15 +50,25 @@ async function cargarSitio() {
   sitio.error = null;
 
   try {
-    const paramSitio = route.params.sitio;
-    const esNumerico = /^\d+$/.test(paramSitio);
+    // Con ruta catch-all, params.sitio es un array: ['5'] o ['dashboard', 'posgrados']
+    const paramRaw = route.params.sitio;
+    const paramStr = Array.isArray(paramRaw) ? paramRaw.join('/') : String(paramRaw);
+    const esNumerico = /^\d+$/.test(paramStr);
+    esModoPreview.value = esNumerico;
 
     const datos = esNumerico
-      ? await fetchSitio(Number(paramSitio))
-      : await fetchSitioPorUrl(paramSitio);
+      ? await fetchSitio(Number(paramStr))
+      : await fetchSitioPorUrl(paramStr);
 
     if (!datos) {
       sitio.error = 'Tablero no encontrado.';
+      sitio.cargando = false;
+      return;
+    }
+
+    // Tablero privado: solo el propietario puede verlo
+    if (!datos.is_public && !datos.is_owner) {
+      sitio.error = 'Este tablero es privado y no tienes acceso.';
       sitio.cargando = false;
       return;
     }
@@ -153,9 +167,22 @@ cargarSitio();
 
     <div v-else-if="sitio.error" class="tablero-pagina__error">
       <p class="h3">{{ sitio.error }}</p>
+      <NuxtLink v-if="!estaLogueado" to="/auth/login" class="boton boton-primario m-t-2">
+        Iniciar sesión
+      </NuxtLink>
     </div>
 
     <template v-else-if="sitio.datos">
+      <NuxtLink
+        v-if="esModoPreview && sitio.datos?.is_owner && sitio.datos?.id"
+        :to="`/geocontenidos/tableros/${sitio.datos.id}`"
+        class="tablero-pagina__boton-editar"
+        title="Editar tablero"
+      >
+        <span class="pictograma-editar m-r-1" />
+        Editar tablero
+      </NuxtLink>
+
       <TablerosEncabezado :sitio="sitio.datos" />
 
       <TablerosNavGrupos :grupos="grupos" :activo="grupoActivo" @seleccionar="cambiarGrupo" />
@@ -221,6 +248,31 @@ cargarSitio();
     color: var(--tablero-interface-text, inherit);
     font-size: 0.9rem;
     min-width: 250px;
+  }
+
+  &__boton-editar {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #691c32;
+    color: #ffffff;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition:
+      background 0.15s,
+      box-shadow 0.15s;
+
+    &:hover {
+      background: #4e1525;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
   }
 }
 </style>

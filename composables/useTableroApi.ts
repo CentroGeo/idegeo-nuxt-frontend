@@ -95,6 +95,14 @@ export function useTableroApi() {
     fetchDatasetAttributes: (id: number) =>
       fetchJson(`${config.public.geonodeApi}/datasets/${id}/`),
 
+    syncDatasetAttributes: (id: number, token?: string | null) =>
+      jsonRequest(
+        `${config.public.geonodeApi}/sigic-remote-datasets/${id}/sync-attributes/`,
+        'POST',
+        {},
+        token
+      ),
+
     // ---------- Site configuration ----------
     fetchConfigSitio: (siteId: number) => fetchJson(`${baseUrl}/site-configs/${siteId}/`),
 
@@ -185,6 +193,9 @@ export function useTableroApi() {
 
     eliminarIndicador: (id: number, token?: string | null) =>
       deleteRequest(`${baseUrl}/indicators/${id}/`, token),
+
+    recalcularIndicador: (id: number, token?: string | null) =>
+      jsonRequest(`${baseUrl}/indicators/${id}/recompute/`, 'POST', {}, token),
 
     construirDatosIndicador: (id: number, datos: unknown, token?: string | null) =>
       jsonRequest(`${baseUrl}/indicators/${id}/build-data/`, 'POST', datos, token),

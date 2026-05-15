@@ -1,6 +1,7 @@
 <script setup>
 definePageMeta({ middleware: 'auth' });
 
+const route = useRoute();
 const { data: session } = useAuth();
 const token = computed(() => session.value?.accessToken);
 const {
@@ -9,6 +10,7 @@ const {
   updateSchema,
   previewGeo,
   importToGeonode,
+  finalizeLayer,
   createTablero,
   fetchCategories,
 } = useDataImporter();
@@ -43,6 +45,7 @@ const metaLicencia = ref('');
 const metaCategoria = ref('');
 const metaAtribucion = ref('');
 const styleSpecs = ref([]);
+const defaultStyleCol = ref('');
 
 const GEOCONTENIDOS = [
   {
@@ -50,6 +53,13 @@ const GEOCONTENIDOS = [
     label: 'Tablero de datos',
     descripcion: 'Indicadores con mapas, gráficas y tarjetas de resumen',
     pictograma: 'pictograma-mapa-generador',
+    disponible: true,
+  },
+  {
+    id: 'capa',
+    label: 'Solo la capa',
+    descripcion: 'Publica la capa en el catálogo sin crear un geocontenido adicional',
+    pictograma: 'pictograma-archivo-subir',
     disponible: true,
   },
   {
@@ -77,6 +87,7 @@ const GEOCONTENIDOS = [
 
 const tipoGeocont = ref('tablero');
 const siteIdCreado = ref(null);
+const datasetCreado = ref(null); // { dataset_id, alternate } para el caso 'capa'
 
 // ------------------------------------------------------------------
 // Paso 1: Subir archivo
@@ -224,9 +235,29 @@ async function esperarImportacion() {
 // ------------------------------------------------------------------
 async function crearGeocont() {
   if (!job.value) return;
+  error.value = '';
+
+  if (tipoGeocont.value === 'capa') {
+    if (!metaNombre.value.trim()) {
+      error.value = 'El nombre de la capa es requerido.';
+      return;
+    }
+    if (!metaDescripcion.value.trim()) {
+      error.value = 'El resumen / descripción es requerido.';
+      return;
+    }
+    if (!metaCategoria.value) {
+      error.value = 'La categoría temática es requerida.';
+      return;
+    }
+    if (!metaLicencia.value) {
+      error.value = 'La licencia es requerida.';
+      return;
+    }
+  }
+
   cargando.value = true;
   mensajeCarga.value = 'Creando geocontenido…';
-  error.value = '';
   try {
     if (tipoGeocont.value === 'tablero') {
       const result = await createTablero(
@@ -240,10 +271,27 @@ async function crearGeocont() {
           layer_category: metaCategoria.value,
           layer_attribution: metaAtribucion.value,
           style_specs: styleSpecs.value,
+          default_style_col: defaultStyleCol.value || undefined,
         },
         token.value
       );
       siteIdCreado.value = result.site_id;
+    } else if (tipoGeocont.value === 'capa') {
+      const result = await finalizeLayer(
+        job.value.id,
+        {
+          name: metaNombre.value,
+          layer_abstract: metaDescripcion.value,
+          layer_keywords: metaKeywords.value,
+          layer_license: metaLicencia.value,
+          layer_category: metaCategoria.value,
+          layer_attribution: metaAtribucion.value,
+          style_specs: styleSpecs.value,
+          default_style_col: defaultStyleCol.value || undefined,
+        },
+        token.value
+      );
+      datasetCreado.value = result;
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Error creando geocontenido.';
@@ -254,8 +302,92 @@ async function crearGeocont() {
 
 const PASOS_LABELS = ['Subir archivo', 'Revisar columnas', 'Geografía', 'Metadatos y estilos'];
 
+async function cargarJobExistente(jobId) {
+  cargando.value = true;
+  mensajeCarga.value = 'Cargando job…';
+  error.value = '';
+  let delegaLoaderAlPolling = false;
+  try {
+    const existingJob = await pollJob(jobId, token.value);
+    job.value = existingJob;
+    schema.value = existingJob.column_schema || [];
+    geoStrategy.value = existingJob.geo_strategy || 'none';
+    geoFieldLat.value = existingJob.geo_field_lat || '';
+    geoFieldLon.value = existingJob.geo_field_lon || '';
+    geoFieldJoin.value = existingJob.geo_field_join || '';
+    if (existingJob.original_filename) {
+      metaNombre.value = existingJob.original_filename
+        .replace(/\.[^.]+$/, '')
+        .replace(/[_-]/g, ' ');
+    }
+
+    switch (existingJob.status) {
+      case 'done':
+        fetchCategories(token.value).then((cats) => (categorias.value = cats));
+        cargando.value = false;
+        paso.value = 4;
+        break;
+      case 'ready':
+        cargando.value = false;
+        paso.value = 2;
+        break;
+      case 'importing':
+        mensajeCarga.value = 'Importando datos a GeoNode…';
+        await esperarImportacion();
+        fetchCategories(token.value).then((cats) => (categorias.value = cats));
+        cargando.value = false;
+        paso.value = 4;
+        break;
+      case 'analyzing':
+      case 'pending':
+        // iniciarPolling gestiona cargando por sí mismo al terminar
+        mensajeCarga.value = 'Analizando columnas del archivo…';
+        delegaLoaderAlPolling = true;
+        iniciarPolling();
+        break;
+      case 'error':
+        error.value = existingJob.error_message || 'El job terminó con un error.';
+        break;
+      default:
+        error.value = `Estado inesperado del job: ${existingJob.status}`;
+    }
+  } catch (e) {
+    error.value =
+      e instanceof Error
+        ? e.message
+        : 'No se pudo cargar el job. Verifica que el enlace sea correcto.';
+  } finally {
+    if (!delegaLoaderAlPolling) cargando.value = false;
+  }
+}
+
+onMounted(() => {
+  const jobIdParam = route.query.job;
+  if (!jobIdParam) return;
+  // Cuando viene de cargar-archivos el tipo por defecto es 'capa'
+  tipoGeocont.value = 'capa';
+
+  if (token.value) {
+    cargarJobExistente(Number(jobIdParam));
+  } else {
+    // Token no disponible aún (hidratación SSR): esperar a que esté listo
+    const stop = watch(token, (t) => {
+      if (t) {
+        stop();
+        cargarJobExistente(Number(jobIdParam));
+      }
+    });
+  }
+});
+
 onUnmounted(() => {
   if (pollingTimer) clearInterval(pollingTimer);
+});
+
+onErrorCaptured((err) => {
+  error.value = `Error al renderizar el paso: ${err instanceof Error ? err.message : String(err)}`;
+  cargando.value = false;
+  return false;
 });
 </script>
 
@@ -337,8 +469,15 @@ onUnmounted(() => {
           <div v-if="previewResult" class="m-t-2">
             <div v-if="previewResult.ok" class="alerta alerta-exito">
               <span class="pictograma-exito" />
-              {{ previewResult.matched }} de {{ previewResult.total }} registros tienen geometría
-              asignada.
+              <template v-if="previewResult.total > previewResult.sample_size">
+                Muestra verificada: {{ previewResult.matched }} de
+                {{ previewResult.sample_size }} registros tienen geometría válida (muestra de
+                {{ previewResult.total }} totales).
+              </template>
+              <template v-else>
+                {{ previewResult.matched }} de {{ previewResult.total }} registros tienen geometría
+                asignada.
+              </template>
             </div>
             <div v-else class="alerta alerta-error">
               <span class="pictograma-alerta" />
@@ -357,7 +496,7 @@ onUnmounted(() => {
 
       <!-- ========== PASO 4: Metadatos, estilos y geocontenido ========== -->
       <div v-if="paso === 4">
-        <div v-if="!siteIdCreado">
+        <div v-if="!siteIdCreado && !datasetCreado">
           <!-- Metadatos de la capa -->
           <ImportadorMetadatos
             :nombre="metaNombre"
@@ -367,6 +506,7 @@ onUnmounted(() => {
             :categoria="metaCategoria"
             :atribucion="metaAtribucion"
             :categorias="categorias"
+            :requeridos="tipoGeocont === 'capa'"
             @update:nombre="metaNombre = $event"
             @update:descripcion="metaDescripcion = $event"
             @update:keywords="metaKeywords = $event"
@@ -380,7 +520,9 @@ onUnmounted(() => {
             :schema="schema"
             :geo-strategy="geoStrategy"
             :specs="styleSpecs"
+            :default-col="defaultStyleCol"
             @update:specs="styleSpecs = $event"
+            @update:default-col="defaultStyleCol = $event"
           />
 
           <hr class="m-y-4" />
@@ -427,16 +569,31 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Creado exitosamente -->
-        <div v-else class="texto-centrado p-4">
+        <!-- Tablero creado exitosamente -->
+        <div v-else-if="siteIdCreado" class="texto-centrado p-4">
           <span class="pictograma-exito pictograma-grande texto-color-exito" />
-          <h3 class="m-t-2">¡Geocontenido creado!</h3>
+          <h3 class="m-t-2">¡Tablero creado!</h3>
           <p class="texto-color-secundario m-b-4">
             Tu tablero fue generado con los indicadores y estilos configurados. Puedes
             personalizarlo en el editor.
           </p>
           <NuxtLink :to="`/geocontenidos/tableros/${siteIdCreado}`" class="boton boton-primario">
             Ir al editor del tablero
+          </NuxtLink>
+        </div>
+
+        <!-- Capa publicada exitosamente -->
+        <div v-else-if="datasetCreado" class="texto-centrado p-4">
+          <span class="pictograma-exito pictograma-grande texto-color-exito" />
+          <h3 class="m-t-2">¡Capa publicada!</h3>
+          <p class="texto-color-secundario m-b-4">
+            La capa fue publicada en el catálogo con los metadatos y estilos configurados.
+          </p>
+          <NuxtLink
+            :to="`/consulta/capas?capas=${datasetCreado.dataset_id}`"
+            class="boton boton-primario"
+          >
+            Ver en el visualizador
           </NuxtLink>
         </div>
       </div>
