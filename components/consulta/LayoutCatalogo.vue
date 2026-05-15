@@ -100,7 +100,7 @@ async function buildCategoriesDict() {
   }
   if (Object.keys(categoriesDict.value).length > 0) {
     orderedCategories.value = Object.keys(categoriesDict.value).sort((a, b) =>
-      categoriesInSpanish[a].localeCompare(categoriesInSpanish[b])
+      (categoriesInSpanish[a] ?? a).localeCompare(categoriesInSpanish[b] ?? b)
     );
   } else {
     orderedCategories.value = [];
@@ -380,7 +380,12 @@ onMounted(async () => {
       </div>
       <!--Spinner general-->
       <div v-if="isLoading" class="flex flex-contenido-centrado m-t-3">
-        <img class="color-invertir" src="/img/loader.gif" alt="...Cargando" height="120px" />
+        <img
+          class="color-invertir"
+          :src="`${$config.app.baseURL}img/loader.gif`"
+          alt="...Cargando"
+          height="120px"
+        />
       </div>
 
       <!--Si no hay resultados que coincidan con la busqueda-->
@@ -444,7 +449,7 @@ onMounted(async () => {
           >
             <img
               class="color-invertir m-y-2"
-              src="/img/loader.gif"
+              :src="`${$config.app.baseURL}img/loader.gif`"
               alt="...Cargando"
               height="40px"
             />

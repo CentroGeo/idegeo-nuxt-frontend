@@ -24,6 +24,7 @@ const obtenerMasRecientes = (type) => {
   return computed(() => storeResources.resourcesByType(type) || [{}]);
 };
 
+const config = useRuntimeConfig();
 const isLoading = ref(true);
 const capasMasRecientes = obtenerMasRecientes('dataLayer');
 
@@ -75,14 +76,12 @@ watch(
         <div class="contenedor ancho-lectura texto-centrado m-b-10">
           <h2>¿Qué es SIGIC?</h2>
           <p>
-            SIGIC permite articular información estructurada de las ciencias, humanidades,
-            tecnologías e innovación en un ecosistema digital que impulsa la toma de decisiones, el
-            entendimiento territorial y la generación de nuevo conocimiento.
-          </p>
-          <p>
-            Con módulos para visualizar capas, generar mapas, cargar información propia y aprovechar
-            inteligencia artificial, SIGIC ofrece herramientas clave para investigar, planear y
-            actuar con base en datos.
+            SIGIC es la plataforma digital de la Secretaría de Ciencia y Tecnología y desarrollada
+            en colaboración con CentroGeo para consultar, visualizar y analizar información
+            científica y territorial de México. Reúne datos abiertos, capas geográficas, documentos
+            y herramientas de inteligencia artificial en un solo lugar, para que investigadores,
+            tomadores de decisiones y público en general puedan explorar el conocimiento generado
+            por el sistema nacional de ciencia y tecnología.
           </p>
         </div>
         <div class="contenedor ancho-fijo">
@@ -93,8 +92,10 @@ watch(
                 <div class="tarjeta-cuerpo">
                   <p class="tarjeta-titulo">Visualiza información territorial</p>
                   <p>
-                    Explora capas, datos y documentos desde una interfaz intuitiva. Filtra, consulta
-                    y combina fuentes para generar mapas listos para descargar.
+                    Explora mapas interactivos con capas de información geográfica: datos
+                    económicos, límites administrativos, de infraestructura, población y más. Filtra
+                    por región, tema o periodo, combina fuentes y descarga tus mapas en formatos
+                    estándar.
                   </p>
                 </div>
                 <div class="tarjeta-pie">
@@ -110,8 +111,9 @@ watch(
                 <div class="tarjeta-cuerpo">
                   <p class="tarjeta-titulo">Analiza con Inteligencia Artificial</p>
                   <p>
-                    Crea proyectos, define contextos y conversa con tus datos en lenguaje natural.
-                    La IA de SIGIC analiza, resume y entrega respuestas claras al instante.
+                    Crea un proyecto de análisis, sube tus documentos o selecciona fuentes del
+                    catálogo SIGIC, y haz preguntas en lenguaje natural. La IA lee, compara y resume
+                    la información para darte respuestas con referencias a las fuentes originales
                   </p>
                 </div>
                 <div class="tarjeta-pie">
@@ -127,8 +129,9 @@ watch(
                 <div class="tarjeta-cuerpo">
                   <p class="tarjeta-titulo">Explora los recursos disponibles</p>
                   <p>
-                    Explora capas, tablas y documentos en un solo lugar. Accede a tus archivos y a
-                    los públicos, ordénalos por tipo o fecha y encuentra rápidamente lo que buscas.
+                    Consulta el catálogo completo de recursos del SIGIC: capas geográficas, tablas
+                    de datos, documentos de investigación y otros servicios remotos. Busca por tema,
+                    institución, fecha o tipo de recurso, y descarga lo que necesites.
                   </p>
                 </div>
                 <div class="tarjeta-pie">
@@ -144,8 +147,11 @@ watch(
                 <div class="tarjeta-cuerpo">
                   <p class="tarjeta-titulo">Usa tu propia información</p>
                   <p>
-                    Carga tus capas, tablas o documentos y publícalos en el catálogo. Georreferencia
-                    fácilmente y usa tus datos en mapas, proyectos o análisis dentro de SIGIC.
+                    Sube tus archivos con información geográfica o científica, y úsalos directamente
+                    en el visualizador o en tus proyectos de análisis con IA. Sin necesidad de
+                    herramientas externas, puedes integrar tus datos al ecosistema SIGIC y
+                    aprovechar sus funcionalidades para explorar, analizar o compartir tu
+                    información.
                   </p>
                 </div>
                 <div class="tarjeta-pie">
@@ -175,9 +181,13 @@ watch(
                 />
               </picture>
               <p>
-                Consulta capas, tablas y documentos que puedes combinar fácilmente para entender
-                patrones espaciales, fenómenos sociales o contextos específicos con la información
-                científica del país.
+                Permite superponer múltiples capas temáticas del catálogo SIGIC sobre un mapa base,
+                aplicar filtros por región y periodo, y exportar el resultado. Cabe resaltar que no
+                es un sistema GIS en su totalidad; está orientado a consulta y visualización, no a
+                edición avanzada de geometrías. Admite capas vectoriales (shapefile, GeoJSON) y
+                tabulares con coordenadas (CSV con latitud/longitud). Las capas públicas del
+                catálogo son de libre consulta; para subir capas propias o guardar mapas, se
+                requiere una cuenta SIGIC activa.
               </p>
             </div>
             <div class="columna-8">
@@ -203,10 +213,12 @@ watch(
                 <img loading="lazy" class="oculto-esc" src="/inicio/imagenprofundizar.png" alt="" />
               </picture>
               <p>
-                Organiza la información en proyectos temáticos y analiza tus datos mediante
-                consultas en lenguaje natural. La IA del SIGIC te ayuda a interpretar contextos
-                complejos, generar síntesis, encontrar conexiones clave y preparar reportes
-                descargables en formato PDF.
+                La IA puede resumir documentos, comparar contenidos entre fuentes, extraer datos
+                clave y responder preguntas sobre la información que el usuario le proporcione
+                dentro de un proyecto. Las respuestas incluyen referencias a los párrafos o
+                secciones de origen. Admite documentos PDF, archivos de texto (.txt) y tablas
+                (.csv). Se requiere una cuenta SIGIC activa y el uso de la IA está sujeto a
+                disponibilidad del servicio..
               </p>
             </div>
           </div>
@@ -222,9 +234,13 @@ watch(
                 />
               </picture>
               <p>
-                Sube información en distintos formatos, agrégale un componente geográfico y úsala
-                directamente en tus proyectos de IA, análisis o visualizaciones sin necesidad de
-                herramientas externas.
+                Permite cargar archivos al espacio personal del usuario, georreferenciar tablas con
+                coordenadas y publicar recursos en el catálogo público para que otros usuarios los
+                consulten. Los archivos subidos quedan disponibles para su uso en los módulos de
+                visualización y de IA. Admite capas (GeoJSON, Geopaquetes), tablas (CSV con o sin
+                coordenadas) y documentos (.pdf, .txt). La georreferenciación automática solo
+                funciona con tablas que contengan columnas de latitud y longitud en formato decimal.
+                Se requiere cuenta SIGIC activa.
               </p>
             </div>
             <div class="columna-8">
@@ -250,9 +266,13 @@ watch(
                 <img loading="lazy" class="oculto-esc" src="/inicio/imagentener.png" alt="" />
               </picture>
               <p>
-                Accede fácilmente a todos tus archivos personales o a datos públicos desde un solo
-                catálogo. Filtra por tipo, tema o fecha, y encuentra lo que necesitas con el
-                buscador integrado.
+                El catálogo permite buscar, filtrar y previsualizar todos los recursos públicos del
+                SIGIC, así como los archivos privados del usuario. Incluye metadatos (autor, fecha,
+                descripción, institución de origen, licencia, entre otros) para facilitar la
+                búsqueda. Ofrece capas geográficas (Geopaquetes, GeoJSON), tablas de datos (csv) y
+                documentos (pdf), organizados por temática. La consulta del catálogo público es
+                libre y no requiere cuenta; para acceder a recursos restringidos o descargar en
+                formatos avanzados, se requiere iniciar sesión.
               </p>
             </div>
           </div>
@@ -298,7 +318,12 @@ watch(
         </div>
         <div class="contenedor ancho-fijo">
           <div v-if="isLoading" class="flex flex-contenido-centrado m-t-3">
-            <img class="color-invertir" src="/img/loader.gif" alt="...Cargando" height="120px" />
+            <img
+              class="color-invertir"
+              :src="`${config.app.baseURL}img/loader.gif`"
+              alt="...Cargando"
+              height="120px"
+            />
           </div>
           <div v-if="!isLoading" class="flex">
             <div v-for="(capa, i) in capasMasRecientes" :key="i" class="columna-4">

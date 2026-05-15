@@ -11,6 +11,7 @@ definePageMeta({
   },
 });
 
+const config = useRuntimeConfig();
 const campoTipo = ref('');
 const campoURL = ref('');
 const campoNombre = ref('');
@@ -74,27 +75,15 @@ function irAImportarRecursos() {
 
 async function validateUrl() {
   const serverType = campoURL.value.toLowerCase().includes('arcgis') ? 'arcgis' : 'ogc';
-  const url =
-    serverType === 'arcgis'
-      ? `${campoURL.value}?f=json`
-      : `${campoURL.value}?service=WMS&request=GetCapabilities`;
-  let isValid;
-
   try {
-    const fetchUrl = await fetch(url);
-    if (!fetchUrl.ok) {
-      isValid = false;
-    } else if (serverType === 'arcgis') {
-      const res = await fetchUrl.json();
-      isValid = res.capabilities.includes('Map') || res.capabilities.includes('Image');
-    } else {
-      const res = await fetchUrl.text();
-      isValid = res.includes('GetMap');
-    }
+    const { isValid } = await $fetch('/api/validar-url', {
+      method: 'POST',
+      body: { url: campoURL.value, serverType },
+    });
+    return isValid;
   } catch {
-    isValid = false;
+    return false;
   }
-  return isValid;
 }
 
 async function registrar() {
@@ -109,13 +98,9 @@ async function registrar() {
       // Hacemos la validación de la url
       const isUrlValid = await validateUrl();
       if (isUrlValid) {
-        const { data } = useAuth();
-        const token = data.value?.accessToken;
-
         // Creamos la conexión
         const { responseStatus, message } = await $fetch('/api/registrar-servicio', {
           method: 'POST',
-          headers: { token: token },
           body: {
             url: campoURL.value,
             type: campoTipo.value,
@@ -217,7 +202,12 @@ onMounted(() => {
 
             <!--Validación-->
             <div v-if="isLoading" class="flex flex-contenido-centrado m-y-2">
-              <img class="color-invertir" src="/img/loader.gif" alt="...Cargando" height="40px" />
+              <img
+                class="color-invertir"
+                :src="`${config.app.baseURL}img/loader.gif`"
+                alt="...Cargando"
+                height="40px"
+              />
             </div>
             <p
               v-if="error"
@@ -268,7 +258,11 @@ onMounted(() => {
             class="flex flex-contenido-inicio texto-color-informacion fondo-color-informacion p-1 borde borde-color-informacion borde-redondeado-8"
           >
             <div class="flex-vertical-centrado columna-2">
-              <img src="/img/loader.gif" alt="...Cargando" class="loader color-invertir" />
+              <img
+                :src="`${config.app.baseURL}img/loader.gif`"
+                alt="...Cargando"
+                class="loader color-invertir"
+              />
             </div>
             <p class="columna-14">
               Estamos obteniendo los recursos del catálogo registrado. Este proceso puede demorar

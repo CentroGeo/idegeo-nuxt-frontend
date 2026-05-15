@@ -16,10 +16,11 @@ import { categoriesInSpanish, resourceTypeDic, tooltipContent } from '~/utils/co
 
 const storeConsulta = useConsultaStore();
 storeConsulta.resourceType = resourceTypeDic.dataLayer;
+const config = useRuntimeConfig();
 
 const storeCatalogo = useResourcesCatalogoStore();
 const { gnoxyFetch } = useGnoxyUrl();
-const { findServer, hasWFS, getSLDs } = useResourcesSupplements();
+const { getLayerName, findServer, hasWFS, getSLDs } = useResourcesSupplements();
 const route = useRoute();
 const selectedPk = route.query.pk;
 const isLoading = ref(true);
@@ -150,7 +151,7 @@ onMounted(async () => {
             <SisdaiCapaWms
               v-if="serverType === 'ogc'"
               :key="`wms-${resourceElement.pk}`"
-              :capa="resourceElement.alternate"
+              :capa="getLayerName(resourceElement)"
               :consulta="gnoxyFetch"
               :fuente="findServer(resourceElement)"
               :mosaicos="true"
@@ -162,7 +163,7 @@ onMounted(async () => {
               v-if="serverType === 'arcgis'"
               :key="`arcgis-${resourceElement.pk}`"
               :fuente="findServer(resourceElement).replace('?', '')"
-              :capa="resourceElement.alternate.split(':')[1]"
+              :capa="getLayerName(resourceElement).split(':')[1]"
               :mosaicos="true"
               :opacidad="layerOpacity / 100"
             />
@@ -240,7 +241,7 @@ onMounted(async () => {
                       v-if="serverType === 'ogc'"
                       :consulta="gnoxyFetch"
                       :fuente="findServer(resourceElement).replace('?', '')"
-                      :nombre="resourceElement.alternate"
+                      :nombre="getLayerName(resourceElement)"
                       :titulo="resourceElement.title || 'cargando...'"
                       :estilo="selectedStyle"
                       :sin-control="true"
@@ -252,7 +253,7 @@ onMounted(async () => {
                       :sin-control="true"
                       :sin-control-clases="true"
                       :titulo="resourceElement.title || 'cargando...'"
-                      :capa="resourceElement.alternate.split(':')[1]"
+                      :capa="getLayerName(resourceElement).split(':')[1]"
                       :fuente="findServer(resourceElement).replace('?', '')"
                     />
                   </div>
@@ -292,6 +293,10 @@ onMounted(async () => {
               ref="tablaChild"
               :key="`tabla_${resourceElement.pk}_${'dataLayer'}`"
               :selected-element="resourceElement"
+              @notify-download="
+                tablaChild.cerrarModalTabla();
+                downloadOneChild.abrirModalDescarga();
+              "
             />
 
             <!-- Modal opacidad -->
@@ -347,7 +352,11 @@ onMounted(async () => {
   </div>
   <div v-else class="flex flex-contenido-centrado">
     <figure>
-      <img class="color-invertir" src="/img/loader.gif" alt="Loader de SIGIC" />
+      <img
+        class="color-invertir"
+        :src="`${config.app.baseURL}img/loader.gif`"
+        alt="Loader de SIGIC"
+      />
       <figcaption class="texto-centrado">Cargando Capa Geográfica</figcaption>
     </figure>
   </div>

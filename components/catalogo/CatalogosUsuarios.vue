@@ -28,13 +28,51 @@ const statusDict = {
   'updating-harvestable-resources': 'Listando recursos',
   'harvesting-resources': 'Cosechando recursos',
 };
+const retryingId = ref(null);
+const retryError = ref(null);
+
+async function retryHarvester(serviceId) {
+  retryingId.value = serviceId;
+  retryError.value = null;
+  try {
+    const result = await $fetch('/api/retry-harvesting', {
+      method: 'POST',
+      body: { serviceId },
+    });
+    if (!result.success) {
+      retryError.value = result.message;
+      retryingId.value = null;
+      return;
+    }
+    // Esperar a que el harvester termine (status === 'ready') antes de refrescar
+    const POLL_INTERVAL = 4000;
+    const MAX_WAIT = 120000;
+    const start = Date.now();
+    await new Promise((resolve) => {
+      const poll = async () => {
+        await fetchResources();
+        const harvester = harvesters.value.find((h) => h.service_id === serviceId);
+        if (!harvester || harvester.status === 'ready' || Date.now() - start > MAX_WAIT) {
+          resolve();
+        } else {
+          setTimeout(poll, POLL_INTERVAL);
+        }
+      };
+      setTimeout(poll, POLL_INTERVAL);
+    });
+  } catch {
+    retryError.value = 'No se pudo reintentar la cosecha';
+  } finally {
+    retryingId.value = null;
+  }
+}
 /**
  * Esta función obtiene el pk de la persona usuaria
  */
 async function getUserInfo() {
   const { data } = useAuth();
   const email = data.value?.user.email;
-  const url = `https://geonode.dev.geoint.mx/api/v2/users/?filter{username}=${email}`;
+  const url = `${config.public.geonodeUrl}/api/v2/users/?filter{username}=${email}`;
   const request = await gnoxyFetch(url);
   if (!request.ok) {
     console.error('No se pudo recuperar la información de usuario');
@@ -49,11 +87,20 @@ async function getUserInfo() {
  */
 async function getTotal() {
   let url;
-  if (inputSearch.value) {
-    url = `${config.public.geonodeApi}/services/?title=${inputSearch.value.trim()}`;
+  if (queryParams.value['owner_id']) {
+    if (inputSearch.value) {
+      url = `${config.public.geonodeApi}/services/?title=${inputSearch.value.trim()}&owner_id=${queryParams.value['owner_id']}`;
+    } else {
+      url = `${config.public.geonodeApi}/services/?owner_id=${queryParams.value['owner_id']}`;
+    }
   } else {
-    url = `${config.public.geonodeApi}/services/`;
+    if (inputSearch.value) {
+      url = `${config.public.geonodeApi}/services/?title=${inputSearch.value.trim()}`;
+    } else {
+      url = `${config.public.geonodeApi}/services/`;
+    }
   }
+
   const requestServices = await gnoxyFetch(url);
   if (!requestServices.ok) {
     const error = await requestServices.json();
@@ -231,7 +278,12 @@ onMounted(async () => {
 
     <!--El spinner general-->
     <div v-if="isLoadingGeneral" class="flex flex-contenido-centrado m-y-5">
-      <img class="color-invertir" src="/img/loader.gif" alt="...Cargando" height="120px" />
+      <img
+        class="color-invertir"
+        :src="`${config.app.baseURL}img/loader.gif`"
+        alt="...Cargando"
+        height="120px"
+      />
     </div>
 
     <!--Si aun no hay servicios catgados por usuarios-->
@@ -256,7 +308,12 @@ onMounted(async () => {
       v-if="!isLoadingGeneral && isLoadingPage && harvesters.length === 0"
       class="flex flex-contenido-centrado m-y-5"
     >
-      <img class="color-invertir" src="/img/loader.gif" alt="...Cargando" height="120px" />
+      <img
+        class="color-invertir"
+        :src="`${config.app.baseURL}img/loader.gif`"
+        alt="...Cargando"
+        height="120px"
+      />
     </div>
     <!--La tabla de servicios remotos-->
     <div
@@ -285,11 +342,21 @@ onMounted(async () => {
               >
                 {{ statusDict[harvester.status] }}
               </div>
-              <div
-                v-else
-                class="texto-color-alerta texto-centrado fondo-color-alerta borde borde-color-alerta borde-redondeado-8 p-1"
-              >
-                {{ statusDict[harvester.status] }}
+              <div v-else>
+                <div
+                  class="texto-color-alerta texto-centrado fondo-color-alerta borde borde-color-alerta borde-redondeado-8 p-1"
+                >
+                  {{ statusDict[harvester.status] || harvester.status }}
+                </div>
+                <button
+                  class="boton-secundario boton-chico m-t-1"
+                  style="width: 100%"
+                  :disabled="retryingId === harvester.service_id"
+                  @click="retryHarvester(harvester.service_id)"
+                >
+                  <span v-if="retryingId === harvester.service_id">Reintentando...</span>
+                  <span v-else>Reintentar cosecha</span>
+                </button>
               </div>
             </td>
             <td>
@@ -304,7 +371,12 @@ onMounted(async () => {
               </nuxt-link>
             </td>
             <td>
-              <a :href="harvester.remote_url" target="_blank" rel="noopener noreferrer">
+              <a
+                :href="harvester.remote_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="break-url"
+              >
                 {{ harvester.remote_url }}
               </a>
             </td>
@@ -312,13 +384,29 @@ onMounted(async () => {
         </tbody>
       </table>
       <div v-if="isLoadingPage" class="flex flex-contenido-centrado m-y-2">
-        <img class="color-invertir" src="/img/loader.gif" alt="...Cargando" height="32px" />
+        <img
+          class="color-invertir"
+          :src="`${config.app.baseURL}img/loader.gif`"
+          alt="...Cargando"
+          height="32px"
+        />
       </div>
       <UiPaginador
         :pagina-parent="paginaActual"
         :total-paginas="totalPags"
         @cambio="paginaActual = $event"
       />
+    </div>
+
+    <!--Mensaje de error al reintentar cosecha-->
+    <div
+      v-if="retryError"
+      class="contenedor ancho-lectura borde-redondeado-16 texto-color-error fondo-color-error p-2 m-2 flex flex-contenido-separado"
+    >
+      <span><span class="pictograma-alerta" /> {{ retryError }}</span>
+      <button class="boton-sin-contenedor-secundario" @click="retryError = null">
+        <span class="pictograma-cerrar" />
+      </button>
     </div>
 
     <!--Mensaje de error si falla la petición-->
@@ -336,5 +424,9 @@ onMounted(async () => {
   background-color: var(--fondo-acento);
   gap: 8px;
   padding: 16px;
+}
+.break-url {
+  word-break: break-all !important;
+  display: inline-block !important;
 }
 </style>

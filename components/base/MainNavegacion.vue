@@ -11,7 +11,6 @@ async function iniciarSesion() {
     callbackUrl: route.fullPath,
   });
 }
-const basePath = config.public.basePath || '';
 const mostrarInicio = computed(() => config.public.defaultPage);
 const mostrarCatalogo = computed(() => config.public.enableCatalogoVista);
 const mostrarConsulta = computed(() => config.public.enableConsulta);
@@ -32,7 +31,7 @@ const mostrarAuth = computed(() => config.public.enableAuth);
           class="nav-hiperviculo-logo"
         >
           <img
-            :src="`${basePath}/img/logo_secihiti.svg`"
+            :src="`${config.app.baseURL}img/logo_secihiti.svg`"
             class="nav-logo color-invertir"
             alt="SECIHITI"
             height="36"
@@ -41,7 +40,7 @@ const mostrarAuth = computed(() => config.public.enableAuth);
 
         <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
           <img
-            :src="`${basePath}/img/logo_sigic.svg`"
+            :src="`${config.app.baseURL}img/logo_sigic.svg`"
             class="nav-logo color-invertir"
             alt="SIGIC"
             height="36"
@@ -54,7 +53,6 @@ const mostrarAuth = computed(() => config.public.enableAuth);
       <li v-if="mostrarInicio">
         <NuxtLink class="nav-hipervinculo" to="/" exact-path>Inicio</NuxtLink>
       </li>
-      <!-- <li><NuxtLink class="nav-hipervinculo" to="/carga">Carga</NuxtLink></li> -->
       <li v-if="mostrarCatalogo">
         <NuxtLink class="nav-hipervinculo" to="/catalogo">Catálogo</NuxtLink>
       </li>
@@ -69,6 +67,9 @@ const mostrarAuth = computed(() => config.public.enableAuth);
       </li>
       <li>
         <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
+      </li>
+      <li>
+        <NuxtLink class="nav-hipervinculo" to="/acerca-de">Acerca de</NuxtLink>
       </li>
       <li v-if="mostrarAuth">
         <NuxtLink v-if="status === 'authenticated'" class="nav-hipervinculo" to="/mi-cuenta">
