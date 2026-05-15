@@ -329,6 +329,7 @@ export function useResourcesSupplements() {
   async function getSLDs(resource) {
     let styleList = [];
     let defaultStyle = null;
+    let styleTitles = {};
 
     try {
       if (resource.sourcetype !== 'REMOTE') {
@@ -336,12 +337,13 @@ export function useResourcesSupplements() {
         const stylesRes = await gnoxyFetch(stylesURL);
 
         if (!stylesRes.ok) {
-          //console.error('Falló la petición de estilos de:', resource.title);
-          return { defaultStyle, styleList };
+          return { defaultStyle, styleList, styleTitles };
         }
 
         const stylesData = await stylesRes.json();
         defaultStyle = stylesData.default_style;
+        styleTitles = stylesData.style_titles || {};
+
         stylesData.styles.forEach((d) => {
           const optionList = d.split(':');
           if (optionList.length > 1 && !styleList.includes(optionList[1])) {
@@ -354,16 +356,15 @@ export function useResourcesSupplements() {
         if (!styleList.includes(defaultStyle)) {
           styleList.push(defaultStyle);
         }
-        return { defaultStyle, styleList };
+        return { defaultStyle, styleList, styleTitles };
       } else {
         const { targetLayerDefaultStyle, targetLayerStyles } = await fetchRemoteStyles(resource);
         defaultStyle = targetLayerDefaultStyle;
         styleList = targetLayerStyles;
-        return { defaultStyle, styleList };
+        return { defaultStyle, styleList, styleTitles };
       }
     } catch {
-      //console.error('Falló la petición general de estilos de:', resource.title);
-      return { defaultStyle, styleList };
+      return { defaultStyle, styleList, styleTitles };
     }
   }
 
