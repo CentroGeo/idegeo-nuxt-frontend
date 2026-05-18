@@ -436,7 +436,8 @@ onMounted(() => {
                   :es_obligatorio="false"
                   class="m-b-3"
                 />
-                <SisdaiGrupoBotonesRadio leyenda="Visibilidad">
+                <!-- OCULTO TEMPORALMENTE: Selección de visibilidad del proyecto -->
+                <!-- <SisdaiGrupoBotonesRadio leyenda="Visibilidad">
                   <SisdaiBotonRadio
                     v-model="visibilidadProyecto"
                     etiqueta="Público"
@@ -449,7 +450,7 @@ onMounted(() => {
                     value="privado"
                     name="visibilidad"
                   />
-                </SisdaiGrupoBotonesRadio>
+                </SisdaiGrupoBotonesRadio> -->
               </ClientOnly>
             </form>
           </div>
