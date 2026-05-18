@@ -463,14 +463,14 @@ onMounted(() => {
               <h2>Agregar fuentes de información</h2>
 
               <div>
-                <button
+                <!-- <button
                   class="boton-pictograma boton-primario m-r-2"
                   aria-label="Agregar fuentes del catalogo"
                   @click="agregarFuentesCatalogo"
                 >
                   Agregar del catálogo
                   <span class="pictograma-agregar" aria-hidden="true" />
-                </button>
+                </button> -->
 
                 <button
                   class="boton-pictograma boton-primario"
@@ -480,6 +480,7 @@ onMounted(() => {
                   Subir archivos
                   <span class="pictograma-archivo-subir" aria-hidden="true" />
                 </button>
+
                 <input
                   ref="fileInput"
                   type="file"
@@ -488,6 +489,9 @@ onMounted(() => {
                   style="display: none"
                   @change="manejarSeleccionArchivos"
                 />
+                <p class="m-y-1 texto-derecha">
+                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                </p>
               </div>
             </div>
 

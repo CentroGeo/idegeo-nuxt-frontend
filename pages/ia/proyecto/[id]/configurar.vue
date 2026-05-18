@@ -1,7 +1,5 @@
 <script setup>
 import SisdaiAreaTexto from '@centrogeomx/sisdai-componentes/src/componentes/area-texto/SisdaiAreaTexto.vue';
-import SisdaiGrupoBotonesRadio from '@centrogeomx/sisdai-componentes/src/componentes/boton-radio-grupo/SisdaiBotonesRadioGrupo.vue';
-import SisdaiBotonRadio from '@centrogeomx/sisdai-componentes/src/componentes/boton-radio/SisdaiBotonRadio.vue';
 import SisdaiCampoBase from '@centrogeomx/sisdai-componentes/src/componentes/campo-base/SisdaiCampoBase.vue';
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
@@ -513,14 +511,14 @@ onBeforeUnmount(() => {
               <h2>Agregar fuentes de información</h2>
 
               <div>
-                <button
+                <!-- <button
                   class="boton-pictograma boton-primario m-r-2"
                   aria-label="Agregar fuentes del catalogo"
                   @click="agregarFuentesCatalogo"
                 >
                   Agregar del catálogo
                   <span class="pictograma-agregar" aria-hidden="true" />
-                </button>
+                </button> -->
 
                 <button
                   class="boton-pictograma boton-primario"
@@ -538,6 +536,9 @@ onBeforeUnmount(() => {
                   style="display: none"
                   @change="manejarSeleccionArchivos"
                 />
+                <p class="m-y-1 texto-derecha">
+                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                </p>
               </div>
             </div>
 
@@ -616,7 +617,7 @@ onBeforeUnmount(() => {
       </main>
 
       <ClientOnly>
-        <SisdaiModal ref="agregaCatalogoModal">
+        <!-- <SisdaiModal ref="agregaCatalogoModal">
           <template #encabezado>
             <h2>Agregar información del catálogo</h2>
           </template>
@@ -845,7 +846,7 @@ onBeforeUnmount(() => {
               Aceptar
             </button>
           </template>
-        </SisdaiModal>
+        </SisdaiModal> -->
 
         <SisdaiModal id="loaderModal" ref="loaderModal">
           <template #encabezado>

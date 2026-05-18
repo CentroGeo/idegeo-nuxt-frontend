@@ -500,7 +500,7 @@ watch(
                       <td class="p-3 etiqueta-tabla">
                         <span class="p-x-1 p-y-minimo">
                           {{
-                            archivo.geonode_type === 'Catalogo' ? 'Catálogo' : archivo.geonode_type
+                            archivo.geonode_type === 'Catalogo' ? 'Propio' : archivo.geonode_type
                           }}
                         </span>
                       </td>
