@@ -125,6 +125,10 @@ export default defineNuxtConfig({
       enableConsulta: process.env.NUXT_PUBLIC_ENABLE_CONSULTA === 'true',
       enableIaa: process.env.NUXT_PUBLIC_ENABLE_IAA === 'true',
       enableLevantamiento: process.env.NUXT_PUBLIC_ENABLE_LEVANTAMIENTO === 'true',
+      enableAcercaDe: process.env.NUXT_PUBLIC_ENABLE_ACERCA_DE === 'true',
+      enableGeocontenidos: process.env.NUXT_PUBLIC_ENABLE_GEOCONTENIDOS === 'true',
+      enableGeohistorias: process.env.NUXT_PUBLIC_ENABLE_GEOHISTORIAS === 'true',
+      enableTableros: process.env.NUXT_PUBLIC_ENABLE_TABLEROS === 'true',
     },
   },
 

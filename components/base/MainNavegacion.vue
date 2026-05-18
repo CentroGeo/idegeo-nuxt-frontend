@@ -17,6 +17,8 @@ const mostrarConsulta = computed(() => config.public.enableConsulta);
 const mostrarIaa = computed(() => config.public.enableIaa);
 const mostrarLevantamiento = computed(() => config.public.enableLevantamiento);
 const mostrarAuth = computed(() => config.public.enableAuth);
+const mostrarAcercaDe = computed(() => config.public.enableAcercaDe);
+const mostrarGeocontenidos = computed(() => config.public.enableGeocontenidos);
 </script>
 
 <template>
@@ -65,10 +67,10 @@ const mostrarAuth = computed(() => config.public.enableAuth);
       <li v-if="mostrarLevantamiento && status === 'authenticated'">
         <NuxtLink class="nav-hipervinculo" to="/levantamiento">Levantamiento</NuxtLink>
       </li>
-      <li>
+      <li v-if="mostrarGeocontenidos">
         <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
       </li>
-      <li>
+      <li v-if="mostrarAcercaDe">
         <NuxtLink class="nav-hipervinculo" to="/acerca-de">Acerca de</NuxtLink>
       </li>
       <li v-if="mostrarAuth">
