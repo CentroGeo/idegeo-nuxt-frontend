@@ -37,6 +37,7 @@ const mostrarAuth = computed(() => config.public.enableAuth);
             height="36"
           />
         </a>
+
         <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
           <img
             :src="`${config.app.baseURL}img/logo_sigic.svg`"
@@ -52,7 +53,6 @@ const mostrarAuth = computed(() => config.public.enableAuth);
       <li v-if="mostrarInicio">
         <NuxtLink class="nav-hipervinculo" to="/" exact-path>Inicio</NuxtLink>
       </li>
-      <!-- <li><NuxtLink class="nav-hipervinculo" to="/carga">Carga</NuxtLink></li> -->
       <li v-if="mostrarCatalogo">
         <NuxtLink class="nav-hipervinculo" to="/catalogo">Catálogo</NuxtLink>
       </li>
@@ -65,10 +65,16 @@ const mostrarAuth = computed(() => config.public.enableAuth);
       <li v-if="mostrarLevantamiento && status === 'authenticated'">
         <NuxtLink class="nav-hipervinculo" to="/levantamiento">Levantamiento</NuxtLink>
       </li>
+      <li>
+        <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
+      </li>
+      <li>
+        <NuxtLink class="nav-hipervinculo" to="/acerca-de">Acerca de</NuxtLink>
+      </li>
       <li v-if="mostrarAuth">
-        <NuxtLink v-if="status === 'authenticated'" class="nav-hipervinculo" to="/mi-cuenta"
-          >Mi cuenta</NuxtLink
-        >
+        <NuxtLink v-if="status === 'authenticated'" class="nav-hipervinculo" to="/mi-cuenta">
+          Mi cuenta
+        </NuxtLink>
 
         <button
           v-else
