@@ -1,7 +1,5 @@
 <script setup>
 import SisdaiAreaTexto from '@centrogeomx/sisdai-componentes/src/componentes/area-texto/SisdaiAreaTexto.vue';
-import SisdaiGrupoBotonesRadio from '@centrogeomx/sisdai-componentes/src/componentes/boton-radio-grupo/SisdaiBotonesRadioGrupo.vue';
-import SisdaiBotonRadio from '@centrogeomx/sisdai-componentes/src/componentes/boton-radio/SisdaiBotonRadio.vue';
 import SisdaiCampoBase from '@centrogeomx/sisdai-componentes/src/componentes/campo-base/SisdaiCampoBase.vue';
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
@@ -538,6 +536,9 @@ onBeforeUnmount(() => {
                   style="display: none"
                   @change="manejarSeleccionArchivos"
                 />
+                <p class="m-y-1 texto-derecha">
+                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                </p>
               </div>
             </div>
 

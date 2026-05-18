@@ -480,6 +480,7 @@ onMounted(() => {
                   Subir archivos
                   <span class="pictograma-archivo-subir" aria-hidden="true" />
                 </button>
+
                 <input
                   ref="fileInput"
                   type="file"
@@ -488,6 +489,9 @@ onMounted(() => {
                   style="display: none"
                   @change="manejarSeleccionArchivos"
                 />
+                <p class="m-y-1 texto-derecha">
+                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                </p>
               </div>
             </div>
 
