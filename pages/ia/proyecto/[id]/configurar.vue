@@ -513,14 +513,14 @@ onBeforeUnmount(() => {
               <h2>Agregar fuentes de información</h2>
 
               <div>
-                <button
+                <!-- <button
                   class="boton-pictograma boton-primario m-r-2"
                   aria-label="Agregar fuentes del catalogo"
                   @click="agregarFuentesCatalogo"
                 >
                   Agregar del catálogo
                   <span class="pictograma-agregar" aria-hidden="true" />
-                </button>
+                </button> -->
 
                 <button
                   class="boton-pictograma boton-primario"
@@ -616,7 +616,7 @@ onBeforeUnmount(() => {
       </main>
 
       <ClientOnly>
-        <SisdaiModal ref="agregaCatalogoModal">
+        <!-- <SisdaiModal ref="agregaCatalogoModal">
           <template #encabezado>
             <h2>Agregar información del catálogo</h2>
           </template>
@@ -845,7 +845,7 @@ onBeforeUnmount(() => {
               Aceptar
             </button>
           </template>
-        </SisdaiModal>
+        </SisdaiModal> -->
 
         <SisdaiModal id="loaderModal" ref="loaderModal">
           <template #encabezado>
