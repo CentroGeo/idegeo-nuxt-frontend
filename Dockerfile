@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- copiar solo package.json primero ---
 COPY package*.json ./
+COPY scripts ./
 
 # instalar dependencias
 RUN npm install --include=dev --legacy-peer-deps \
