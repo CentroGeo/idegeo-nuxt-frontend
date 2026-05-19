@@ -1,11 +1,5 @@
 <script setup>
-import {
-  // SisdaiCapaArcgis,
-  // SisdaiCapaWms,
-  // SisdaiCapaXyz,
-  // SisdaiLeyendaArcgis,
-  SisdaiLeyendaWms,
-} from '@centrogeomx/sisdai-mapas';
+import { SisdaiLeyendaWms } from '@centrogeomx/sisdai-mapas';
 
 const props = defineProps({
   funcionConsulta: {
@@ -77,9 +71,18 @@ function CargaCompleta(idx, v) {
   </div>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.mapa-descarga {
+  background-color: #fff;
+  color: #000;
+}
+</style>
 
 <style>
+.mapa-descarga .sisdai-mapa-leyenda .lectura {
+  color: #000;
+}
+
 .mapa-descarga
   .sisdai-mapa
   .contenedor-vis-paneles
