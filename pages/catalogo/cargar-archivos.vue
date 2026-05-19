@@ -250,8 +250,8 @@ async function monitorLayerImport(executionId, archivo) {
             class="texto-color-informacion fondo-color-informacion borde borde-color-informacion borde-redondeado-2 p-2 m-y-2"
           >
             Los archivos tabulares (CSV, Excel, JSON) se analizan automáticamente para detectar
-            columnas geográficas. Podrás elegir entre georreferenciar los datos y crear un
-            geocontenido, o subirlos directamente como tabla.
+            columnas geográficas, lo que permite la espacialización de datos tabulares mediante la
+            construcción de geometrías de puntos.
           </p>
           <!-- Si el archivo contiene datos de coordenadas pero estos no siguen la
             nomenclatura establecida, serán procesados como cualquier otro valor numérico sin
