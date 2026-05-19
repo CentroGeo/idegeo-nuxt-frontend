@@ -185,9 +185,9 @@ watch(
                 aplicar filtros por región y periodo, y exportar el resultado. Cabe resaltar que no
                 es un sistema SIG en su totalidad; está orientado a consulta y visualización, no a
                 edición avanzada de geometrías. Admite capas vectoriales (Shapefile, GeoJSON) y
-                tabulares con coordenadas (CSV con latitud/longitud). Las capas públicas del
-                catálogo son de libre consulta; para subir capas propias o guardar mapas, se
-                requiere una cuenta SIGIC activa.
+                archivos tabulares (CSV con latitud/longitud). Las capas públicas del catálogo son
+                de libre consulta; para subir capas propias o guardar mapas, se requiere una cuenta
+                SIGIC activa.
               </p>
             </div>
             <div class="columna-8">
@@ -216,9 +216,9 @@ watch(
                 La IA puede resumir documentos, comparar contenidos entre fuentes, extraer datos
                 clave y responder preguntas sobre la información que el usuario le proporcione
                 dentro de un proyecto. Las respuestas incluyen referencias a los párrafos o
-                secciones de origen. Admite documentos PDF, archivos de texto (.txt) y tablas (CSV).
-                Se requiere una cuenta SIGIC activa y el uso de la IA está sujeto a disponibilidad
-                del servicio.
+                secciones de origen. Admite documentos PDF, archivos Word (.doc, .docx) y tablas
+                (.csv). Se requiere una cuenta SIGIC activa y el uso de la IA está sujeto a
+                disponibilidad del servicio.
               </p>
             </div>
           </div>
