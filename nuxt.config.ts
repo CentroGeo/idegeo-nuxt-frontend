@@ -112,6 +112,7 @@ export default defineNuxtConfig({
       enableConsulta: process.env.NUXT_PUBLIC_ENABLE_CONSULTA === 'true',
       enableIaa: process.env.NUXT_PUBLIC_ENABLE_IAA === 'true',
       enableLevantamiento: process.env.NUXT_PUBLIC_ENABLE_LEVANTAMIENTO === 'true',
+      enableMapas: process.env.NUXT_PUBLIC_ENABLE_MAPAS === 'true',
     },
   },
 

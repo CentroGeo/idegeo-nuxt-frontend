@@ -21,6 +21,7 @@ interface FeatureFlags {
   enableConsulta: boolean;
   enableIaa: boolean;
   enableLevantamiento: boolean;
+  enableMapas: boolean;
 }
 
 export default defineNuxtRouteMiddleware((to) => {
@@ -48,6 +49,9 @@ export default defineNuxtRouteMiddleware((to) => {
 
     // --- Levantamiento (y sus internas) ---
     '/levantamiento': flags.enableAuth && flags.enableLevantamiento,
+
+    // --- Mapas ---
+    '/mapas': flags.enableMapas,
   };
 
   for (const [prefix, allowed] of Object.entries(rules)) {

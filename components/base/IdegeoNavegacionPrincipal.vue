@@ -21,6 +21,7 @@ const headerReducido = ref(false);
 const mostrarInicio = computed(() => config.public.defaultPage);
 const mostrarCatalogo = computed(() => config.public.enableCatalogoVista);
 const mostrarConsulta = computed(() => config.public.enableConsulta);
+const mostrarMapas = computed(() => config.public.enableMapas);
 const mostrarIaa = computed(() => config.public.enableIaa);
 const mostrarLevantamiento = computed(() => config.public.enableLevantamiento);
 const mostrarAuth = computed(() => config.public.enableAuth);
@@ -112,6 +113,15 @@ onUnmounted(() => {
         </NuxtLink>
 
         <NuxtLink
+          to="https://centrogeo.org.mx/coordinacion-de-vinculacion/plataforma-de-informacion-geoespacial"
+          external="true"
+          class="idegeo-menu__link"
+          @click="cerrarMenu"
+        >
+          Plataforma IDEGeo
+        </NuxtLink>
+
+        <NuxtLink
           v-if="mostrarCatalogo"
           to="/catalogo"
           class="idegeo-menu__link"
@@ -127,6 +137,10 @@ onUnmounted(() => {
           @click="cerrarMenu"
         >
           Consulta
+        </NuxtLink>
+
+        <NuxtLink v-if="mostrarMapas" to="/mapas" class="idegeo-menu__link" @click="cerrarMenu">
+          Mapas
         </NuxtLink>
 
         <NuxtLink
