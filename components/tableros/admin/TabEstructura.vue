@@ -83,6 +83,7 @@ onMounted(recargarTodo);
       <TablerosAdminRepositorioIndicadores
         :site-id="siteId"
         :indicadores="indicadoresSitio"
+        :grupos="grupos"
         :cargando="cargandoIndicadores"
         @crear="recargarTodo"
         @eliminar="recargarTodo"

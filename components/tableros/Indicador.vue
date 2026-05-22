@@ -59,6 +59,7 @@ watch(
             :plot-config="datos.plot_config"
             :layer-id-field="datos.layer_id_field"
             :layer-name="datos.layer_name"
+            :bbox="datos.bbox"
             :use-filter="datos.use_filter"
             :filters="datos.filters"
             :rango-activo-color="rangoActivoColor"

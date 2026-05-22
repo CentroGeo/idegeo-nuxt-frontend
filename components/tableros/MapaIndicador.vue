@@ -20,6 +20,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  bbox: {
+    type: Array,
+    default: null,
+  },
   useFilter: {
     type: Boolean,
     default: false,
@@ -38,10 +42,22 @@ const emit = defineEmits(['hover-rango']);
 
 const leyendaMinimizada = ref(false);
 
-const vista = {
-  centro: [-99.1332, 19.4326],
-  acercamiento: 5,
-};
+const VISTA_DEFAULT = { centro: [-99.1332, 19.4326], acercamiento: 5 };
+
+const mapaKey = computed(() => `${props.layerName || 'sin-capa'}-${(props.bbox || []).join(',')}`);
+
+const vista = computed(() => {
+  if (!props.bbox || props.bbox.length < 4) return VISTA_DEFAULT;
+  const [minLon, minLat, maxLon, maxLat] = props.bbox;
+  if (!isFinite(minLon) || !isFinite(minLat) || !isFinite(maxLon) || !isFinite(maxLat)) {
+    return VISTA_DEFAULT;
+  }
+  const centro = [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
+  const maxDiff = Math.max(maxLon - minLon, maxLat - minLat);
+  const acercamiento =
+    maxDiff > 0 ? Math.max(1, Math.min(16, Math.round(Math.log2(360 / maxDiff)) + 1)) : 5;
+  return { centro, acercamiento };
+});
 
 const wfsUrl = computed(() => {
   if (!props.layerName) return null;
@@ -107,7 +123,7 @@ const globoInformativo = computed(() => {
 <template>
   <ClientOnly>
     <div class="mapa-indicador">
-      <SisdaiMapa class="gema" :vista="vista">
+      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista">
         <SisdaiCapaXyz :posicion="0" />
 
         <SisdaiCapaVectorial
