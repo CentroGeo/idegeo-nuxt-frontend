@@ -29,6 +29,8 @@ const campoBusqueda = ref('');
 
 const agregaCatalogoModal = ref(null);
 const seleccionCatalogoModal = ref(null);
+
+/* eslint-disable no-unused-vars */
 const dictTipoRecurso = {
   dataLayer: 'capas',
   dataTable: 'tablas',
@@ -128,6 +130,7 @@ async function fetchNewData() {
 }
 
 // Selecciona la categoría en el modal de fuentes de catálogo
+
 async function seleccionarCategoria(categoria) {
   if (categoriaSeleccionada.value !== categoriesDict.value[categoria].label) {
     // reseteando recursos filtrados por categoría y valores
@@ -159,6 +162,7 @@ function removerBusquedaFiltro() {
 }
 
 // Método para buscar el recurso con filtro el modal de fuentes de catálogo
+
 async function buscarRecurso() {
   if (categoriaSeleccionada.value !== null) {
     // reseteando recursos filtrados por categoría y valores
@@ -184,6 +188,7 @@ async function buscarRecurso() {
 }
 
 // Remueve la búsqueda en el filtro del modal de fuentes de catálogo
+
 async function removerBusqueda() {
   storeFilters.updateFilter('inputSearch', '');
   if (categoriaSeleccionada.value !== null && inputSearch.value === '') {
@@ -215,6 +220,7 @@ function agregarFuentesCatalogo() {
 }
 
 // Abre el modal para agregar fuentes del catálogo
+
 async function siguenteAgregar() {
   agregaCatalogoModal.value.cerrarModal();
   seleccionCatalogoModal.value.abrirModal();
@@ -246,6 +252,7 @@ function seleccionarProyecto(proyecto) {
 }
 
 // Método para manejar los archivos seleccionados del catálogo de geonode
+
 function cargarArchivosGeonode() {
   seleccionCatalogoModal?.value.cerrarModal();
   // se obtiene primero del geonode
@@ -262,6 +269,7 @@ function cargarArchivosGeonode() {
   archivosGeonode.value = [...archivosGeonode.value, ...nuevosArchivos];
   archivosTabla.value = [...archivosSeleccionados.value, ...archivosGeonode.value];
 }
+/* eslint-enable no-unused-vars */
 
 // Método para manejar la selección de archivos
 const manejarSeleccionArchivos = (event) => {
@@ -490,7 +498,7 @@ onMounted(() => {
                   @change="manejarSeleccionArchivos"
                 />
                 <p class="m-y-1 texto-derecha">
-                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                  <small><b>Solo archivos PDF, CSV y Word.</b></small>
                 </p>
               </div>
             </div>

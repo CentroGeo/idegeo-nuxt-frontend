@@ -31,6 +31,7 @@ const campoBusqueda = ref('');
 
 const agregaCatalogoModal = ref(null);
 const seleccionCatalogoModal = ref(null);
+/* eslint-disable no-unused-vars */
 const dictTipoRecurso = {
   dataLayer: 'capas',
   dataTable: 'tablas',
@@ -264,6 +265,7 @@ function cargarArchivosGeonode() {
   archivosGeonode.value = [...archivosGeonode.value, ...nuevosArchivos];
   archivosTabla.value = [...archivosSeleccionados.value, ...archivosGeonode.value];
 }
+/* eslint-enable no-unused-vars */
 
 // Método para manejar la selección de archivos
 const manejarSeleccionArchivos = (event) => {
@@ -537,7 +539,7 @@ onBeforeUnmount(() => {
                   @change="manejarSeleccionArchivos"
                 />
                 <p class="m-y-1 texto-derecha">
-                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                  <small><b>Solo archivos PDF, CSV y Word.</b></small>
                 </p>
               </div>
             </div>

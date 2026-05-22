@@ -281,7 +281,7 @@ onMounted(cargarDetalle);
             @dragover.prevent
             @drop.prevent="onDropSubgrupo($event, sg.id)"
           >
-            <header>
+            <div class="arbol-grupo__subgrupo-cab">
               <template v-if="subgrupoEditandoId === sg.id">
                 <form class="arbol-grupo__subgrupo-form" @submit.prevent="guardarSubgrupo(sg.id)">
                   <input
@@ -315,7 +315,8 @@ onMounted(cargarDetalle);
                   title="Editar subgrupo"
                   @click="abrirEdicionSubgrupo(sg)"
                 >
-                  <span class="pictograma-editar" />
+                  <span class="pictograma-editar m-r-1" />
+                  Editar
                 </button>
                 <button
                   type="button"
@@ -325,7 +326,7 @@ onMounted(cargarDetalle);
                   <span class="pictograma-eliminar" />
                 </button>
               </template>
-            </header>
+            </div>
             <ul v-if="sg.indicators?.length">
               <li v-for="ind in sg.indicators" :key="ind.id">
                 <span class="pictograma-reporte m-r-1" />
@@ -439,7 +440,7 @@ onMounted(cargarDetalle);
     border-radius: 4px;
     color: #111;
 
-    header {
+    &-cab {
       display: flex;
       align-items: center;
       gap: 0.5rem;
