@@ -1,11 +1,6 @@
 <script setup>
-import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
-
 const props = defineProps({
-  siteId: {
-    type: Number,
-    required: true,
-  },
+  siteId: { type: Number, required: true },
 });
 
 const { data: userData } = useAuth();
@@ -53,14 +48,14 @@ async function cargar() {
 
 async function abrir() {
   await cargar();
-  modal.value?.abrirModal();
+  modal.value?.abrir();
 }
 
 async function guardar() {
   guardando.value = true;
   try {
     await actualizarConfigSitio(props.siteId, config, userData.value?.accessToken);
-    modal.value?.cerrarModal();
+    modal.value?.cerrar();
   } catch (e) {
     console.error('Error al guardar configuración:', e);
   } finally {
@@ -73,130 +68,259 @@ defineExpose({ abrir });
 
 <template>
   <ClientOnly>
-    <SisdaiModal ref="modal">
+    <TablerosAdminModalBase ref="modal" ancho="820px">
       <template #encabezado>
         <h2>Identidad visual del sitio</h2>
       </template>
 
       <template #cuerpo>
         <form @submit.prevent="guardar">
-          <section class="m-b-4">
-            <h3>Configuración global</h3>
-
-            <div class="m-b-3">
-              <label for="modal-vis-fuente">Tipo de letra</label>
-              <select id="modal-vis-fuente" v-model="config.site_font_style">
+          <!-- ── Tipografía ── -->
+          <div class="seccion-titulo">Tipografía</div>
+          <div class="form-grid-3">
+            <div class="campo col-span-1">
+              <label for="vis-fuente">Tipo de letra</label>
+              <select id="vis-fuente" v-model="config.site_font_style">
                 <option v-for="f in FUENTES" :key="f" :value="f">{{ f }}</option>
               </select>
             </div>
+            <div class="campo">
+              <label for="vis-size">Tamaño general (px)</label>
+              <input
+                id="vis-size"
+                v-model.number="config.site_font_size"
+                type="number"
+                min="10"
+                max="32"
+              />
+            </div>
+            <div class="campo">
+              <label for="vis-hsize">Tamaño encabezado (px)</label>
+              <input
+                id="vis-hsize"
+                v-model.number="config.header_font_size"
+                type="number"
+                min="14"
+                max="60"
+              />
+            </div>
+          </div>
+          <div class="campo m-t-2">
+            <label for="vis-ibt">Título del recuadro de indicadores</label>
+            <input id="vis-ibt" v-model="config.indicator_box_title" type="text" />
+          </div>
 
-            <div class="flex flex-contenido-separado m-b-3">
-              <div>
-                <label for="modal-vis-size">Tamaño de fuente general (px)</label>
-                <input
-                  id="modal-vis-size"
-                  v-model.number="config.site_font_size"
-                  type="number"
-                  min="10"
-                  max="32"
-                />
+          <!-- ── Colores ── -->
+          <div class="seccion-titulo m-t-4">Colores</div>
+          <div class="colores-grid">
+            <div class="colores-seccion">
+              <div class="colores-seccion__titulo">
+                <label class="check-inline">
+                  <input v-model="config.show_header" type="checkbox" />
+                  Encabezado
+                </label>
               </div>
-
-              <div>
-                <label for="modal-vis-hsize">Tamaño de fuente del encabezado (px)</label>
-                <input
-                  id="modal-vis-hsize"
-                  v-model.number="config.header_font_size"
-                  type="number"
-                  min="14"
-                  max="60"
-                />
+              <div class="colores-seccion__fila">
+                <div class="campo-color">
+                  <label for="vis-h-bg">Fondo</label>
+                  <input
+                    id="vis-h-bg"
+                    v-model="config.header_background_color"
+                    type="color"
+                    class="input-color"
+                  />
+                  <span class="color-hex">{{ config.header_background_color }}</span>
+                </div>
+                <div class="campo-color">
+                  <label for="vis-h-text">Texto</label>
+                  <input
+                    id="vis-h-text"
+                    v-model="config.header_text_color"
+                    type="color"
+                    class="input-color"
+                  />
+                  <span class="color-hex">{{ config.header_text_color }}</span>
+                </div>
               </div>
             </div>
 
-            <div class="m-b-3">
-              <label for="modal-vis-ibt">Título del recuadro de indicadores</label>
-              <input id="modal-vis-ibt" v-model="config.indicator_box_title" type="text" />
-            </div>
-          </section>
-
-          <section class="m-b-4">
-            <h3>Encabezado</h3>
-            <div class="m-b-2">
-              <input id="modal-vis-show-header" v-model="config.show_header" type="checkbox" />
-              <label for="modal-vis-show-header">Mostrar encabezado</label>
-            </div>
-
-            <div class="flex flex-contenido-separado m-b-2">
-              <div>
-                <label for="modal-vis-h-bg">Color de fondo</label>
-                <input id="modal-vis-h-bg" v-model="config.header_background_color" type="color" />
-              </div>
-
-              <div>
-                <label for="modal-vis-h-text">Color de texto</label>
-                <input id="modal-vis-h-text" v-model="config.header_text_color" type="color" />
-              </div>
-            </div>
-          </section>
-
-          <section class="m-b-4">
-            <h3>Contenedores (widgets)</h3>
-            <div class="flex flex-contenido-separado m-b-2">
-              <div>
-                <label for="modal-vis-c-bg">Fondo del widget</label>
-                <input
-                  id="modal-vis-c-bg"
-                  v-model="config.site_interface_background_color"
-                  type="color"
-                />
-              </div>
-
-              <div>
-                <label for="modal-vis-c-text">Texto del widget</label>
-                <input
-                  id="modal-vis-c-text"
-                  v-model="config.site_interface_text_color"
-                  type="color"
-                />
+            <div class="colores-seccion">
+              <div class="colores-seccion__titulo">Contenedores (widgets)</div>
+              <div class="colores-seccion__fila">
+                <div class="campo-color">
+                  <label for="vis-c-bg">Fondo</label>
+                  <input
+                    id="vis-c-bg"
+                    v-model="config.site_interface_background_color"
+                    type="color"
+                    class="input-color"
+                  />
+                  <span class="color-hex">{{ config.site_interface_background_color }}</span>
+                </div>
+                <div class="campo-color">
+                  <label for="vis-c-text">Texto</label>
+                  <input
+                    id="vis-c-text"
+                    v-model="config.site_interface_text_color"
+                    type="color"
+                    class="input-color"
+                  />
+                  <span class="color-hex">{{ config.site_interface_text_color }}</span>
+                </div>
               </div>
             </div>
-          </section>
 
-          <section class="m-b-4">
-            <h3>Pie de página</h3>
-
-            <div class="m-b-2">
-              <input id="modal-vis-show-footer" v-model="config.show_footer" type="checkbox" />
-              <label for="modal-vis-show-footer">Mostrar pie de página</label>
-            </div>
-
-            <div class="flex flex-contenido-separado m-b-2">
-              <div>
-                <label for="modal-vis-f-bg">Color de fondo</label>
-                <input id="modal-vis-f-bg" v-model="config.site_background_color" type="color" />
+            <div class="colores-seccion">
+              <div class="colores-seccion__titulo">
+                <label class="check-inline">
+                  <input v-model="config.show_footer" type="checkbox" />
+                  Pie de página
+                </label>
               </div>
-
-              <div>
-                <label for="modal-vis-f-text">Color de texto</label>
-                <input id="modal-vis-f-text" v-model="config.site_text_color" type="color" />
+              <div class="colores-seccion__fila">
+                <div class="campo-color">
+                  <label for="vis-f-bg">Fondo</label>
+                  <input
+                    id="vis-f-bg"
+                    v-model="config.site_background_color"
+                    type="color"
+                    class="input-color"
+                  />
+                  <span class="color-hex">{{ config.site_background_color }}</span>
+                </div>
+                <div class="campo-color">
+                  <label for="vis-f-text">Texto</label>
+                  <input
+                    id="vis-f-text"
+                    v-model="config.site_text_color"
+                    type="color"
+                    class="input-color"
+                  />
+                  <span class="color-hex">{{ config.site_text_color }}</span>
+                </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <section class="flex flex-contenido-final">
-            <button type="button" class="boton boton-secundario" @click="modal?.cerrarModal()">
+          <div class="acciones-modal">
+            <button type="button" class="boton boton-secundario" @click="modal?.cerrar()">
               Cancelar
             </button>
             <input
               type="submit"
               class="boton boton-primario"
-              :value="guardando ? 'Guardando...' : 'Guardar'"
+              :value="guardando ? 'Guardando...' : 'Guardar cambios'"
               :disabled="guardando"
             />
-          </section>
+          </div>
         </form>
       </template>
-    </SisdaiModal>
+    </TablerosAdminModalBase>
   </ClientOnly>
 </template>
+
+<style lang="scss" scoped>
+.seccion-titulo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-texto-secundario, #777);
+  border-bottom: 1px solid var(--color-borde, #e8e8e8);
+  padding-bottom: 4px;
+  margin-bottom: 1rem;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Grid de secciones de color (3 columnas) */
+.colores-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.colores-seccion {
+  border: 1px solid var(--color-borde, #e0e0e0);
+  border-radius: 8px;
+  overflow: hidden;
+
+  &__titulo {
+    padding: 8px 12px;
+    background: var(--color-fondo-2, #fafafa);
+    border-bottom: 1px solid var(--color-borde, #e0e0e0);
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  &__fila {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.campo-color {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-borde, #f0f0f0);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  label {
+    font-size: 0.82rem;
+    color: var(--color-texto-secundario, #666);
+    width: 40px;
+    flex-shrink: 0;
+  }
+}
+
+.input-color {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--color-borde, #ccc);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.color-hex {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--color-texto-secundario, #888);
+}
+
+/* Acciones */
+.acciones-modal {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-borde, #e8e8e8);
+}
+</style>

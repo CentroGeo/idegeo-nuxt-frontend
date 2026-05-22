@@ -1,6 +1,4 @@
 <script setup>
-import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
-
 const props = defineProps({
   indicadorId: {
     type: Number,
@@ -106,7 +104,7 @@ async function guardar() {
 
     if (data?.id) {
       emit('guardado', data);
-      modal.value?.cerrarModal();
+      modal.value?.cerrar();
     } else {
       error.value = data?.detail || JSON.stringify(data);
     }
@@ -117,65 +115,91 @@ async function guardar() {
   }
 }
 
-onMounted(async () => {
-  cargarDesdeCuadro();
-  await nextTick();
-  modal.value?.abrirModal();
-});
+watch(
+  () => modal.value,
+  (m) => {
+    if (m) {
+      cargarDesdeCuadro();
+      m.abrir();
+    }
+  },
+  { once: true }
+);
 </script>
 
 <template>
   <ClientOnly>
-    <SisdaiModal ref="modal" @cerrar="emit('cerrar')">
+    <TablerosAdminModalBase ref="modal" ancho="760px" @cerrar="emit('cerrar')">
       <template #encabezado>
         <h2>{{ esEdicion ? 'Editar' : 'Crear' }} cuadro de datos</h2>
       </template>
 
       <template #cuerpo>
         <form @submit.prevent="guardar">
-          <div class="m-b-2">
-            <label for="cd-field">Campo de información</label>
-            <input
-              id="cd-field"
-              v-model="formulario.field"
-              type="text"
-              placeholder="Ej: poblacion_total"
-              required
-            />
+          <!-- ── Datos del indicador ── -->
+          <div class="seccion-titulo">Datos del indicador</div>
+          <div class="form-grid-2">
+            <div class="campo">
+              <label for="cd-field">Campo de información <span class="requerido">*</span></label>
+              <input
+                id="cd-field"
+                v-model="formulario.field"
+                type="text"
+                placeholder="Ej: poblacion_total"
+                required
+              />
+            </div>
+            <div class="campo">
+              <label for="cd-name">Nombre personalizado <span class="requerido">*</span></label>
+              <input id="cd-name" v-model="formulario.name" type="text" required />
+            </div>
           </div>
 
-          <div class="m-b-2">
-            <label for="cd-name">Nombre personalizado</label>
-            <input id="cd-name" v-model="formulario.name" type="text" required />
+          <div class="check-row m-t-2">
+            <label class="check-inline">
+              <input id="cd-percentage" v-model="formulario.is_percentage" type="checkbox" />
+              ¿Es porcentual?
+            </label>
           </div>
 
-          <div class="m-b-2">
-            <input id="cd-percentage" v-model="formulario.is_percentage" type="checkbox" />
-            <label for="cd-percentage">¿Es porcentual?</label>
-          </div>
-
-          <div v-if="formulario.is_percentage" class="m-b-2">
+          <div v-if="formulario.is_percentage" class="campo m-t-2">
             <label for="cd-total">Campo total para calcular porcentaje</label>
             <input id="cd-total" v-model="formulario.field_percentage_total" type="text" />
           </div>
 
-          <div class="flex flex-contenido-separado m-b-2">
-            <div>
-              <label for="cd-color">Color de fondo</label>
-              <input id="cd-color" v-model="formulario.color" type="color" />
+          <!-- ── Apariencia ── -->
+          <div class="seccion-titulo m-t-4">Apariencia</div>
+
+          <div class="colores-fila">
+            <div class="campo-color">
+              <label for="cd-color">Fondo</label>
+              <input id="cd-color" v-model="formulario.color" type="color" class="input-color" />
+              <span class="color-hex">{{ formulario.color }}</span>
             </div>
-            <div>
-              <label for="cd-text">Color de texto</label>
-              <input id="cd-text" v-model="formulario.text_color" type="color" />
+            <div class="campo-color">
+              <label for="cd-text">Texto</label>
+              <input
+                id="cd-text"
+                v-model="formulario.text_color"
+                type="color"
+                class="input-color"
+              />
+              <span class="color-hex">{{ formulario.text_color }}</span>
             </div>
-            <div>
-              <label for="cd-edge-color">Color de borde</label>
-              <input id="cd-edge-color" v-model="formulario.edge_color" type="color" />
+            <div class="campo-color">
+              <label for="cd-edge-color">Borde</label>
+              <input
+                id="cd-edge-color"
+                v-model="formulario.edge_color"
+                type="color"
+                class="input-color"
+              />
+              <span class="color-hex">{{ formulario.edge_color }}</span>
             </div>
           </div>
 
-          <div class="flex flex-contenido-separado m-b-2">
-            <div>
+          <div class="form-grid-2 m-t-3">
+            <div class="campo">
               <label for="cd-size">Tamaño</label>
               <select id="cd-size" v-model="formulario.size">
                 <option v-for="t in TAMANIOS" :key="t.value" :value="t.value">
@@ -183,8 +207,7 @@ onMounted(async () => {
                 </option>
               </select>
             </div>
-
-            <div>
+            <div class="campo">
               <label for="cd-edge">Estilo de borde</label>
               <select id="cd-edge" v-model="formulario.edge_style">
                 <option v-for="b in BORDES" :key="b.value" :value="b.value">{{ b.label }}</option>
@@ -192,55 +215,45 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="m-b-2">
-            <label for="cd-icon">Icono (clase Font Awesome / Material)</label>
-            <input
-              id="cd-icon"
-              v-model="formulario.icon"
-              type="text"
-              placeholder="Ej: fas fa-users"
-            />
+          <!-- ── Ícono ── -->
+          <div class="seccion-titulo m-t-4">Ícono</div>
+          <div class="campo">
+            <label>Seleccionar del catálogo</label>
+            <TablerosAdminPickerIcono v-model="formulario.icon" />
           </div>
-
-          <div class="m-b-2">
-            <label for="cd-icon-custom">O subir icono personalizado</label>
+          <div class="campo m-t-2">
+            <label for="cd-icon-custom">O subir ícono personalizado</label>
             <input id="cd-icon-custom" type="file" accept="image/*" @change="onArchivoIcono" />
             <img
               v-if="previewIcono"
               :src="previewIcono"
-              alt="Preview"
-              style="width: 40px; height: 40px; margin-top: 0.5rem"
+              alt="Preview del ícono"
+              class="icono-preview"
             />
           </div>
 
-          <section class="m-b-3">
-            <h4>Vista previa</h4>
-            <div
-              :style="{
-                background: formulario.color,
-                color: formulario.text_color,
-                borderColor: formulario.edge_color,
-                padding: '1rem',
-                borderRadius: '8px',
-                borderWidth: '2px',
-                borderStyle: 'solid',
-                maxWidth: '240px',
-              }"
-            >
-              <div style="display: flex; align-items: center; gap: 0.5rem">
-                <span v-if="formulario.icon" :class="formulario.icon" style="font-size: 1.5rem" />
-                <strong>{{ formulario.name || 'Nombre' }}</strong>
-              </div>
-              <p style="margin: 0.3rem 0 0; font-size: 0.85rem">
-                {{ formulario.field || 'campo' }}
-                {{ formulario.is_percentage ? '(%)' : '' }}
-              </p>
+          <!-- ── Vista previa ── -->
+          <div class="seccion-titulo m-t-4">Vista previa</div>
+          <div
+            class="cuadro-preview"
+            :style="{
+              background: formulario.color,
+              color: formulario.text_color,
+              borderColor: formulario.edge_color,
+            }"
+          >
+            <div class="cuadro-preview__titulo">
+              <span v-if="formulario.icon" :class="formulario.icon" class="cuadro-preview__icono" />
+              <strong>{{ formulario.name || 'Nombre del cuadro' }}</strong>
             </div>
-          </section>
+            <p class="cuadro-preview__campo">
+              {{ formulario.field || 'campo' }}{{ formulario.is_percentage ? ' (%)' : '' }}
+            </p>
+          </div>
 
-          <p v-if="error" class="color-error">{{ error }}</p>
+          <p v-if="error" class="color-error m-t-2">{{ error }}</p>
 
-          <div class="flex flex-contenido-separado">
+          <div class="acciones-modal">
             <button type="button" class="boton boton-secundario" @click="emit('cerrar')">
               Cancelar
             </button>
@@ -253,6 +266,126 @@ onMounted(async () => {
           </div>
         </form>
       </template>
-    </SisdaiModal>
+    </TablerosAdminModalBase>
   </ClientOnly>
 </template>
+
+<style lang="scss" scoped>
+.seccion-titulo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-texto-secundario, #777);
+  border-bottom: 1px solid var(--color-borde, #e8e8e8);
+  padding-bottom: 4px;
+  margin-bottom: 1rem;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.check-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.colores-fila {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.campo-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--color-texto-secundario, #666);
+    min-width: 36px;
+  }
+}
+
+.input-color {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--color-borde, #ccc);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.color-hex {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--color-texto-secundario, #888);
+}
+
+.icono-preview {
+  width: 40px;
+  height: 40px;
+  margin-top: 0.25rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-borde, #ccc);
+}
+
+.cuadro-preview {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border-width: 2px;
+  border-style: solid;
+  min-width: 200px;
+  max-width: 280px;
+
+  &__titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  &__icono {
+    font-size: 1.4rem;
+  }
+
+  &__campo {
+    margin: 0;
+    font-size: 0.82rem;
+    opacity: 0.85;
+  }
+}
+
+.acciones-modal {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-borde, #e8e8e8);
+}
+
+.requerido {
+  color: var(--color-primario-4, #991f47);
+}
+</style>
