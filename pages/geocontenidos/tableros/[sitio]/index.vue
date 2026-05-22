@@ -1,8 +1,14 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
-const { data: userData } = useAuth();
+const { data: userData, status, signIn } = useAuth();
 const route = useRoute();
+
+const noAutenticado = computed(() => status.value === 'unauthenticated');
+
+function iniciarSesion() {
+  signIn('keycloak', { callbackUrl: route.fullPath });
+}
 const { fetchSitio, crearSitio, actualizarSitio, togglePublic } = useTableroApi();
 
 const idRuta = computed(() => route.params.sitio);
@@ -23,7 +29,7 @@ const sitio = reactive({
   url: '',
   title: '',
   info_text: '',
-  is_public: true,
+  is_public: false,
 });
 
 const togglandoPublico = ref(false);
@@ -58,7 +64,7 @@ async function cargarSitio() {
       sitio.url = datos.url || '';
       sitio.title = datos.title || '';
       sitio.info_text = datos.info_text || '';
-      sitio.is_public = datos.is_public ?? true;
+      sitio.is_public = datos.is_public ?? false;
     }
   } catch (e) {
     console.error('Error al cargar sitio:', e);
@@ -83,6 +89,7 @@ async function guardar() {
     url: sitio.url,
     title: sitio.title,
     info_text: sitio.info_text,
+    ...(esNuevo.value ? { is_public: false } : {}),
   };
 
   try {
@@ -123,80 +130,130 @@ cargarSitio();
 
 <template>
   <section>
-    <GeocontenidosTituloVolver
-      :titulo="esNuevo ? 'Nuevo tablero' : `Editar tablero: ${sitio.name}`"
-      volver="/tableros"
-    />
-
-    <div v-if="!esNuevo && sitio.id" class="flex brecha-2 m-b-3">
-      <NuxtLink
-        :to="`/tableros/${sitio.id}`"
-        class="boton boton-secundario boton-chico"
-        target="_blank"
-      >
-        <span class="pictograma-visualizar m-r-1" />
-        Ver tablero
-      </NuxtLink>
-
-      <button
-        type="button"
-        class="boton boton-chico"
-        :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
-        :disabled="togglandoPublico"
-        @click="togglearPublico"
-      >
-        <span
-          :class="sitio.is_public ? 'pictograma-ojo' : 'pictograma-ojo-cerrado'"
-          class="m-r-1"
-        />
-        {{
-          togglandoPublico
-            ? 'Cambiando...'
-            : sitio.is_public
-              ? 'Público — hacer privado'
-              : 'Privado — hacer público'
-        }}
+    <!-- Sesión requerida -->
+    <div v-if="noAutenticado" class="sesion-requerida">
+      <span class="pictograma-candado sesion-requerida__icono" aria-hidden="true" />
+      <h2 class="sesion-requerida__titulo">Acceso restringido</h2>
+      <p class="sesion-requerida__desc">
+        Para editar este tablero necesitas iniciar sesión con tu cuenta institucional.
+      </p>
+      <button type="button" class="boton boton-primario" @click="iniciarSesion">
+        Iniciar sesión
       </button>
     </div>
 
-    <GeocontenidosLoader v-if="cargandoSitio" mensaje="Cargando tablero..." />
+    <template v-else>
+      <GeocontenidosTituloVolver
+        :titulo="esNuevo ? 'Nuevo tablero' : `Editar tablero: ${sitio.name}`"
+        volver="/tableros"
+      />
 
-    <GeocontenidosPestanias v-else :pestanias="pestanias" id-seleccion="identidad">
-      <template #contenido-identidad>
-        <TablerosAdminTabIdentidad :sitio="sitio" @actualizar="aplicarCambios" @guardar="guardar" />
-      </template>
+      <div v-if="!esNuevo && sitio.id" class="flex brecha-2 m-b-3">
+        <NuxtLink
+          :to="`/tableros/${sitio.id}`"
+          class="boton boton-secundario boton-chico"
+          target="_blank"
+        >
+          <span class="pictograma-visualizar m-r-1" />
+          Ver tablero
+        </NuxtLink>
 
-      <template #contenido-estructura>
-        <TablerosAdminTabEstructura v-if="sitio.id" :site-id="sitio.id" />
-      </template>
-
-      <template #contenido-datos>
-        <TablerosAdminTabDatos v-if="sitio.id" :site-id="sitio.id" />
-      </template>
-    </GeocontenidosPestanias>
-
-    <ClientOnly>
-      <SisdaiModal ref="modalStatus">
-        <template #encabezado>
-          <span v-if="estatusAlGuardar.cargando" />
-          <h2 v-else>
-            {{ estatusAlGuardar.estado ? 'Guardado con éxito' : 'Error al guardar' }}
-          </h2>
-        </template>
-
-        <template #cuerpo>
-          <GeocontenidosLoader
-            v-if="estatusAlGuardar.cargando"
-            :mensaje="estatusAlGuardar.textoCargando"
+        <button
+          type="button"
+          class="boton boton-chico"
+          :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
+          :disabled="togglandoPublico"
+          @click="togglearPublico"
+        >
+          <span
+            :class="sitio.is_public ? 'pictograma-ojo' : 'pictograma-ojo-cerrado'"
+            class="m-r-1"
           />
+          {{
+            togglandoPublico
+              ? 'Cambiando...'
+              : sitio.is_public
+                ? 'Público — hacer privado'
+                : 'Privado — hacer público'
+          }}
+        </button>
+      </div>
 
-          <p v-else-if="estatusAlGuardar.estado === false" v-text="estatusAlGuardar.mensaje" />
+      <GeocontenidosLoader v-if="cargandoSitio" mensaje="Cargando tablero..." />
 
-          <p v-else class="texto-centrado">
-            <span class="pictograma-aprobado pictograma-grande" />
-          </p>
+      <GeocontenidosPestanias v-else :pestanias="pestanias" id-seleccion="identidad">
+        <template #contenido-identidad>
+          <TablerosAdminTabIdentidad
+            :sitio="sitio"
+            @actualizar="aplicarCambios"
+            @guardar="guardar"
+          />
         </template>
-      </SisdaiModal>
-    </ClientOnly>
+
+        <template #contenido-estructura>
+          <TablerosAdminTabEstructura v-if="sitio.id" :site-id="sitio.id" />
+        </template>
+
+        <template #contenido-datos>
+          <TablerosAdminTabDatos v-if="sitio.id" :site-id="sitio.id" />
+        </template>
+      </GeocontenidosPestanias>
+
+      <ClientOnly>
+        <SisdaiModal ref="modalStatus">
+          <template #encabezado>
+            <span v-if="estatusAlGuardar.cargando" />
+            <h2 v-else>
+              {{ estatusAlGuardar.estado ? 'Guardado con éxito' : 'Error al guardar' }}
+            </h2>
+          </template>
+
+          <template #cuerpo>
+            <GeocontenidosLoader
+              v-if="estatusAlGuardar.cargando"
+              :mensaje="estatusAlGuardar.textoCargando"
+            />
+
+            <p v-else-if="estatusAlGuardar.estado === false" v-text="estatusAlGuardar.mensaje" />
+
+            <p v-else class="texto-centrado">
+              <span class="pictograma-aprobado pictograma-grande" />
+            </p>
+          </template>
+        </SisdaiModal>
+      </ClientOnly> </template
+    ><!-- /v-else autenticado -->
   </section>
 </template>
+
+<style lang="scss" scoped>
+.sesion-requerida {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  text-align: center;
+
+  &__icono {
+    font-size: 3rem;
+    color: var(--color-secundario-7, #876670);
+    opacity: 0.6;
+  }
+
+  &__titulo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-primario-4, #991f47);
+    margin: 0;
+  }
+
+  &__desc {
+    font-size: 1rem;
+    color: var(--color-texto-secundario, #555);
+    max-width: 420px;
+    margin: 0;
+  }
+}
+</style>
