@@ -204,6 +204,7 @@ async function removerBusqueda() {
 }
 
 // Abre el modal para elegir el tipo de fuente del catálogo
+// eslint-disable-next-line no-unused-vars
 function agregarFuentesCatalogo() {
   // limpiando recursos filtrados por categoría y seleccionados
   storeFilters.updateFilter('inputSearch', '');
@@ -490,7 +491,7 @@ onMounted(() => {
                   @change="manejarSeleccionArchivos"
                 />
                 <p class="m-y-1 texto-derecha">
-                 <small><b>Solo archivos PDF, CSV y Word.</b></small>
+                  <small><b>Solo archivos PDF, CSV y Word.</b></small>
                 </p>
               </div>
             </div>

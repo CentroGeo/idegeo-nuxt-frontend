@@ -38,10 +38,10 @@ const estados = computed(() => {
   return [...props.plotValues].sort((a, b) => a.sortPosition - b.sortPosition);
 });
 
+const TIPOS_CON_ESTADOS = ['horizontal_bar', 'treemap', 'line', 'area', 'scatter', 'radar'];
+
 const tieneDatos = computed(() => {
-  if (chartType.value === 'horizontal_bar' || chartType.value === 'treemap') {
-    return estados.value.length > 0;
-  }
+  if (TIPOS_CON_ESTADOS.includes(chartType.value)) return estados.value.length > 0;
   return barras.value.length > 0;
 });
 
@@ -205,14 +205,196 @@ const optionTreemap = computed(() => ({
   ],
 }));
 
+const optionPie = computed(() => ({
+  animationDurationUpdate: 350,
+  animationEasingUpdate: 'cubicInOut',
+  tooltip: {
+    trigger: 'item',
+    formatter: (p) => `<b>${p.name}</b><br/>${p.value} (${p.percent}%)`,
+  },
+  series: [
+    {
+      type: 'pie',
+      radius: '70%',
+      center: ['50%', '50%'],
+      label: { show: true, fontSize: 10, formatter: (p) => `${p.percent}%`, color: '#555' },
+      labelLine: { length: 8, length2: 6 },
+      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' }, scaleSize: 6 },
+      data: barras.value.map((b) => {
+        const activo = !props.rangoActivoColor || b.color === props.rangoActivoColor;
+        return {
+          value: b.count,
+          name: b.label,
+          itemStyle: { color: b.color, opacity: activo ? 1 : 0.35 },
+        };
+      }),
+    },
+  ],
+}));
+
+const optionLine = computed(() => {
+  const lista = estados.value;
+  return {
+    animationDurationUpdate: 350,
+    animationEasingUpdate: 'cubicInOut',
+    tooltip: { trigger: 'axis' },
+    grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: lista.map((e) => e.label),
+      axisLabel: { rotate: 35, fontSize: 9, overflow: 'truncate', width: 80 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { fontSize: 9 },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+    },
+    series: [
+      {
+        type: 'line',
+        smooth: true,
+        data: lista.map((e) => {
+          const activo = !props.rangoActivoColor || e.color === props.rangoActivoColor;
+          return {
+            value: typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0,
+            itemStyle: { color: e.color, opacity: activo ? 1 : 0.4 },
+          };
+        }),
+      },
+    ],
+  };
+});
+
+const optionArea = computed(() => {
+  const lista = estados.value;
+  return {
+    animationDurationUpdate: 350,
+    animationEasingUpdate: 'cubicInOut',
+    tooltip: { trigger: 'axis' },
+    grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: lista.map((e) => e.label),
+      axisLabel: { rotate: 35, fontSize: 9, overflow: 'truncate', width: 80 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { fontSize: 9 },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+    },
+    series: [
+      {
+        type: 'line',
+        smooth: true,
+        areaStyle: {},
+        data: lista.map((e) => {
+          const activo = !props.rangoActivoColor || e.color === props.rangoActivoColor;
+          return {
+            value: typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0,
+            itemStyle: { color: e.color, opacity: activo ? 1 : 0.4 },
+          };
+        }),
+      },
+    ],
+  };
+});
+
+const optionScatter = computed(() => {
+  const lista = estados.value;
+  return {
+    animationDurationUpdate: 350,
+    animationEasingUpdate: 'cubicInOut',
+    tooltip: { formatter: (p) => `<b>${lista[p.dataIndex]?.label}</b><br/>${p.value[1]}` },
+    grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
+    xAxis: { type: 'value', axisLabel: { fontSize: 9 } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 9 } },
+    series: [
+      {
+        type: 'scatter',
+        symbolSize: 10,
+        data: lista.map((e, idx) => {
+          const activo = !props.rangoActivoColor || e.color === props.rangoActivoColor;
+          const val = typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0;
+          return {
+            value: [e.sortPosition ?? idx, val],
+            itemStyle: { color: e.color, opacity: activo ? 1 : 0.4 },
+          };
+        }),
+      },
+    ],
+  };
+});
+
+const optionGauge = computed(() => {
+  const lista = barras.value;
+  const total = lista.reduce((s, b) => s + (b.count || 0), 0);
+  const max = lista.reduce((m, b) => Math.max(m, b.count || 0), 0);
+  return {
+    animationDurationUpdate: 350,
+    series: [
+      {
+        type: 'gauge',
+        min: 0,
+        max: total || 100,
+        axisLine: {
+          lineStyle: { width: 20, color: lista.map((b, i) => [(i + 1) / lista.length, b.color]) },
+        },
+        pointer: { show: true },
+        detail: { formatter: '{value}', fontSize: 16 },
+        data: [{ value: max, name: lista.find((b) => b.count === max)?.label || '' }],
+      },
+    ],
+  };
+});
+
+const optionRadar = computed(() => {
+  const lista = estados.value.slice(0, 10);
+  return {
+    animationDurationUpdate: 350,
+    tooltip: { trigger: 'item' },
+    radar: {
+      indicator: lista.map((e) => {
+        const val = typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0;
+        return { name: e.label, max: val * 1.2 || 1 };
+      }),
+      axisName: { fontSize: 9 },
+    },
+    series: [
+      {
+        type: 'radar',
+        data: [
+          {
+            value: lista.map((e) =>
+              typeof e.value === 'number' ? e.value : parseFloat(e.value) || 0
+            ),
+            areaStyle: { opacity: 0.3 },
+          },
+        ],
+      },
+    ],
+  };
+});
+
 const option = computed(() => {
   switch (chartType.value) {
     case 'donut':
       return optionDonut.value;
+    case 'pie':
+      return optionPie.value;
     case 'horizontal_bar':
       return optionHorizontalBar.value;
     case 'treemap':
       return optionTreemap.value;
+    case 'line':
+      return optionLine.value;
+    case 'area':
+      return optionArea.value;
+    case 'scatter':
+      return optionScatter.value;
+    case 'gauge':
+      return optionGauge.value;
+    case 'radar':
+      return optionRadar.value;
     default:
       return optionBar.value;
   }
@@ -228,10 +410,11 @@ function onBarHover(params) {
     const estado = estados.value.find((e) => e.label === params.name);
     color = estado?.color ?? null;
   } else if (chartType.value === 'horizontal_bar') {
-    // La lista está invertida en ECharts (índice 0 = última entidad)
     const idx = estados.value.length - 1 - params.dataIndex;
     color = estados.value[idx]?.color ?? null;
-  } else if (chartType.value === 'donut') {
+  } else if (TIPOS_CON_ESTADOS.includes(chartType.value)) {
+    color = estados.value[params.dataIndex]?.color ?? null;
+  } else if (chartType.value === 'donut' || chartType.value === 'pie') {
     color = barras.value[params.dataIndex]?.color ?? null;
   } else {
     color = barras.value[params.dataIndex]?.color ?? null;

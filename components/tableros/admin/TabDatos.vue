@@ -133,17 +133,17 @@ onMounted(cargarIndicadores);
           <p class="tab-datos__campo">Campo: {{ cuadro.field }}</p>
           <p v-if="cuadro.is_percentage" class="tab-datos__badge">Porcentual</p>
 
-          <footer>
+          <footer class="tab-datos__pie">
             <button
               type="button"
-              class="boton boton-secundario boton-chico"
+              class="boton boton-chico tab-datos__btn-tarjeta"
               @click="editarCuadro(cuadro)"
             >
               Editar
             </button>
             <button
               type="button"
-              class="boton boton-primario boton-chico"
+              class="boton boton-chico tab-datos__btn-tarjeta tab-datos__btn-tarjeta--eliminar"
               @click="borrarCuadro(cuadro.id)"
             >
               Eliminar
@@ -204,6 +204,26 @@ onMounted(cargarIndicadores);
       display: flex;
       gap: 0.3rem;
       margin-top: 0.75rem;
+    }
+
+    &__btn-tarjeta {
+      background: rgba(255, 255, 255, 0.88);
+      color: #111 !important;
+      border: 1px solid rgba(0, 0, 0, 0.18);
+
+      &:hover {
+        background: rgba(255, 255, 255, 1);
+        border-color: rgba(0, 0, 0, 0.35);
+      }
+
+      &--eliminar {
+        background: rgba(220, 53, 69, 0.1);
+
+        &:hover {
+          background: rgba(220, 53, 69, 0.85);
+          color: #fff !important;
+        }
+      }
     }
   }
 

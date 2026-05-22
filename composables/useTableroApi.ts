@@ -92,6 +92,25 @@ export function useTableroApi() {
         `${config.public.geonodeApi}/datasets/?filter{title.icontains}=${encodeURIComponent(search)}&page_size=20`
       ),
 
+    fetchDatasetsPaginados: (
+      search: string,
+      page: number = 1,
+      token?: string | null,
+      pageSize: number = 20,
+      category: string = ''
+    ) => {
+      const params = new URLSearchParams({ page_size: String(pageSize), page: String(page) });
+      if (search) params.set('filter{title.icontains}', search);
+      if (category) params.set('filter{category.identifier.in}', category);
+      const url = `${config.public.geonodeApi}/datasets/?${params.toString()}`;
+      if (token) {
+        return gnoxyFetch(url, { headers: { Authorization: `Bearer ${token}` } }).then((r) =>
+          r.json()
+        );
+      }
+      return fetchJson(url);
+    },
+
     fetchDatasetAttributes: (id: number) =>
       fetchJson(`${config.public.geonodeApi}/datasets/${id}/`),
 

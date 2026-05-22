@@ -8,6 +8,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  grupos: {
+    type: Array,
+    default: () => [],
+  },
   cargando: {
     type: Boolean,
     default: false,
@@ -20,15 +24,20 @@ const { data: userData } = useAuth();
 const { eliminarIndicador, recalcularIndicador } = useTableroApi();
 
 const filtro = ref('');
+const filtroGrupo = ref('');
 const mostrarModalNuevo = ref(false);
 const indicadorEditando = ref(null);
 const recalculandoId = ref(null);
 const mensajeRecalculo = ref('');
 
 const filtrados = computed(() => {
-  if (!filtro.value) return props.indicadores;
+  let lista = props.indicadores;
+  if (filtroGrupo.value) {
+    lista = lista.filter((i) => String(i.group) === String(filtroGrupo.value));
+  }
+  if (!filtro.value) return lista;
   const t = filtro.value.toLowerCase();
-  return props.indicadores.filter((i) => i.name?.toLowerCase().includes(t));
+  return lista.filter((i) => i.name?.toLowerCase().includes(t));
 });
 
 async function quitar(id) {
@@ -78,6 +87,15 @@ async function recalcular(ind) {
         placeholder="Buscar indicador..."
         class="repo-indicadores__buscar"
       />
+      <select
+        v-if="grupos.length"
+        v-model="filtroGrupo"
+        class="repo-indicadores__filtro-grupo"
+        title="Filtrar por grupo"
+      >
+        <option value="">Todos los grupos</option>
+        <option v-for="g in grupos" :key="g.id" :value="g.id">{{ g.name }}</option>
+      </select>
       <button
         type="button"
         class="boton boton-primario boton-chico"
@@ -167,6 +185,10 @@ async function recalcular(ind) {
 
   &__buscar {
     flex: 1;
+  }
+
+  &__filtro-grupo {
+    max-width: 160px;
   }
 
   &__lista {
