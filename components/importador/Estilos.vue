@@ -354,6 +354,7 @@ watch(
             palette: isNumeric ? 'YlOrRd' : 'Set1',
             n_classes: 5,
             classification: 'quantile',
+            reverse: false,
             enabled: !razonDesactivado(col),
           };
     });
@@ -410,14 +411,16 @@ function paletteGroups(colName) {
   ].filter((g) => g.ramps.length > 0);
 }
 
-function swatchColors(paletteName) {
+function swatchColors(paletteName, reverse = false) {
   const all = [...RAMPS.sequential, ...RAMPS.diverging, ...RAMPS.qualitative];
   const ramp = all.find((r) => r.name === paletteName);
   if (!ramp) return [];
   const colors = ramp.colors;
-  if (colors.length <= 7) return colors;
-  const step = (colors.length - 1) / 6;
-  return Array.from({ length: 7 }, (_, i) => colors[Math.round(i * step)]);
+  const result =
+    colors.length <= 7
+      ? [...colors]
+      : Array.from({ length: 7 }, (_, i) => colors[Math.round((i * (colors.length - 1)) / 6)]);
+  return reverse ? [...result].reverse() : result;
 }
 </script>
 
@@ -602,9 +605,23 @@ function swatchColors(paletteName) {
             </select>
           </div>
 
+          <div class="campo-chico campo-invertir">
+            <label class="etiqueta-chica" :for="`rev-${col.name}`">Invertir</label>
+            <input
+              :id="`rev-${col.name}`"
+              type="checkbox"
+              class="checkbox-invertir"
+              :checked="localSpecs[col.name]?.reverse ?? false"
+              @change="updateSpec(col.name, { reverse: $event.target.checked })"
+            />
+          </div>
+
           <div class="paleta-preview" aria-hidden="true">
             <span
-              v-for="(color, ci) in swatchColors(localSpecs[col.name]?.palette ?? '')"
+              v-for="(color, ci) in swatchColors(
+                localSpecs[col.name]?.palette ?? '',
+                localSpecs[col.name]?.reverse ?? false
+              )"
               :key="ci"
               class="swatch"
               :style="{ backgroundColor: color }"
@@ -670,16 +687,16 @@ function swatchColors(paletteName) {
     border-color 0.1s;
 
   &:has(input:checked) {
-    background: var(--color-primario-claro, #e8f0fe);
-    border-color: var(--color-primario, #005fcc);
-    color: var(--color-primario, #005fcc);
+    background: var(--color-secundario-3, #f8e1e8);
+    border-color: var(--color-primario-4, #991f47);
+    color: var(--color-primario-4, #991f47);
     font-weight: 600;
   }
 
   input[type='radio'] {
     width: 13px;
     height: 13px;
-    accent-color: var(--color-primario, #005fcc);
+    accent-color: var(--color-primario-4, #991f47);
     margin: 0;
   }
 }
@@ -714,8 +731,8 @@ function swatchColors(paletteName) {
   color: var(--color-texto-secundario, #888);
 
   &.activo {
-    background: var(--color-acento, #2e7d32);
-    border-color: var(--color-acento, #2e7d32);
+    background: var(--color-primario-4, #991f47);
+    border-color: var(--color-primario-4, #991f47);
     color: #fff;
   }
 
@@ -766,6 +783,19 @@ function swatchColors(paletteName) {
 .campo-numero {
   min-width: 80px;
   max-width: 100px;
+}
+
+.campo-invertir {
+  align-items: center;
+  justify-content: center;
+
+  .checkbox-invertir {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--color-primario-4, #991f47);
+  }
 }
 
 .paleta-preview {

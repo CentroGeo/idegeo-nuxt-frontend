@@ -12,6 +12,8 @@ const {
   importToGeonode,
   finalizeLayer,
   createTablero,
+  listJobs,
+  deleteJob,
   fetchCategories,
 } = useDataImporter();
 
@@ -233,6 +235,22 @@ async function esperarImportacion() {
 // ------------------------------------------------------------------
 // Paso 4: Crear geocontenido
 // ------------------------------------------------------------------
+async function esperarTablero() {
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 4000));
+    const actualizado = await pollJob(job.value.id, token.value);
+    job.value = actualizado;
+    if (actualizado.dashboard_site_id) {
+      siteIdCreado.value = actualizado.dashboard_site_id;
+      return;
+    }
+    if (actualizado.error_message?.startsWith('Error creando tablero:')) {
+      throw new Error(actualizado.error_message);
+    }
+  }
+  throw new Error('La generación del tablero está tardando más de lo esperado. Intenta de nuevo.');
+}
+
 async function crearGeocont() {
   if (!job.value) return;
   error.value = '';
@@ -275,7 +293,12 @@ async function crearGeocont() {
         },
         token.value
       );
-      siteIdCreado.value = result.site_id;
+      if (result.building) {
+        mensajeCarga.value = 'Construyendo tablero de datos… (puede tardar un momento)';
+        await esperarTablero();
+      } else if (result.site_id) {
+        siteIdCreado.value = result.site_id;
+      }
     } else if (tipoGeocont.value === 'capa') {
       const result = await finalizeLayer(
         job.value.id,
@@ -323,9 +346,15 @@ async function cargarJobExistente(jobId) {
 
     switch (existingJob.status) {
       case 'done':
-        fetchCategories(token.value).then((cats) => (categorias.value = cats));
-        cargando.value = false;
-        paso.value = 4;
+        if (existingJob.dashboard_site_id) {
+          siteIdCreado.value = existingJob.dashboard_site_id;
+          cargando.value = false;
+          paso.value = 4;
+        } else {
+          fetchCategories(token.value).then((cats) => (categorias.value = cats));
+          cargando.value = false;
+          paso.value = 4;
+        }
         break;
       case 'ready':
         cargando.value = false;
@@ -361,20 +390,70 @@ async function cargarJobExistente(jobId) {
   }
 }
 
+// ------------------------------------------------------------------
+// Jobs recientes
+// ------------------------------------------------------------------
+const jobsRecientes = ref([]);
+const cargandoJobs = ref(false);
+const eliminandoJobId = ref(null);
+
+async function cargarJobsRecientes() {
+  if (!token.value) {
+    console.warn('[importar-datos] sin token, no se cargan jobs');
+    return;
+  }
+  cargandoJobs.value = true;
+  try {
+    const resultado = await listJobs(token.value);
+    console.debug('[importar-datos] jobs cargados:', resultado.length);
+    jobsRecientes.value = resultado;
+  } catch (e) {
+    console.error('[importar-datos] error cargando jobs:', e);
+  } finally {
+    cargandoJobs.value = false;
+  }
+}
+
+async function retomarJob(jobId) {
+  tipoGeocont.value = 'tablero';
+  jobsRecientes.value = [];
+  await cargarJobExistente(jobId);
+}
+
+watch(paso, (p) => {
+  if (p === 1) cargarJobsRecientes();
+});
+
+async function eliminarJob(jobId) {
+  eliminandoJobId.value = jobId;
+  try {
+    await deleteJob(jobId, token.value);
+    jobsRecientes.value = jobsRecientes.value.filter((j) => j.id !== jobId);
+  } finally {
+    eliminandoJobId.value = null;
+  }
+}
+
 onMounted(() => {
   const jobIdParam = route.query.job;
-  if (!jobIdParam) return;
-  // Cuando viene de cargar-archivos el tipo por defecto es 'capa'
-  tipoGeocont.value = 'capa';
 
   if (token.value) {
-    cargarJobExistente(Number(jobIdParam));
+    if (jobIdParam) {
+      tipoGeocont.value = 'capa';
+      cargarJobExistente(Number(jobIdParam));
+    } else {
+      cargarJobsRecientes();
+    }
   } else {
-    // Token no disponible aún (hidratación SSR): esperar a que esté listo
     const stop = watch(token, (t) => {
       if (t) {
         stop();
-        cargarJobExistente(Number(jobIdParam));
+        if (jobIdParam) {
+          tipoGeocont.value = 'capa';
+          cargarJobExistente(Number(jobIdParam));
+        } else {
+          cargarJobsRecientes();
+        }
       }
     });
   }
@@ -430,6 +509,14 @@ onErrorCaptured((err) => {
         <p class="texto-chico texto-color-secundario m-t-2">
           Formatos aceptados: <strong>CSV, XLSX, XLS, JSON</strong>. Tamaño máximo: 50 MB.
         </p>
+
+        <ImportadorJobsPendientes
+          :jobs="jobsRecientes"
+          :cargando="cargandoJobs"
+          :eliminando="eliminandoJobId"
+          @retomar="retomarJob"
+          @eliminar="eliminarJob"
+        />
       </div>
 
       <!-- ========== PASO 2: Revisar esquema ========== -->
@@ -638,15 +725,15 @@ onErrorCaptured((err) => {
     }
 
     &.activo .paso-numero {
-      background-color: var(--color-primario, #005fcc);
+      background-color: var(--color-primario-4, #991f47);
       color: white;
-      border-color: var(--color-primario, #005fcc);
+      border-color: var(--color-primario-4, #991f47);
     }
 
     &.completado .paso-numero {
-      background-color: var(--color-exito, #2e7d32);
+      background-color: var(--color-secundario-9, #53323c);
       color: white;
-      border-color: var(--color-exito, #2e7d32);
+      border-color: var(--color-secundario-9, #53323c);
     }
   }
 
@@ -685,16 +772,16 @@ onErrorCaptured((err) => {
   border-radius: 8px;
   cursor: pointer;
   text-align: center;
-  background-color: var(--color-acento, #f5f5f5);
+  background-color: var(--color-fondo-2, #fafafa);
   transition: border-color 0.15s;
 
   &:hover:not(.deshabilitado) {
-    border-color: var(--color-primario, #005fcc);
+    border-color: var(--color-primario-4, #991f47);
   }
 
   &.seleccionado {
-    border-color: var(--color-primario, #005fcc);
-    background-color: var(--color-primario-claro, #e8f0fe);
+    border-color: var(--color-primario-4, #991f47);
+    background-color: var(--color-secundario-2, #fcf3f5);
   }
 
   &.deshabilitado {
