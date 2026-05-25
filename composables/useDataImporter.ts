@@ -17,6 +17,7 @@ export interface StyleSpec {
   label?: string;
   size_min?: number;
   size_max?: number;
+  reverse?: boolean;
 }
 
 export interface GeoNodeCategory {
@@ -169,7 +170,7 @@ export function useDataImporter() {
     jobId: number,
     payload: CreateTableroPayload,
     token?: string | null
-  ): Promise<{ site_id: number }> {
+  ): Promise<{ site_id?: number; building?: boolean; job_id?: number }> {
     const resp = await gnoxyFetch(`${baseUrl}/${jobId}/create-tablero/`, {
       method: 'POST',
       headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
@@ -180,6 +181,26 @@ export function useDataImporter() {
       throw new Error(err.detail || `Error ${resp.status} creando tablero`);
     }
     return resp.json();
+  }
+
+  async function listJobs(token?: string | null): Promise<DataImportJob[]> {
+    const url = `${baseUrl}/`;
+    const resp = await gnoxyFetch(url, { headers: authHeaders(token) });
+    if (!resp.ok) {
+      console.warn('[listJobs] HTTP', resp.status, url);
+      return [];
+    }
+    const data = await resp.json();
+    console.debug('[listJobs] recibidos:', Array.isArray(data) ? data.length : data);
+    return Array.isArray(data) ? data : (data.results ?? []);
+  }
+
+  async function deleteJob(jobId: number, token?: string | null): Promise<boolean> {
+    const resp = await gnoxyFetch(`${baseUrl}/${jobId}/`, {
+      method: 'DELETE',
+      headers: authHeaders(token),
+    });
+    return resp.ok || resp.status === 204;
   }
 
   async function fetchCategories(token?: string | null): Promise<GeoNodeCategory[]> {
@@ -203,6 +224,8 @@ export function useDataImporter() {
     importToGeonode,
     finalizeLayer,
     createTablero,
+    listJobs,
+    deleteJob,
     fetchCategories,
   };
 }
