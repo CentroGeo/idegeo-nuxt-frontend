@@ -10,14 +10,14 @@ const { data: session } = useAuth();
 const mapaId = computed(() => Number(route.params.id));
 
 const modalEditar = ref(null);
-const modalAgregarCapas = ref(null);
 
-const esOwner = computed(
-  () =>
-    !!session.value &&
-    mapasStore.activeMap?.owner?.username &&
-    mapasStore.activeMap.owner.username === session.value.user?.name
-);
+const esOwner = computed(() => {
+  const ownerUsername = mapasStore.activeMap?.owner?.username;
+  const sessionEmail = session.value?.user?.email;
+  const sessionName = session.value?.user?.name;
+  if (!ownerUsername || !session.value) return false;
+  return ownerUsername === sessionEmail || ownerUsername === sessionName;
+});
 
 async function alternarVisible({ id, visible }) {
   await mapasStore.actualizarCapa(id, { visible });
@@ -36,7 +36,7 @@ async function eliminarCapa(id) {
 }
 
 function abrirAgregarCapas() {
-  modalAgregarCapas.value?.abrir();
+  mapasStore.abrirModalAgregarCapas();
 }
 
 function abrirEditar() {
@@ -85,7 +85,7 @@ onUnmounted(() => {
           <button class="boton-secundario" type="button" @click="eliminarMapa">
             <span class="pictograma-tache" aria-hidden="true" /> Eliminar mapa
           </button>
-          <NuxtLink :to="`/mapas/${mapaId}`" class="boton-secundario">Ver</NuxtLink>
+          <NuxtLink :to="`/mapas/${mapaId}`" class="boton-secundario">Atrás</NuxtLink>
         </div>
       </header>
 
@@ -120,16 +120,17 @@ onUnmounted(() => {
       </div>
 
       <MapasModalEditarMapa ref="modalEditar" :mapa="mapasStore.activeMap" />
-      <MapasModalAgregarCapas
-        ref="modalAgregarCapas"
-        :mapa-id="mapaId"
-        :map-type="mapasStore.activeMap.map_type"
-      />
     </template>
   </div>
 </template>
 
 <style lang="scss" scoped>
+a {
+  display: inline-flex !important;
+  padding: 16px 24px !important;
+  align-items: center !important;
+}
+
 .encabezado-editor {
   align-items: center;
   border-bottom: 1px solid var(--color-neutro-1);

@@ -1,7 +1,5 @@
 <script setup>
 const mapasStore = useMapasStore();
-const { data: session } = useAuth();
-const isLoggedIn = computed(() => !!session.value);
 
 const paginaActual = ref(0);
 
@@ -22,9 +20,6 @@ onMounted(() => cargar(paginaActual.value));
   <main class="pagina-mapas p-3">
     <div class="encabezado flex flex-contenido-separado">
       <h1 class="m-0">Mapas</h1>
-      <NuxtLink v-if="isLoggedIn" to="/mapas/crear" class="boton-primario">
-        <span class="pictograma-mas" aria-hidden="true" /> Crear mapa
-      </NuxtLink>
     </div>
 
     <p v-if="mapasStore.isLoading" class="m-y-3">Cargando…</p>

@@ -2,7 +2,7 @@
 import { defineNuxtConfig } from 'nuxt/config';
 
 const isDev = process.env.NODE_ENV !== 'production';
-const originEnvKey = isDev ? undefined : 'NUXT_AUTH_ORIGIN';
+const originEnvKey = 'NUXT_AUTH_ORIGIN';
 
 const metaImg = process.env.NUXT_APP_BASE_URL + 'img/icono_sigic.png';
 const metaDescription =
@@ -69,9 +69,9 @@ export default defineNuxtConfig({
   css: ['@centrogeomx/sisdai-css/dist/sisdai.min.css'],
 
   auth: {
-    debug: !isDev,
+    debug: isDev,
     isEnabled: true,
-    baseURL: '/',
+    baseURL: '/api/auth',
     originEnvKey: originEnvKey,
     globalAppMiddleware: false,
     provider: {

@@ -5,12 +5,13 @@ const { data: session } = useAuth();
 
 const mapaId = computed(() => Number(route.params.id));
 
-const esOwner = computed(
-  () =>
-    !!session.value &&
-    mapasStore.activeMap?.owner?.username &&
-    mapasStore.activeMap.owner.username === session.value.user?.name
-);
+const esOwner = computed(() => {
+  const ownerUsername = mapasStore.activeMap?.owner?.username;
+  const sessionEmail = session.value?.user?.email;
+  const sessionName = session.value?.user?.name;
+  if (!ownerUsername || !session.value) return false;
+  return ownerUsername === sessionEmail || ownerUsername === sessionName;
+});
 
 onMounted(async () => {
   await mapasStore.cargarMapa(mapaId.value);
@@ -73,6 +74,11 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+a {
+  display: inline-flex !important;
+  padding: 16px 24px !important;
+  align-items: center !important;
+}
 .encabezado-mapa {
   align-items: center;
   border-bottom: 1px solid var(--color-neutro-1);

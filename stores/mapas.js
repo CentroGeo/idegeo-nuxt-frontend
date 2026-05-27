@@ -28,6 +28,15 @@ export const useMapasStore = defineStore('mapas', () => {
   const activeLayers = ref([]);
   const isLoading = ref(false);
   const isLoadingMap = ref(false);
+  const modalAgregarCapasAbierto = ref(false);
+
+  function abrirModalAgregarCapas() {
+    modalAgregarCapasAbierto.value = true;
+  }
+
+  function cerrarModalAgregarCapas() {
+    modalAgregarCapasAbierto.value = false;
+  }
 
   // ── Getters ───────────────────────────────────────────────────────────────
 
@@ -179,6 +188,9 @@ export const useMapasStore = defineStore('mapas', () => {
     activeLayers,
     isLoading,
     isLoadingMap,
+    modalAgregarCapasAbierto,
+    abrirModalAgregarCapas,
+    cerrarModalAgregarCapas,
     layersOrdered,
     layersByPosition,
     buildWmtsUrl,
