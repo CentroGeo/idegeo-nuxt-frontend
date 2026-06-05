@@ -91,9 +91,20 @@ export const useMapasStore = defineStore('mapas', () => {
   }
 
   async function actualizarMapa(id, body) {
+    console.warn('[store.actualizarMapa] in', {
+      id,
+      body,
+      activeMapType: activeMap.value?.map_type,
+    });
     const data = await updateMap(id, body);
+    console.warn('[store.actualizarMapa] response', data);
     if (!data) return null;
-    if (activeMap.value?.id === id) activeMap.value = { ...activeMap.value, ...data };
+    if (activeMap.value?.id === id) {
+      activeMap.value = { ...activeMap.value, ...data };
+      console.warn('[store.actualizarMapa] activeMap actualizado', {
+        map_type: activeMap.value.map_type,
+      });
+    }
     const idx = maps.value.findIndex((m) => m.id === id);
     if (idx !== -1) maps.value[idx] = { ...maps.value[idx], ...data };
     return data;

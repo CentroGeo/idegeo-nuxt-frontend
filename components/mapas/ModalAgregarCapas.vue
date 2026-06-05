@@ -183,6 +183,13 @@ onBeforeUnmount(() => {
                         />
                         <strong>{{ capa.name }}</strong>
                       </label>
+                      <span
+                        v-if="capa.dataset_is_published != null"
+                        class="etiqueta-visibilidad"
+                        :class="capa.dataset_is_published ? 'es-publica' : 'es-privada'"
+                      >
+                        {{ capa.dataset_is_published ? 'Pública' : 'Privada' }}
+                      </span>
                       <button
                         class="boton-pictograma boton-sin-contenedor-secundario"
                         type="button"
@@ -340,6 +347,24 @@ onBeforeUnmount(() => {
 
 .bloque-cabecera {
   align-items: flex-start;
+}
+
+.etiqueta-visibilidad {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.etiqueta-visibilidad.es-publica {
+  background-color: #d8f5dc;
+  color: #16703c;
+}
+
+.etiqueta-visibilidad.es-privada {
+  background-color: #fde2e1;
+  color: #c0392b;
 }
 
 .capa-toggle {

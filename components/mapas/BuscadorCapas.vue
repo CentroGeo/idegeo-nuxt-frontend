@@ -57,8 +57,11 @@ async function cargarCapas() {
   const params = new URLSearchParams({
     page: String(pagina.value),
     page_size: String(tamPagina),
-    'filter{subtype.in}': 'vector,raster',
   });
+  // GeoNode no soporta el lookup `.in` con lista separada por comas;
+  // hay que repetir el parámetro por cada valor.
+  params.append('filter{subtype.in}', 'vector');
+  params.append('filter{subtype.in}', 'raster');
   if (busqueda.value.trim()) {
     params.append('search', busqueda.value.trim());
   } else if (categoriaSeleccionada.value) {
@@ -210,6 +213,12 @@ onMounted(async () => {
                 </p>
                 <div class="capa-meta flex">
                   <span class="etiqueta">{{ capa.subtype }}</span>
+                  <span
+                    class="etiqueta"
+                    :class="capa.is_published ? 'etiqueta-publica' : 'etiqueta-privada'"
+                  >
+                    {{ capa.is_published ? 'Pública' : 'Privada' }}
+                  </span>
                   <span class="texto-secundario">{{ capa.workspace }}</span>
                 </div>
               </div>
@@ -382,6 +391,7 @@ onMounted(async () => {
   font-size: 0.8rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 4px 0;
@@ -404,6 +414,16 @@ onMounted(async () => {
 .etiqueta-ok {
   background-color: #d8f5dc;
   color: #16703c;
+}
+
+.etiqueta-publica {
+  background-color: #d8f5dc;
+  color: #16703c;
+}
+
+.etiqueta-privada {
+  background-color: #fde2e1;
+  color: #c0392b;
 }
 
 .etiqueta-sel {

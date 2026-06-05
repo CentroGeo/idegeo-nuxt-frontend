@@ -10,6 +10,11 @@ const { data: session } = useAuth();
 const mapaId = computed(() => Number(route.params.id));
 
 const modalEditar = ref(null);
+const modalCompartir = ref(null);
+
+function abrirCompartir() {
+  modalCompartir.value?.abrir();
+}
 
 const esOwner = computed(() => {
   const ownerUsername = mapasStore.activeMap?.owner?.username;
@@ -35,6 +40,16 @@ async function eliminarCapa(id) {
   await mapasStore.eliminarCapa(id);
 }
 
+function cambiarVista(vista) {
+  if (!mapasStore.activeMap) return;
+  mapasStore.activeMap = { ...mapasStore.activeMap, ...vista };
+}
+
+async function guardarVista(vista) {
+  if (!mapasStore.activeMap) return;
+  await mapasStore.actualizarMapa(mapasStore.activeMap.id, vista);
+}
+
 function abrirAgregarCapas() {
   mapasStore.abrirModalAgregarCapas();
 }
@@ -46,8 +61,15 @@ function abrirEditar() {
 async function eliminarMapa() {
   if (!confirm('¿Eliminar este mapa? Esta acción no se puede deshacer.')) return;
   const ok = await mapasStore.eliminarMapa(mapaId.value);
-  if (ok) navigateTo('/mapas');
+  if (ok) navigateTo('/catalogo/explorar/mapas');
 }
+
+watch(
+  () => mapasStore.activeMap?.map_type,
+  (nv, ov) => {
+    console.warn('[editar.vue] activeMap.map_type cambió', { ov, nv });
+  }
+);
 
 onMounted(async () => {
   await mapasStore.cargarMapa(mapaId.value);
@@ -64,12 +86,12 @@ onUnmounted(() => {
 
     <div v-else-if="!mapasStore.activeMap" class="m-3">
       <p>No se encontró el mapa solicitado.</p>
-      <NuxtLink to="/mapas" class="boton-secundario">Volver</NuxtLink>
+      <NuxtLink to="/catalogo/explorar/mapas" class="boton-secundario">Volver</NuxtLink>
     </div>
 
     <div v-else-if="!esOwner" class="m-3">
       <p>No tienes permisos para editar este mapa.</p>
-      <NuxtLink :to="`/mapas/${mapaId}`" class="boton-secundario">Ver mapa</NuxtLink>
+      <NuxtLink :to="`/consulta/mapas/${mapaId}`" class="boton-secundario">Ver mapa</NuxtLink>
     </div>
 
     <template v-else>
@@ -79,47 +101,57 @@ onUnmounted(() => {
           <p class="texto-secundario m-0">Tipo: {{ mapasStore.activeMap.map_type }}</p>
         </div>
         <div class="flex">
+          <button class="boton-secundario" type="button" @click="abrirCompartir">
+            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Compartir
+          </button>
           <button class="boton-secundario" type="button" @click="abrirEditar">
             <span class="pictograma-editar" aria-hidden="true" /> Configuración
           </button>
           <button class="boton-secundario" type="button" @click="eliminarMapa">
             <span class="pictograma-tache" aria-hidden="true" /> Eliminar mapa
           </button>
-          <NuxtLink :to="`/mapas/${mapaId}`" class="boton-secundario">Atrás</NuxtLink>
+          <NuxtLink :to="`/consulta/mapas/${mapaId}`" class="boton-secundario">Atrás</NuxtLink>
         </div>
       </header>
 
       <div class="contenido-editor flex">
-        <div class="contenedor-mapa">
+        <div :key="mapasStore.activeMap.map_type" class="contenedor-mapa">
           <MapasVisorMapa
             v-if="mapasStore.activeMap.map_type === 'regular'"
             :mapa="mapasStore.activeMap"
             :capas="mapasStore.activeLayers"
+            @vista="cambiarVista"
           />
           <MapasVisorSwipe
             v-else-if="mapasStore.activeMap.map_type === 'swipe'"
             :mapa="mapasStore.activeMap"
             :capas="mapasStore.activeLayers"
+            @vista="cambiarVista"
           />
           <MapasVisorDual
             v-else-if="mapasStore.activeMap.map_type === 'dual'"
             :mapa="mapasStore.activeMap"
             :capas="mapasStore.activeLayers"
+            @vista="cambiarVista"
           />
         </div>
 
         <MapasPanelCapas
           :capas="mapasStore.activeLayers"
           :editable="true"
+          :mapa="mapasStore.activeMap"
           @toggle="alternarVisible"
           @opacidad="cambiarOpacidad"
           @reordenar="reordenar"
           @eliminar="eliminarCapa"
           @agregar="abrirAgregarCapas"
+          @vista="cambiarVista"
+          @guardar-vista="guardarVista"
         />
       </div>
 
       <MapasModalEditarMapa ref="modalEditar" :mapa="mapasStore.activeMap" />
+      <MapasModalCompartir ref="modalCompartir" :mapa="mapasStore.activeMap" />
     </template>
   </div>
 </template>

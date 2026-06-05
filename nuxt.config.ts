@@ -57,6 +57,15 @@ export default defineNuxtConfig({
     compressPublicAssets: false,
   },
 
+  routeRules: {
+    '/consulta/mapas/*/embed': {
+      headers: {
+        'X-Frame-Options': 'ALLOWALL',
+        'Content-Security-Policy': 'frame-ancestors *',
+      },
+    },
+  },
+
   modules: [
     '@pinia/nuxt',
     '@nuxt/eslint',

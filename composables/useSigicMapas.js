@@ -41,8 +41,14 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
-    return res.json();
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      console.warn('[updateMap] !ok', { status: res.status, body: txt });
+      return null;
+    }
+    const json = await res.json();
+    console.warn('[updateMap] ok', { status: res.status, json });
+    return json;
   }
 
   async function deleteMap(id) {

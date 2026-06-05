@@ -50,8 +50,9 @@ export default defineNuxtRouteMiddleware((to) => {
     // --- Levantamiento (y sus internas) ---
     '/levantamiento': flags.enableAuth && flags.enableLevantamiento,
 
-    // --- Mapas ---
-    '/mapas': flags.enableMapas,
+    // --- Mapas (ahora dentro de catálogo y consulta) ---
+    '/catalogo/explorar/mapas': flags.enableMapas,
+    '/consulta/mapas': flags.enableMapas,
   };
 
   for (const [prefix, allowed] of Object.entries(rules)) {

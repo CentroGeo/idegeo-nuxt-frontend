@@ -25,6 +25,7 @@ const form = reactive({
   base_layer: 'osm',
   map_type: 'regular',
   highlight_color: '#ff51ba',
+  is_public: true,
 });
 
 function cargarFormulario() {
@@ -36,6 +37,7 @@ function cargarFormulario() {
   form.base_layer = props.mapa.base_layer ?? 'osm';
   form.map_type = props.mapa.map_type ?? 'regular';
   form.highlight_color = props.mapa.highlight_color ?? '#ff51ba';
+  form.is_public = props.mapa.is_public ?? true;
 }
 
 watch(() => props.mapa, cargarFormulario, { immediate: true });
@@ -61,7 +63,7 @@ async function guardar() {
   }
   guardando.value = true;
   error.value = '';
-  const data = await mapasStore.actualizarMapa(props.mapa.id, {
+  const payload = {
     name: form.name.trim(),
     zoom: Number(form.zoom),
     center_lat: Number(form.center_lat),
@@ -69,7 +71,9 @@ async function guardar() {
     base_layer: form.base_layer,
     map_type: form.map_type,
     highlight_color: form.highlight_color,
-  });
+    is_public: Boolean(form.is_public),
+  };
+  const data = await mapasStore.actualizarMapa(props.mapa.id, payload);
   guardando.value = false;
   if (!data) {
     error.value = 'No se pudo actualizar el mapa.';
@@ -114,33 +118,28 @@ defineExpose({ abrir, cerrar });
           </SisdaiSelector>
         </div>
 
-        <div class="grid-coords m-t-2">
-          <SisdaiCampoBase
-            v-model="form.zoom"
-            etiqueta="Zoom"
-            tipo="number"
-            :es_etiqueta_visible="true"
-          />
-          <SisdaiCampoBase
-            v-model="form.center_lat"
-            etiqueta="Centro (longitud)"
-            tipo="number"
-            :es_etiqueta_visible="true"
-          />
-          <SisdaiCampoBase
-            v-model="form.center_long"
-            etiqueta="Centro (latitud)"
-            tipo="number"
-            :es_etiqueta_visible="true"
-          />
-        </div>
-
         <div class="m-t-2">
           <label class="campo-color">
             <span class="campo-etiqueta">Color de resaltado</span>
             <input v-model="form.highlight_color" type="color" />
             <span class="texto-secundario">{{ form.highlight_color }}</span>
           </label>
+        </div>
+
+        <div class="m-t-2">
+          <label class="campo-toggle">
+            <input v-model="form.is_public" type="checkbox" />
+            <span class="campo-etiqueta boton-secundario boton-chico">
+              {{ form.is_public ? 'Mapa público' : 'Mapa privado' }}
+            </span>
+          </label>
+          <p class="texto-secundario m-0">
+            {{
+              form.is_public
+                ? 'Cualquier persona con el enlace puede ver el mapa.'
+                : 'Sólo tú puedes ver el mapa.'
+            }}
+          </p>
         </div>
 
         <p v-if="error" class="m-t-2 texto-error">{{ error }}</p>
@@ -159,16 +158,17 @@ defineExpose({ abrir, cerrar });
 </template>
 
 <style lang="scss" scoped>
-.grid-coords {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
 .campo-color {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.campo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
 }
 
 .campo-etiqueta {

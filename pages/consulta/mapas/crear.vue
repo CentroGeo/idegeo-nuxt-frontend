@@ -6,11 +6,11 @@ definePageMeta({
 const modalCrear = ref(null);
 
 function alCrear(mapa) {
-  navigateTo(`/mapas/${mapa.id}/editar`);
+  navigateTo(`/consulta/mapas/${mapa.id}/editar`);
 }
 
 function cancelar() {
-  navigateTo('/mapas');
+  navigateTo('/catalogo/explorar/mapas');
 }
 
 onMounted(() => {

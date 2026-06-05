@@ -13,6 +13,15 @@ const esOwner = computed(() => {
   return ownerUsername === sessionEmail || ownerUsername === sessionName;
 });
 
+const modalCompartir = ref(null);
+function abrirCompartir() {
+  modalCompartir.value?.abrir();
+}
+
+function abrirAgregarCapas() {
+  mapasStore.abrirModalAgregarCapas();
+}
+
 onMounted(async () => {
   await mapasStore.cargarMapa(mapaId.value);
 });
@@ -28,7 +37,7 @@ onUnmounted(() => {
 
     <div v-else-if="!mapasStore.activeMap" class="m-3">
       <p>No se encontró el mapa solicitado.</p>
-      <NuxtLink to="/mapas" class="boton-secundario">Volver al listado</NuxtLink>
+      <NuxtLink to="/catalogo/explorar/mapas" class="boton-secundario">Volver al listado</NuxtLink>
     </div>
 
     <template v-else>
@@ -41,15 +50,32 @@ onUnmounted(() => {
           </p>
         </div>
         <div class="flex">
-          <NuxtLink v-if="esOwner" :to="`/mapas/${mapaId}/editar`" class="boton-secundario">
+          <NuxtLink
+            :to="`/consulta/mapas/${mapaId}/visualizar`"
+            class="boton-secundario"
+            target="_blank"
+          >
+            <i class="fa-solid fa-eye" aria-hidden="true"></i> Visualizar
+          </NuxtLink>
+          <button class="boton-secundario" type="button" @click="abrirCompartir">
+            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Compartir
+          </button>
+          <button v-if="esOwner" class="boton-primario" type="button" @click="abrirAgregarCapas">
+            <span class="pictograma-mas" aria-hidden="true" /> Agregar capas
+          </button>
+          <NuxtLink
+            v-if="esOwner"
+            :to="`/consulta/mapas/${mapaId}/editar`"
+            class="boton-secundario"
+          >
             <span class="pictograma-editar" aria-hidden="true" /> Editar
           </NuxtLink>
-          <NuxtLink to="/mapas" class="boton-secundario">Volver</NuxtLink>
+          <NuxtLink to="/catalogo/explorar/mapas" class="boton-secundario">Volver</NuxtLink>
         </div>
       </header>
 
       <div class="contenido-visor flex">
-        <div class="contenedor-mapa">
+        <div :key="mapasStore.activeMap.map_type" class="contenedor-mapa">
           <MapasVisorMapa
             v-if="mapasStore.activeMap.map_type === 'regular'"
             :mapa="mapasStore.activeMap"
@@ -69,6 +95,8 @@ onUnmounted(() => {
 
         <MapasPanelCapas :capas="mapasStore.activeLayers" :editable="false" />
       </div>
+
+      <MapasModalCompartir ref="modalCompartir" :mapa="mapasStore.activeMap" />
     </template>
   </div>
 </template>
@@ -86,7 +114,7 @@ a {
 
 .contenido-visor {
   gap: 0;
-  height: calc(100vh - 200px);
+  height: calc(100vh - 17rem);
 }
 
 .contenedor-mapa {

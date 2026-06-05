@@ -17,7 +17,11 @@ const tipoEtiqueta = {
 const previewSrc = computed(() => props.mapa.preview || `${config.app.baseURL}img/icono_sigic.png`);
 
 function abrirMapa() {
-  navigateTo(`/mapas/${props.mapa.id}`);
+  navigateTo(`/consulta/mapas/${props.mapa.id}`);
+}
+
+function visualizarMapa() {
+  window.open(`/consulta/mapas/${props.mapa.id}/visualizar`, '_blank');
 }
 </script>
 
@@ -28,6 +32,9 @@ function abrirMapa() {
         <img :src="previewSrc" :alt="`Vista previa de ${mapa.name}`" class="preview" />
         <span class="borde-redondeado-16 p-1 etiqueta-tipo">
           {{ tipoEtiqueta[mapa.map_type] || mapa.map_type }}
+        </span>
+        <span v-if="mapa.is_public === false" class="borde-redondeado-16 p-1 etiqueta-privado">
+          <i class="fa-solid fa-lock" aria-hidden="true"></i> Privado
         </span>
       </div>
 
@@ -47,7 +54,15 @@ function abrirMapa() {
         style="width: 100%; margin: 8px"
         @click="abrirMapa"
       >
-        Abrir mapa
+        Abrir configuración
+      </button>
+      <button
+        class="boton-secundario flex flex-contenido-centrado"
+        style="width: 100%; margin: 8px"
+        @click="visualizarMapa"
+      >
+        <i class="fa-solid fa-eye" aria-hidden="true" style="margin-right: 6px"></i>
+        Visualizar mapa
       </button>
     </div>
     <div class="tarjeta-pie columna-16"></div>
@@ -84,6 +99,18 @@ function abrirMapa() {
   color: var(--color-primario-4);
   border: solid 1px var(--color-primario-4);
   font-size: 0.85rem;
+}
+
+.etiqueta-privado {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .meta {
