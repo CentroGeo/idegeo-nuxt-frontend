@@ -36,7 +36,7 @@ jobs:
 
   build:
     name: Build SIGIC Nuxt Frontend image (develop)
-    runs-on: [self-hosted, build-develop, idegeo-nuxt-frontend]
+    runs-on: [self-hosted, develop]
     environment: develop
     if: github.event_name == 'push'
 
@@ -82,5 +82,17 @@ jobs:
           docker push ghcr.io/${{ steps.vars.outputs.owner }}/${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.sha }}
 
   deploy:
+    needs: build
     runs-on: [self-hosted, develop]
     if: github.event_name == 'push'
+    environment: develop
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_PAULINAPC6_PAT }}" | docker login ghcr.io -u PaulinaPC6 --password-stdin
+
+      - name: Pull and restart frontend
+        run: |
+          cd /opt/sigic
+          docker compose pull frontend-admin frontend-app
+          docker compose up -d frontend-admin frontend-app
