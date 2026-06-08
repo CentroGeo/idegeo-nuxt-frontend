@@ -22,6 +22,10 @@ interface FeatureFlags {
   enableIaa: boolean;
   enableLevantamiento: boolean;
   enableMapas: boolean;
+  enableAcercaDe: boolean;
+  enableGeocontenidos: boolean;
+  enableGeohistorias: boolean;
+  enableTableros: boolean;
 }
 
 export default defineNuxtRouteMiddleware((to) => {
@@ -53,6 +57,17 @@ export default defineNuxtRouteMiddleware((to) => {
     // --- Mapas (ahora dentro de catálogo y consulta) ---
     '/catalogo/explorar/mapas': flags.enableMapas,
     '/consulta/mapas': flags.enableMapas,
+    // --- Acerca de ---
+    '/acerca-de': flags.enableAcercaDe,
+
+    // --- Geocontenidos (y sus internas) ---
+    '/geocontenidos': flags.enableGeocontenidos,
+
+    // --- Geohistorias (vista pública) ---
+    '/geohistorias': flags.enableGeohistorias,
+
+    // --- Tableros (vista pública, catch-all) ---
+    '/tableros': flags.enableTableros,
   };
 
   for (const [prefix, allowed] of Object.entries(rules)) {
