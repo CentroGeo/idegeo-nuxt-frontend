@@ -8,9 +8,7 @@
  */
 import { ref } from 'vue';
 
-// const config = useRuntimeConfig()
-
-/*const props = defineProps({
+defineProps({
   // Enlaces de la barra superior
   enlaces: {
     type: Array,
@@ -24,7 +22,7 @@ import { ref } from 'vue';
     type: Number,
     default: 768,
   },
-})*/
+});
 
 const esVisible = ref(true);
 </script>

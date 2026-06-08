@@ -2,7 +2,7 @@
 import { defineNuxtConfig } from 'nuxt/config';
 
 const isDev = process.env.NODE_ENV !== 'production';
-const originEnvKey = isDev ? undefined : 'NUXT_AUTH_ORIGIN';
+const originEnvKey = 'NUXT_AUTH_ORIGIN';
 
 const metaImg = process.env.NUXT_APP_BASE_URL + 'img/icono_sigic.png';
 const metaDescription =
@@ -57,6 +57,15 @@ export default defineNuxtConfig({
     compressPublicAssets: false,
   },
 
+  routeRules: {
+    '/consulta/mapas/*/embed': {
+      headers: {
+        'X-Frame-Options': 'ALLOWALL',
+        'Content-Security-Policy': 'frame-ancestors *',
+      },
+    },
+  },
+
   modules: [
     '@pinia/nuxt',
     '@nuxt/eslint',
@@ -69,9 +78,9 @@ export default defineNuxtConfig({
   css: ['@centrogeomx/sisdai-css/dist/sisdai.min.css'],
 
   auth: {
-    debug: !isDev,
+    debug: isDev,
     isEnabled: true,
-    baseURL: '/',
+    baseURL: '/api/auth',
     originEnvKey: originEnvKey,
     globalAppMiddleware: false,
     provider: {
@@ -112,6 +121,7 @@ export default defineNuxtConfig({
       enableConsulta: process.env.NUXT_PUBLIC_ENABLE_CONSULTA === 'true',
       enableIaa: process.env.NUXT_PUBLIC_ENABLE_IAA === 'true',
       enableLevantamiento: process.env.NUXT_PUBLIC_ENABLE_LEVANTAMIENTO === 'true',
+      enableMapas: process.env.NUXT_PUBLIC_ENABLE_MAPAS === 'true',
     },
   },
 

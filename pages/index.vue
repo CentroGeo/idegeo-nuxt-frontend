@@ -2,13 +2,13 @@
 import SelectedLayer from '~/utils/consulta/SelectedLayer';
 
 definePageMeta({ auth: false, key: 'inicio' });
-// const { signIn } = useAuth();
+const { signIn } = useAuth();
 
-/*async function iniciarSesion() {
+async function iniciarSesion() {
   await signIn('keycloak', {
     callbackUrl: '/',
   });
-}*/
+}
 
 // Capas recientes
 const storeResources = useResourcesCatalogoStore();
@@ -281,6 +281,31 @@ const logosUsuarios = [
           </div>
         </div>
       </section>
+      <!-- ============================================ -->
+      <!-- CTA: ¿CON QUÉ QUIERES EMPEZAR?              -->
+      <!-- ============================================ -->
+      <section id="empezar" class="idegeo-cta">
+        <div class="contenedor ancho-lectura texto-centrado">
+          <h2>¿Con qué quieres empezar?</h2>
+          <div class="flex">
+            <button
+              class="idegeo-btn idegeo-btn--primary idegeo-btn--lg columna-16"
+              @click="iniciarSesion"
+            >
+              Crear una cuenta
+            </button>
+          </div>
+          <h3>o también puedes ir a:</h3>
+        </div>
+        <div class="contenedor ancho-lectura texto-centrado flex">
+          <nuxt-link class="idegeo-btn idegeo-btn--outline-dark columna-8" to="/consulta/capas">
+            Visualizador de contenido
+          </nuxt-link>
+          <nuxt-link class="idegeo-btn idegeo-btn--outline-dark columna-8" to="/catalogo/explorar">
+            Catálogo de información
+          </nuxt-link>
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -288,12 +313,12 @@ const logosUsuarios = [
 <style lang="scss">
 /* ================================================================
    IDEGeo Landing Page Styles
-   Paleta: teal rgb(0,98,96), dorado #e5c743/#f2d247,
+   Paleta: rojo #db1631, dorado #ffd300/#f2d247,
            fondo oscuro #111, textos #151414
    ================================================================ */
 
-$color-theme: rgb(0, 98, 96);
-$color-accent: #e5c743;
+$color-theme: #db1631;
+$color-accent: #ffd300;
 $color-accent-light: #f2d247;
 $bg-dark: #111;
 $bg-section: #eef1f7;

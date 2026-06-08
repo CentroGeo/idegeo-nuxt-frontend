@@ -112,6 +112,15 @@ onUnmounted(() => {
         </NuxtLink>
 
         <NuxtLink
+          to="https://centrogeo.org.mx/coordinacion-de-vinculacion/plataforma-de-informacion-geoespacial"
+          external="true"
+          class="idegeo-menu__link"
+          @click="cerrarMenu"
+        >
+          Plataforma IDEGeo
+        </NuxtLink>
+
+        <NuxtLink
           v-if="mostrarCatalogo"
           to="/catalogo"
           class="idegeo-menu__link"
@@ -173,9 +182,9 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
-$color-theme: rgb(0, 98, 96);
-$color-accent: #e5c743;
-$color-accent-hover: #cf132f;
+$color-theme: #db1631;
+$color-accent: #ffd300;
+$color-accent-hover: #ff6c22;
 $header-bg: #ffffff;
 $text-dark: #151414;
 
