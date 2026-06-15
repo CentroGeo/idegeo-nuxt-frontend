@@ -226,7 +226,7 @@ onMounted(async () => {
                       <ClientOnly>
                         <SisdaiSelector
                           v-model="selectedStyle"
-                          etiqueta="Variables disponibles"
+                          etiqueta="Visualizaciones disponibles"
                           texto_ayuda="Texto de ayuda."
                         >
                           <option v-for="estilo in allStyles" :key="estilo" :value="estilo">

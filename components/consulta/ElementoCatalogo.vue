@@ -104,7 +104,7 @@ const iconOptions = {
       position: 'arriba',
     },
     {
-      tooltipText: `Variables disponibles`,
+      tooltipText: `Visualizaciones disponibles`,
       class: 'pictograma-visualizador',
       position: 'arriba',
     },
@@ -208,7 +208,7 @@ onUnmounted(() => {
         aria-hidden="true"
       >
         <span
-          v-if="button.tooltipText === 'Variables disponibles'"
+          v-if="button.tooltipText === 'Visualizaciones disponibles'"
           style="font-size: 12px; margin-left: 4px; text-align: center"
         >
           {{ catalogueElement.styles?.length === 0 ? 1 : catalogueElement.styles?.length }}
