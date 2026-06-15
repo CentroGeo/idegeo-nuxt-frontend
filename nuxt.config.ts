@@ -25,6 +25,11 @@ export default defineNuxtConfig({
           rel: 'shortcut icon',
           href: 'https://framework-gb.cdn.gob.mx/gm/v3/assets/images/favicon.ico',
         },
+        {
+          rel: 'stylesheet',
+          href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
+          crossorigin: 'anonymous',
+        },
       ],
       meta: [
         { name: 'description', content: metaDescription },
@@ -120,12 +125,23 @@ export default defineNuxtConfig({
       enableConsulta: process.env.NUXT_PUBLIC_ENABLE_CONSULTA === 'true',
       enableIaa: process.env.NUXT_PUBLIC_ENABLE_IAA === 'true',
       enableLevantamiento: process.env.NUXT_PUBLIC_ENABLE_LEVANTAMIENTO === 'true',
+      enableAcercaDe: process.env.NUXT_PUBLIC_ENABLE_ACERCA_DE === 'true',
+      enableGeocontenidos: process.env.NUXT_PUBLIC_ENABLE_GEOCONTENIDOS === 'true',
+      enableGeohistorias: process.env.NUXT_PUBLIC_ENABLE_GEOHISTORIAS === 'true',
+      enableTableros: process.env.NUXT_PUBLIC_ENABLE_TABLEROS === 'true',
     },
   },
 
   vite: {
     ssr: {
-      noExternal: ['@centrogeomx/sisdai-mapas', 'ol-displaced-points', 'circle-properties'],
+      noExternal: [
+        '@centrogeomx/sisdai-mapas',
+        'ol-displaced-points',
+        'circle-properties',
+        'echarts',
+        'vue-echarts',
+        'resize-detector',
+      ],
     },
   },
 });

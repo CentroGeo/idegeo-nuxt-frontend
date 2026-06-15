@@ -76,10 +76,10 @@ watch(
         <div class="contenedor ancho-lectura texto-centrado m-b-10">
           <h2>¿Qué es SIGIC?</h2>
           <p>
-            SIGIC es la plataforma digital de la Secretaría de Ciencia y Tecnología y desarrollada
-            en colaboración con CentroGeo para consultar, visualizar y analizar información
-            científica y territorial de México. Reúne datos abiertos, capas geográficas, documentos
-            y herramientas de inteligencia artificial en un solo lugar, para que investigadores,
+            SIGIC es la plataforma digital de la Secretaría de Ciencia y Tecnología, desarrollada en
+            colaboración con CentroGeo para consultar, visualizar y analizar información científica
+            y territorial de México. Reúne datos abiertos, capas geográficas, documentos y
+            herramientas de inteligencia artificial en un solo lugar, para que investigadores,
             tomadores de decisiones y público en general puedan explorar el conocimiento generado
             por el sistema nacional de ciencia y tecnología.
           </p>
@@ -113,7 +113,7 @@ watch(
                   <p>
                     Crea un proyecto de análisis, sube tus documentos o selecciona fuentes del
                     catálogo SIGIC, y haz preguntas en lenguaje natural. La IA lee, compara y resume
-                    la información para darte respuestas con referencias a las fuentes originales
+                    la información para darte respuestas con referencias a las fuentes originales.
                   </p>
                 </div>
                 <div class="tarjeta-pie">
@@ -183,11 +183,11 @@ watch(
               <p>
                 Permite superponer múltiples capas temáticas del catálogo SIGIC sobre un mapa base,
                 aplicar filtros por región y periodo, y exportar el resultado. Cabe resaltar que no
-                es un sistema GIS en su totalidad; está orientado a consulta y visualización, no a
-                edición avanzada de geometrías. Admite capas vectoriales (shapefile, GeoJSON) y
-                tabulares con coordenadas (CSV con latitud/longitud). Las capas públicas del
-                catálogo son de libre consulta; para subir capas propias o guardar mapas, se
-                requiere una cuenta SIGIC activa.
+                es un sistema SIG en su totalidad; está orientado a consulta y visualización, no a
+                edición avanzada de geometrías. Admite capas vectoriales (Shapefile, GeoJSON) y
+                archivos tabulares (CSV con latitud/longitud). Las capas públicas del catálogo son
+                de libre consulta; para subir capas propias o guardar mapas, se requiere una cuenta
+                SIGIC activa.
               </p>
             </div>
             <div class="columna-8">
@@ -216,9 +216,9 @@ watch(
                 La IA puede resumir documentos, comparar contenidos entre fuentes, extraer datos
                 clave y responder preguntas sobre la información que el usuario le proporcione
                 dentro de un proyecto. Las respuestas incluyen referencias a los párrafos o
-                secciones de origen. Admite documentos PDF, archivos de texto (.txt) y tablas
+                secciones de origen. Admite documentos PDF, archivos Word (.doc, .docx) y tablas
                 (.csv). Se requiere una cuenta SIGIC activa y el uso de la IA está sujeto a
-                disponibilidad del servicio..
+                disponibilidad del servicio.
               </p>
             </div>
           </div>
@@ -237,7 +237,7 @@ watch(
                 Permite cargar archivos al espacio personal del usuario, georreferenciar tablas con
                 coordenadas y publicar recursos en el catálogo público para que otros usuarios los
                 consulten. Los archivos subidos quedan disponibles para su uso en los módulos de
-                visualización y de IA. Admite capas (GeoJSON, Geopaquetes), tablas (CSV con o sin
+                visualización y de IA. Admite capas (GeoJSON, GeoPackage), tablas (CSV con o sin
                 coordenadas) y documentos (.pdf, .txt). La georreferenciación automática solo
                 funciona con tablas que contengan columnas de latitud y longitud en formato decimal.
                 Se requiere cuenta SIGIC activa.
@@ -269,8 +269,8 @@ watch(
                 El catálogo permite buscar, filtrar y previsualizar todos los recursos públicos del
                 SIGIC, así como los archivos privados del usuario. Incluye metadatos (autor, fecha,
                 descripción, institución de origen, licencia, entre otros) para facilitar la
-                búsqueda. Ofrece capas geográficas (Geopaquetes, GeoJSON), tablas de datos (csv) y
-                documentos (pdf), organizados por temática. La consulta del catálogo público es
+                búsqueda. Ofrece capas geográficas (GeoPackage, GeoJSON), tablas de datos (CSV) y
+                documentos (PDF), organizados por temática. La consulta del catálogo público es
                 libre y no requiere cuenta; para acceder a recursos restringidos o descargar en
                 formatos avanzados, se requiere iniciar sesión.
               </p>
