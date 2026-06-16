@@ -369,6 +369,34 @@ export function useResourcesSupplements() {
   }
 
   /**
+   * TODO mejorar docstring
+   * Borrar el estilo y regresar mensaje final
+   * @param {Object} resource
+   * @returns {Promise<String>}
+   */
+  async function destroySLDs(resource) {
+    // TODO mejorar return
+    try {
+      if (resource.sourcetype !== 'REMOTE') {
+        const destroyStylesURL = `${config.public.geonodeApi}/datasets/${resource.pk}/sldstyles/${resource.stylename}`;
+
+        const stylesRes = await gnoxyFetch(destroyStylesURL, {
+          method: 'DELETE',
+          // headers: {
+          //   Authorization: `Bearer ${token}`,
+          // },
+        });
+        if (stylesRes.ok) {
+          return 'Completado';
+        }
+        return 'No se puede borrar estilos remotos';
+      }
+    } catch {
+      return 'Error';
+    }
+  }
+
+  /**
    * Obtiene un recurso usando su pk
    * @param {*} pk
    * @returns
@@ -477,6 +505,7 @@ export function useResourcesSupplements() {
     defineGeomType,
     fetchRemoteStyles,
     getSLDs,
+    destroySLDs,
     fetchByPk,
     fetchRemoteServices,
     filteredByServerType,
