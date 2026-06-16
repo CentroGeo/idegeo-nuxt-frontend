@@ -2,17 +2,36 @@
 const config = useRuntimeConfig();
 const mapasStore = useMapasStore();
 const storeCatalogo = useCatalogoStore();
+const { data: session } = useAuth();
 
 const paginaActual = ref(0);
 const inputBusqueda = ref('');
 const seleccionOrden = ref('titulo');
 
 async function cargar(pagina) {
-  // Solo mapas públicos en la exploración del catálogo.
-  await mapasStore.cargarMapas({ is_public: true, page: pagina + 1 });
+  // Públicos para cualquiera y, si hay sesión, también los privados del usuario
+  // (el backend resuelve la visibilidad en get_queryset).
+  await mapasStore.cargarMapas({ page: pagina + 1 });
 }
 
-const totalMapas = computed(() => mapasStore.pagination.total ?? 0);
+/**
+ * ¿El mapa pertenece a la persona autenticada?
+ */
+function esPropio(m) {
+  const ownerUsername = m.owner?.username;
+  if (!ownerUsername || !session.value) return false;
+  return ownerUsername === session.value.user?.email || ownerUsername === session.value.user?.name;
+}
+
+/**
+ * Visible en el catálogo: públicos + privados del propio usuario.
+ * Excluye privados de terceros (p. ej. los que un superusuario podría recibir).
+ */
+function esVisible(m) {
+  return m.is_public !== false || esPropio(m);
+}
+
+const totalMapas = computed(() => mapasStore.maps.filter(esVisible).length);
 
 const totalPags = computed(() =>
   Math.max(1, Math.ceil((mapasStore.pagination.total || 0) / mapasStore.pagination.page_size))
@@ -24,7 +43,7 @@ const totalPags = computed(() =>
  */
 const mapasFiltrados = computed(() => {
   const termino = inputBusqueda.value.trim().toLowerCase();
-  let lista = mapasStore.maps.filter((m) => m.is_public !== false);
+  let lista = mapasStore.maps.filter(esVisible);
   if (termino) {
     lista = lista.filter((m) => (m.name || '').toLowerCase().includes(termino));
   }
@@ -142,7 +161,6 @@ onMounted(() => cargar(paginaActual.value));
             </p>
           </div>
         </div>
-
         <div v-if="mapasFiltrados.length !== 0 && !mapasStore.isLoading" class="flex">
           <div class="columna-16">
             <ClientOnly>

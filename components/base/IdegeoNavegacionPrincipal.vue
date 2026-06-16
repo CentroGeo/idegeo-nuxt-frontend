@@ -24,6 +24,8 @@ const mostrarConsulta = computed(() => config.public.enableConsulta);
 const mostrarIaa = computed(() => config.public.enableIaa);
 const mostrarLevantamiento = computed(() => config.public.enableLevantamiento);
 const mostrarAuth = computed(() => config.public.enableAuth);
+const mostrarAcercaDe = computed(() => config.public.enableAcercaDe);
+const mostrarGeocontenidos = computed(() => config.public.enableGeocontenidos);
 
 function alternarMenu() {
   menuAbierto.value = !menuAbierto.value;
@@ -144,7 +146,7 @@ onUnmounted(() => {
           class="idegeo-menu__link"
           @click="cerrarMenu"
         >
-          Análisis IA
+          Análisis Inteligencia Artificial
         </NuxtLink>
 
         <NuxtLink
@@ -154,6 +156,24 @@ onUnmounted(() => {
           @click="cerrarMenu"
         >
           Levantamiento
+        </NuxtLink>
+
+        <NuxtLink
+          v-if="mostrarGeocontenidos"
+          to="/geocontenidos"
+          class="idegeo-menu__link"
+          @click="cerrarMenu"
+        >
+          Geocontenidos
+        </NuxtLink>
+
+        <NuxtLink
+          v-if="mostrarAcercaDe"
+          to="/acerca-de"
+          class="idegeo-menu__link"
+          @click="cerrarMenu"
+        >
+          Acerca de
         </NuxtLink>
 
         <!-- Autenticación -->
@@ -207,7 +227,7 @@ $text-dark: #151414;
   }
 
   &__inner {
-    max-width: 1200px;
+    max-width: 100%;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -229,6 +249,7 @@ $text-dark: #151414;
   &__logo-img {
     height: 50px;
     width: auto;
+    min-width: 14rem;
     padding: 5px 0;
     transition: height 0.3s;
   }
@@ -328,7 +349,7 @@ $text-dark: #151414;
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@media (max-width: 1400px) {
   .idegeo-nav-toggle {
     display: flex;
   }

@@ -317,7 +317,7 @@ function previsualizarMapa() {
  * @param mapa fila de la tabla (usa pk = id del mapa)
  */
 function editarMapa(mapa) {
-  navigateTo(`/consulta/mapas/${mapa.pk}/editar`);
+  navigateTo(`/geocontenidos/mapas/${mapa.pk}/editar`);
 }
 
 /**

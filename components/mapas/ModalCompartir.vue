@@ -20,8 +20,10 @@ const { capasNoPublicas, puedeSerPublico } = useMapaPublicable();
 
 const origen = computed(() => (typeof window !== 'undefined' ? window.location.origin : ''));
 
-const urlVisualizar = computed(() => `${origen.value}/consulta/mapas/${props.mapa?.id}/visualizar`);
-const urlEmbed = computed(() => `${origen.value}/consulta/mapas/${props.mapa?.id}/embed`);
+const urlVisualizar = computed(
+  () => `${origen.value}/geocontenidos/mapas/${props.mapa?.id}/visualizar`
+);
+const urlEmbed = computed(() => `${origen.value}/geocontenidos/mapas/${props.mapa?.id}/embed`);
 
 const snippetEmbed = computed(
   () =>

@@ -2,10 +2,16 @@
 definePageMeta({ middleware: 'redireccionar-modulo-geocontenidos' });
 
 const ruta = '/geocontenidos';
+const route = useRoute();
+
+// Las vistas de mapa a pantalla completa (visualizar/embed) se renderizan sin
+// el chrome del módulo (navegación lateral + paneles).
+const enMapaStandalone = computed(() => /\/mapas\/[^/]+\/(visualizar|embed)$/.test(route.path));
 </script>
 
 <template>
-  <div class="modulo-geocontenidos flex">
+  <NuxtPage v-if="enMapaStandalone" />
+  <div v-else class="modulo-geocontenidos flex">
     <UiNavegacionLateral
       :sub-paginas="[
         {
@@ -38,7 +44,7 @@ const ruta = '/geocontenidos';
                   v-for="item in [
                     {
                       nombre: 'Mapas',
-                      // ruta: '/geocontenidos/mapas',
+                      ruta: `${ruta}/mapas`,
                     },
                     {
                       nombre: 'Panoramas',

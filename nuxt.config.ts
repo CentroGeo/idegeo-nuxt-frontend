@@ -71,7 +71,7 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/consulta/mapas/*/embed': {
+    '/geocontenidos/mapas/*/embed': {
       headers: {
         'X-Frame-Options': 'ALLOWALL',
         'Content-Security-Policy': 'frame-ancestors *',
