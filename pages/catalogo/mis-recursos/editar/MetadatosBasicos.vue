@@ -34,7 +34,7 @@ onMounted(async () => {
       <main v-if="editedResource && !isLoading" id="principal" class="contenedor m-b-10 m-y-3">
         <div class="alineacion-izquierda ancho-lectura">
           <div class="flex">
-            <nuxt-link to="/catalogo/mis-archivos" aria-label="regresar a mis archivos">
+            <nuxt-link to="/catalogo/mis-recursos" aria-label="regresar a mis recursos">
               <span
                 class="pictograma-flecha-izquierda pictograma-mediano texto-color-acento"
                 aria-hidden="true"

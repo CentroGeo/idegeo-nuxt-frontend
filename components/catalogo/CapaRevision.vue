@@ -208,7 +208,7 @@ onMounted(async () => {
                     class="id-tag flex m-b-1 m-t-0"
                   >
                     <span class="pictograma-persona"></span>
-                    Mis archivos
+                    Mis recursos
                   </div>
                   <div
                     v-if="resourceElement.sourcetype === 'REMOTE'"

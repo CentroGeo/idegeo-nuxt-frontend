@@ -90,7 +90,7 @@ onMounted(() => {
         <div class="flex">
           <nuxt-link
             to="/catalogo/explorar/catalogos-externos"
-            aria-label="regresar a mis archivos"
+            aria-label="regresar a mis recursos"
           >
             <span
               class="pictograma-flecha-izquierda pictograma-mediano texto-color-acento"
@@ -149,7 +149,7 @@ onMounted(() => {
           >
             Los recursos importados ya pueden visualizarse en el mapa. Aparecen bajo la categoría
             <span style="font-weight: bold">Catálogo externo</span> hasta que
-            <nuxt-link to="/catalogo/mis-archivos/metadatos-pendientes"
+            <nuxt-link to="/catalogo/mis-recursos/metadatos-pendientes"
               >completes sus metadatos</nuxt-link
             >
             y les asignes la categoría correcta. Los catálogos externos tienen funciones limitadas:
@@ -188,7 +188,7 @@ onMounted(() => {
             <nuxt-link
               class="boton boton-primario boton-chico"
               aria-label="Ir a editar metadatos"
-              to="/catalogo/mis-archivos/metadatos-pendientes"
+              to="/catalogo/mis-recursos/metadatos-pendientes"
               >Editar metadatos
             </nuxt-link>
             <nuxt-link

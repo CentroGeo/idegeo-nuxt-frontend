@@ -40,7 +40,7 @@ export default defineNuxtRouteMiddleware((to) => {
     // --- Catálogo Carga (y sus internas) ---
     '/catalogo/cargar-servicios-remotos':
       flags.enableAuth && flags.enableCatalogoVista && flags.enableCatalogoCarga,
-    '/catalogo/mis-archivos':
+    '/catalogo/mis-recursos':
       flags.enableAuth && flags.enableCatalogoVista && flags.enableCatalogoCarga,
     '/catalogo/cargar-archivos':
       flags.enableAuth && flags.enableCatalogoVista && flags.enableCatalogoCarga,
