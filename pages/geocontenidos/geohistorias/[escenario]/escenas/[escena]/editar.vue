@@ -8,6 +8,7 @@ import {
   // SisdaiLeyendaWms,
   SisdaiMapa,
 } from '@centrogeomx/sisdai-mapas';
+import EditorTexto from '~/components/geocontenidos/EditorTexto.vue';
 
 const config = useRuntimeConfig();
 const { data: userData } = useAuth();
@@ -138,7 +139,8 @@ const vistaDelMapa = computed(() => {
 
       <div class="m-b-4">
         <label>Contenido de la escena</label>
-        <GeocontenidosEditor v-model="formulario.text_content" />
+        <EditorTexto />
+        <!-- <GeocontenidosEditor v-model="formulario.text_content" /> -->
         <!-- <textarea
           id="descripcion"
           v-model="formulario.text_content"
@@ -150,7 +152,7 @@ const vistaDelMapa = computed(() => {
       <div class="m-b-4">
         <label for="posicion">Posición del texto</label>
         <select id="posicion" v-model="formulario.text_position">
-          <option value="left">Isquierda</option>
+          <option value="left">Izquierda</option>
           <option value="right">Derecha</option>
         </select>
       </div>
