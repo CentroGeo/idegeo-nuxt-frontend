@@ -9,7 +9,7 @@ definePageMeta({
 });
 const storeCatalogo = useCatalogoStore();
 const storeResources = useResourcesCatalogoStore();
-const { getSLDs } = useResourcesSupplements();
+const { getSLDs, destroySLDs } = useResourcesSupplements();
 const config = useRuntimeConfig();
 
 const { data } = useAuth();
@@ -60,6 +60,11 @@ async function guardarArchivo(files) {
     dragNdDrop.value?.archivoNoValido();
   }
   isLoading.value = false;
+}
+
+async function borrarEstilo(style) {
+  // Levantar advertencia
+  destroySLDs({ selectedPk, style });
 }
 
 onMounted(async () => {
@@ -183,6 +188,17 @@ onMounted(async () => {
                     <div>
                       <nuxt-link to="/catalogo/mis-archivos">Ver en mis archivos</nuxt-link>
                     </div>
+                    <tr v-for="style in resourcestyles" :key="style">
+                      <td>{{ style }}</td>
+                      <td>
+                        <button
+                          class="boton boton-error boton-pequeno"
+                          @click="borrarEstilo(style)"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
                   </div>
 
                   <!--Subida fracasó-->
