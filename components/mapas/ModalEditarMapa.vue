@@ -175,6 +175,14 @@ defineExpose({ abrir, cerrar });
 </template>
 
 <style lang="scss" scoped>
+.modal {
+  border: 2px solid var(--color-secundario-2);
+}
+
+.modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
 .campo-color {
   display: flex;
   align-items: center;

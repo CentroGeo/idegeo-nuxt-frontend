@@ -294,6 +294,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss" scoped>
+.modal {
+  border: 2px solid var(--color-secundario-2);
+}
+
+.modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
 .dos-columnas {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -395,5 +403,22 @@ onBeforeUnmount(() => {
   .dos-columnas {
     grid-template-columns: 1fr;
   }
+}
+
+// Overrides del modal sisdai (solo para este modal). El dialog no teletransporta,
+// por lo que :deep alcanza .modal / .modal-cuerpo / .modal-pie.
+// Sube el modal (menos margen superior, aprovecha el espacio de arriba) y acota
+// el cuerpo para que el modal completo entre en pantalla.
+:deep(.modal) {
+  margin-top: -20rem !important;
+  margin-bottom: 2vh !important;
+}
+
+:deep(.modal-cuerpo) {
+  max-height: calc(76vh - 120px) !important;
+}
+
+:deep(.modal-pie) {
+  margin-top: 20px !important;
 }
 </style>

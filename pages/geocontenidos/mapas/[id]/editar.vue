@@ -175,15 +175,18 @@ a {
 
 .contenido-editor {
   gap: 0;
-  height: calc(100vh - 200px);
+  height: calc(88.5vh);
+  overflow-y: scroll;
 }
 
 .contenedor-mapa {
   flex: 1;
-  min-width: 0;
+  min-width: 600px;
+  padding: 5px;
+  border: 3px solid #e5c743;
 }
 
 .flex {
-  gap: 8px;
+  gap: 0px;
 }
 </style>

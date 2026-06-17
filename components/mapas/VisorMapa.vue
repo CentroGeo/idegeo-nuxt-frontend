@@ -166,7 +166,7 @@ const estiloControles = computed(() => {
 }
 
 .visor-mapa {
-  --altura-visor: calc(100vh - 17rem);
+  --altura-visor: calc(88.5vh);
   height: var(--altura-visor) !important;
   width: 100%;
 }
