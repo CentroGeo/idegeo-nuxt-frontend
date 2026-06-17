@@ -167,6 +167,14 @@ defineExpose({ abrir, cerrar });
 </template>
 
 <style lang="scss" scoped>
+.modal {
+  border: 2px solid var(--color-secundario-2);
+}
+
+.modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
 .aviso-privado {
   padding: 8px 12px;
   border-radius: 6px;
@@ -189,6 +197,7 @@ defineExpose({ abrir, cerrar });
 }
 
 .tab-boton {
+  color: var(--color-neutro-1);
   background: none;
   border: none;
   padding: 10px 16px;
