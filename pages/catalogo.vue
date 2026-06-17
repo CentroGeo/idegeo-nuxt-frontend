@@ -57,7 +57,7 @@ onUnmounted(() => (document.querySelector('body').className = ''));
         {
           pictograma: 'pictograma-proyectos',
           ruta: `${ruta}/mis-archivos`,
-          globo: 'Mis archivos',
+          globo: 'Mis recursos',
         },
         {
           pictograma: 'pictograma-archivo-subir',

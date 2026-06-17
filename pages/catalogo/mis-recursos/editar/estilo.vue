@@ -98,7 +98,7 @@ onMounted(async () => {
         </div>
         <div v-else class="alineacion-izquierda ancho-lectura">
           <div class="flex">
-            <nuxt-link to="/catalogo/mis-archivos" aria-label="regresar a mis archivos">
+            <nuxt-link to="/catalogo/mis-recursos" aria-label="regresar a mis recursos">
               <span
                 class="pictograma-flecha-izquierda pictograma-mediano texto-color-acento"
                 aria-hidden="true"
@@ -114,14 +114,14 @@ onMounted(async () => {
               <CatalogoMenuMisArchivos
                 :recurso="resourceToEdit"
                 :opciones="[
-                  { texto: 'Metadatos', ruta: '/catalogo/mis-archivos/editar/MetadatosBasicos' },
+                  { texto: 'Metadatos', ruta: '/catalogo/mis-recursos/editar/MetadatosBasicos' },
                   {
                     texto: 'Estilo',
-                    ruta: '/catalogo/mis-archivos/editar/estilo',
+                    ruta: '/catalogo/mis-recursos/editar/estilo',
                   },
                   {
                     texto: 'Clave Geoestadística',
-                    ruta: '/catalogo/mis-archivos/unir-vectores',
+                    ruta: '/catalogo/mis-recursos/unir-vectores',
                   },
                 ]"
               />
@@ -181,7 +181,7 @@ onMounted(async () => {
                     </div>
                     <p>{{ file }}</p>
                     <div>
-                      <nuxt-link to="/catalogo/mis-archivos">Ver en mis archivos</nuxt-link>
+                      <nuxt-link to="/catalogo/mis-recursos">Ver en mis recursos</nuxt-link>
                     </div>
                   </div>
 

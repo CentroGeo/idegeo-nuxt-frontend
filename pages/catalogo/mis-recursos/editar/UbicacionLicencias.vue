@@ -7,7 +7,6 @@ definePageMeta({
     class: '',
   },
 });
-
 const config = useRuntimeConfig();
 const storeCatalogo = useCatalogoStore();
 const storeMetadatos = useEditedMetadataStore();
@@ -16,6 +15,7 @@ const { fetchByPk } = useResourcesSupplements();
 const route = useRoute();
 const selectedPk = route.query.data;
 const type = route.query.type;
+// Recuperamos la información completa del recurso
 const editedResource = ref(undefined);
 const isLoading = computed(() => storeMetadatos.isLoading);
 
@@ -30,27 +30,27 @@ onMounted(async () => {
     </template>
 
     <template #visualizador>
-      <main
-        v-if="editedResource && !isLoading"
-        id="atributos-conjunto"
-        class="contenedor m-b-10 m-y-3"
-      >
-        <div class="flex">
-          <nuxt-link to="/catalogo/mis-archivos" aria-label="regresar a mis archivos">
-            <span
-              class="pictograma-flecha-izquierda pictograma-mediano texto-color-acento"
-              aria-hidden="true"
-            />
-            <span class="h5 texto-color-primario p-l-2">Editar</span>
-          </nuxt-link>
-        </div>
+      <main v-if="editedResource && !isLoading" id="principal" class="contenedor m-b-10 m-y-3">
+        <div class="alineacion-izquierda ancho-lectura">
+          <div class="flex">
+            <nuxt-link to="/catalogo/mis-recursos" aria-label="regresar a mis recursos">
+              <span
+                class="pictograma-flecha-izquierda pictograma-mediano texto-color-acento"
+                aria-hidden="true"
+              />
+              <span class="h5 texto-color-primario p-l-2">Editar</span>
+            </nuxt-link>
+          </div>
 
-        <CatalogoAtributosMeta
-          :resource="editedResource"
-          :resource-type="type"
-          :resource-pk="selectedPk"
-        />
+          <CatalogoUbicacionMeta
+            :recurso="editedResource"
+            :resource-pk="selectedPk"
+            :resource-type="type"
+            :is-modal="false"
+          />
+        </div>
       </main>
+
       <main v-else>
         <div class="flex flex-contenido-centrado m-t-3">
           <img
@@ -64,4 +64,3 @@ onMounted(async () => {
     </template>
   </UiLayoutPaneles>
 </template>
-<style></style>

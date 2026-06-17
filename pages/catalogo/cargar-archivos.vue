@@ -360,21 +360,21 @@ async function monitorLayerImport(executionId, archivo) {
                   >
                     <div class="m-x-2 m-y-1">
                       <NuxtLink
-                        :to="`/catalogo/mis-archivos/editar/MetadatosBasicos?data=${archivo.IdRutaArchivo}&type=${archivo.tipo_recurso}`"
+                        :to="`/catalogo/mis-recursos/editar/MetadatosBasicos?data=${archivo.IdRutaArchivo}&type=${archivo.tipo_recurso}`"
                         target="_blank"
                         >Editar metadatos</NuxtLink
                       >
                     </div>
                     <div v-if="archivo.tipo_recurso === 'dataLayer'" class="m-x-2 m-y-1">
                       <NuxtLink
-                        :to="`/catalogo/mis-archivos/editar/estilo?data=${archivo.IdRutaArchivo}&type=dataLayer`"
+                        :to="`/catalogo/mis-recursos/editar/estilo?data=${archivo.IdRutaArchivo}&type=dataLayer`"
                       >
                         Agregar un estilo (.sld)</NuxtLink
                       >
                     </div>
                     <!-- <div>
-                      <NuxtLink to="/catalogo/mis-archivos/metadatos-pendientes">
-                        Ver en Mis archivos</NuxtLink
+                      <NuxtLink to="/catalogo/mis-recursos/metadatos-pendientes">
+                        Ver en Mis recursos</NuxtLink
                       >
                     </div> -->
                   </div>

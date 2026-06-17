@@ -6,6 +6,7 @@ definePageMeta({
 const route = useRoute();
 const mapasStore = useMapasStore();
 const { data: session } = useAuth();
+const { esAdmin, cargarEsAdmin } = useEsAdmin();
 
 const mapaId = computed(() => Number(route.params.id));
 
@@ -23,6 +24,10 @@ const esOwner = computed(() => {
   if (!ownerUsername || !session.value) return false;
   return ownerUsername === sessionEmail || ownerUsername === sessionName;
 });
+
+// Un mapa público solo es editable por su dueño o por un administrador.
+// (Para mapas privados basta con ser el dueño.)
+const puedeEditar = computed(() => esAdmin.value || esOwner.value);
 
 async function alternarVisible({ id, visible }) {
   await mapasStore.actualizarCapa(id, { visible });
@@ -61,7 +66,7 @@ function abrirEditar() {
 async function eliminarMapa() {
   if (!confirm('¿Eliminar este mapa? Esta acción no se puede deshacer.')) return;
   const ok = await mapasStore.eliminarMapa(mapaId.value);
-  if (ok) navigateTo('/catalogo/explorar/mapas');
+  if (ok) navigateTo('/geocontenidos/mapas');
 }
 
 watch(
@@ -72,7 +77,7 @@ watch(
 );
 
 onMounted(async () => {
-  await mapasStore.cargarMapa(mapaId.value);
+  await Promise.all([mapasStore.cargarMapa(mapaId.value), cargarEsAdmin()]);
 });
 
 onUnmounted(() => {
@@ -86,12 +91,12 @@ onUnmounted(() => {
 
     <div v-else-if="!mapasStore.activeMap" class="m-3">
       <p>No se encontró el mapa solicitado.</p>
-      <NuxtLink to="/catalogo/explorar/mapas" class="boton-secundario">Volver</NuxtLink>
+      <NuxtLink to="/geocontenidos/mapas" class="boton-secundario">Volver</NuxtLink>
     </div>
 
-    <div v-else-if="!esOwner" class="m-3">
+    <div v-else-if="!puedeEditar" class="m-3">
       <p>No tienes permisos para editar este mapa.</p>
-      <NuxtLink :to="`/consulta/mapas/${mapaId}`" class="boton-secundario">Ver mapa</NuxtLink>
+      <NuxtLink :to="`/geocontenidos/mapas/${mapaId}`" class="boton-secundario">Ver mapa</NuxtLink>
     </div>
 
     <template v-else>
@@ -110,7 +115,7 @@ onUnmounted(() => {
           <button class="boton-secundario" type="button" @click="eliminarMapa">
             <span class="pictograma-tache" aria-hidden="true" /> Eliminar mapa
           </button>
-          <NuxtLink :to="`/consulta/mapas/${mapaId}`" class="boton-secundario">Atrás</NuxtLink>
+          <NuxtLink :to="`/geocontenidos/mapas/${mapaId}`" class="boton-secundario">Atrás</NuxtLink>
         </div>
       </header>
 

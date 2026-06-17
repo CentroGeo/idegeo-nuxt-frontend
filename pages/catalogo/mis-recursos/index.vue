@@ -11,6 +11,8 @@ const config = useRuntimeConfig();
 const storeResources = useResourcesCatalogoStore();
 const storeFilters = useFilteredResources();
 const storeCatalogo = useCatalogoStore();
+const mapasStore = useMapasStore();
+const { data: session } = useAuth();
 const section = 'disponibles';
 const params = computed(() => storeFilters.filters.queryParams);
 const isLoading = ref(true);
@@ -20,14 +22,42 @@ const hayMetaPendiente = computed(() =>
 const haySolicitudesDeAprobacion = computed(() =>
   storeResources.myTotalBySection('publicacion') > 0 ? true : false
 );
-const totalResources = computed(() => storeResources.myTotalBySection(section));
 const resources = computed(() => storeResources.mineBySection(section));
 const appliedFilters = ref(false);
-const tableResources = ref([]);
 const variables = ['pk', 'titulo', 'tipo_recurso', 'categoria', 'actualizacion', 'acciones'];
 const paginaActual = ref(0);
 const tamanioPagina = 10;
-const totalPags = computed(() => Math.ceil(totalResources.value / tamanioPagina));
+
+// Mapas propios (API sigic-maps, distinta de los recursos GeoNode)
+const misMapas = ref([]);
+const esMapas = computed(() => seleccionTipoArchivo.value === 'mapas');
+// Tipo para la maquinaria de filtros GeoNode (mapas no aplica → 'all')
+const tipoParaGeonode = computed(() => (esMapas.value ? 'all' : seleccionTipoArchivo.value));
+
+const mapRows = computed(() =>
+  misMapas.value.map((m) => ({
+    pk: m.id,
+    titulo: m.name,
+    tipo_recurso: 'Mapa',
+    categoria: m.category && m.category.gn_description ? m.category : null,
+    actualizacion: m.created ?? m.created_at ?? m.date ?? null,
+    acciones: 'Pre-visualizar, Editar, Eliminar, Descargar',
+    is_map: true,
+    mapa_completo: m,
+  }))
+);
+
+const totalRecursosGeonode = computed(() => storeResources.myTotalBySection(section));
+const totalResources = computed(() => {
+  if (esMapas.value) return mapRows.value.length;
+  if (seleccionTipoArchivo.value === 'all')
+    return totalRecursosGeonode.value + mapRows.value.length;
+  return totalRecursosGeonode.value;
+});
+const totalPags = computed(() => {
+  if (esMapas.value) return Math.max(1, Math.ceil(mapRows.value.length / tamanioPagina));
+  return Math.ceil(totalRecursosGeonode.value / tamanioPagina);
+});
 
 const modalFiltroAvanzado = ref(null);
 const isFilterActive = ref(false);
@@ -70,8 +100,8 @@ function setActions(recurso) {
     return 'Editar, Ver, Publicar, Descargar, Remover';
   }
 }
-function updateResources() {
-  tableResources.value = resources.value.map((d) => ({
+const resourceRows = computed(() =>
+  resources.value.map((d) => ({
     pk: d.pk,
     titulo: d.title,
     tipo_recurso: tipoRecurso(d),
@@ -82,7 +112,31 @@ function updateResources() {
     resource_type: d.resource_type,
     extent: d.extent,
     recurso_completo: d,
-  }));
+  }))
+);
+
+// Tabla unificada: recursos GeoNode + mapas propios.
+// - tipo "Mapas": solo mapas, paginados del lado del cliente.
+// - tipo "Todos": se anteponen los mapas en la primera página.
+const tableResources = computed(() => {
+  if (esMapas.value) {
+    const inicio = paginaActual.value * tamanioPagina;
+    return mapRows.value.slice(inicio, inicio + tamanioPagina);
+  }
+  if (seleccionTipoArchivo.value === 'all' && paginaActual.value === 0) {
+    return [...mapRows.value, ...resourceRows.value];
+  }
+  return resourceRows.value;
+});
+
+async function cargarMisMapas() {
+  await mapasStore.cargarMapas({ page: 1, page_size: 100 });
+  const email = session.value?.user?.email;
+  const name = session.value?.user?.name;
+  misMapas.value = mapasStore.maps.filter((m) => {
+    const u = m.owner?.username;
+    return u && (u === email || u === name);
+  });
 }
 
 async function fetchNewData() {
@@ -162,11 +216,12 @@ function updateAppliedFilters() {
 }
 
 watch([seleccionTipoArchivo, seleccionOrden], () => {
-  storeFilters.buildQueryParams(seleccionTipoArchivo.value);
+  storeFilters.buildQueryParams(tipoParaGeonode.value);
 });
 
 watch(paginaActual, () => {
-  fetchNewData();
+  // Los mapas paginan del lado del cliente (computed); no requieren fetch.
+  if (!esMapas.value) fetchNewData();
 });
 
 watch(params, () => {
@@ -175,19 +230,13 @@ watch(params, () => {
   fetchNewData();
   updateAppliedFilters();
 });
-watch(
-  resources,
-  () => {
-    updateResources();
-  },
-  { deep: true }
-);
 
 onMounted(async () => {
   appliedFilters.value = false;
   await storeCatalogo.getUserInfo();
+  await cargarMisMapas();
   storeFilters.resetAll();
-  storeFilters.buildQueryParams(seleccionTipoArchivo.value);
+  storeFilters.buildQueryParams(tipoParaGeonode.value);
   storeResources.getMyTotal('pendientes', params.value);
   storeResources.getMyTotal('publicacion', {
     ...params.value,
@@ -208,18 +257,19 @@ onMounted(async () => {
         <div class="flex">
           <div class="columna-4">
             <ClientOnly>
-              <label for="selector-tipo-completos">Tipo de archivo</label>
+              <label for="selector-tipo-completos">Tipo de recurso</label>
               <select
                 v-model="seleccionTipoArchivo"
                 name="selector-tipo-completos"
                 class="m-b-2"
                 :disabled="isLoading"
               >
-                <option value="all">Todos los Archivos</option>
+                <option value="all">Todos los Recursos</option>
                 <option value="remotes">Catálogos Externos</option>
                 <option value="dataLayer">Capas Geográficas</option>
                 <option value="dataTable">Datos Tabulados</option>
                 <option value="document">Documentos</option>
+                <option value="mapas">Mapas</option>
               </select>
             </ClientOnly>
           </div>
@@ -296,15 +346,15 @@ onMounted(async () => {
 
         <CatalogoMenuMisArchivos
           :opciones="[
-            { texto: 'Disponibles', ruta: '/catalogo/mis-archivos' },
+            { texto: 'Disponibles', ruta: '/catalogo/mis-recursos' },
             {
               texto: 'Metadatos pendientes',
-              ruta: '/catalogo/mis-archivos/metadatos-pendientes',
+              ruta: '/catalogo/mis-recursos/metadatos-pendientes',
               notificacion: hayMetaPendiente,
             },
             {
               texto: 'Solicitudes de publicación',
-              ruta: '/catalogo/mis-archivos/solicitudes-publicacion',
+              ruta: '/catalogo/mis-recursos/solicitudes-publicacion',
               notificacion: haySolicitudesDeAprobacion,
             },
           ]"
@@ -314,10 +364,10 @@ onMounted(async () => {
           <p
             class="texto-color-alerta fondo-color-alerta borde borde-color-alerta borde-redondeado-2 p-2 m-0"
           >
-            Si no encuentras tus archivos aquí, es porque aún tienen <i>Metadatos pendientes</i>. Ve
+            Si no encuentras tus recursos aquí, es porque aún tienen <i>Metadatos pendientes</i>. Ve
             a la pestaña Pendientes y complétalos para que se muestren en esta sección.
           </p>
-          <h2>Todos mis archivos disponibles</h2>
+          <h2>Todos mis recursos disponibles</h2>
           <UiNumeroElementos :numero="totalResources" />
         </div>
 
@@ -346,16 +396,16 @@ onMounted(async () => {
           <div class="flex flex-contenido-centrado">
             <div class="columna-7">
               <div class="fondo-color-acento borde-redondeado-8 p-x-3 p-y-1 m-b-3">
-                <p>Aún no hay archivos en esta sección.</p>
+                <p>Aún no hay recursos en esta sección.</p>
                 <p>
-                  No tienes archivos disponibles. Para iniciar, dirígete a Mis archivos > Metadatos
-                  pendientes y selecciona un archivo para completar sus metadatos.
+                  No tienes recursos disponibles. Para iniciar, dirígete a Mis recursos > Metadatos
+                  pendientes y selecciona un recurso para completar sus metadatos.
                 </p>
               </div>
               <div class="flex flex-contenido-centrado">
                 <NuxtLink
                   class="boton boton-primario"
-                  to="/catalogo/mis-archivos/metadatos-pendientes"
+                  to="/catalogo/mis-recursos/metadatos-pendientes"
                   >Metadatos pendientes
                 </NuxtLink>
               </div>
@@ -365,7 +415,7 @@ onMounted(async () => {
 
         <!--Cuando si hay archivos-->
         <p v-if="totalResources !== 0 && !isLoading">
-          En esta tabla se muestran los archivos disponibles para su consulta y uso.
+          En esta tabla se muestran los recursos disponibles para su consulta y uso.
         </p>
         <div v-if="totalResources !== 0 && !isLoading" class="flex">
           <div class="columna-16">

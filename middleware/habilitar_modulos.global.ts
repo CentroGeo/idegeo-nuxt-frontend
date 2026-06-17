@@ -40,7 +40,7 @@ export default defineNuxtRouteMiddleware((to) => {
     // --- Catálogo Carga (y sus internas) ---
     '/catalogo/cargar-servicios-remotos':
       flags.enableAuth && flags.enableCatalogoVista && flags.enableCatalogoCarga,
-    '/catalogo/mis-archivos':
+    '/catalogo/mis-recursos':
       flags.enableAuth && flags.enableCatalogoVista && flags.enableCatalogoCarga,
     '/catalogo/cargar-archivos':
       flags.enableAuth && flags.enableCatalogoVista && flags.enableCatalogoCarga,
@@ -54,9 +54,10 @@ export default defineNuxtRouteMiddleware((to) => {
     // --- Levantamiento (y sus internas) ---
     '/levantamiento': flags.enableAuth && flags.enableLevantamiento,
 
-    // --- Mapas (ahora dentro de catálogo y consulta) ---
+    // --- Mapas (explorar en catálogo, explorador en consulta, gestión en geocontenidos) ---
     '/catalogo/explorar/mapas': flags.enableMapas,
     '/consulta/mapas': flags.enableMapas,
+    '/geocontenidos/mapas': flags.enableMapas,
     // --- Acerca de ---
     '/acerca-de': flags.enableAcercaDe,
 
