@@ -285,7 +285,7 @@ onMounted(async () => {
 .caja-capas {
   border: 1px solid var(--color-neutro-1);
   border-radius: 8px;
-  max-height: 45vh;
+  max-height: 37vh;
   overflow-y: auto;
   background-color: var(--fondo);
 }

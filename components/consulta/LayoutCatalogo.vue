@@ -23,11 +23,16 @@ const esRutaMapas = computed(() => route.path.startsWith('/consulta/mapas'));
 const cargandoMapas = ref(false);
 const busquedaMapas = ref('');
 const filtroMapas = ref('todos'); // todos | publicos | propios
+const modalCompartir = ref(null);
 
 function esMapaPropio(m) {
   const ownerUsername = m.owner?.username;
   if (!ownerUsername || !data.value) return false;
   return ownerUsername === data.value.user?.email || ownerUsername === data.value.user?.name;
+}
+
+function abrirCompartir() {
+  modalCompartir.value?.abrir();
 }
 
 const mapasFiltrados = computed(() => {
@@ -376,6 +381,9 @@ onMounted(async () => {
             <span v-if="m.is_public === false" class="chip-privado">
               <i class="fa-solid fa-lock" aria-hidden="true"></i> Privado
             </span>
+            <button class="boton-secundario boton-chico" type="button" @click="abrirCompartir">
+              <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Compartir
+            </button>
           </div>
         </li>
       </ul>
@@ -591,6 +599,7 @@ onMounted(async () => {
     :ows-link="sigicOWS"
     :service="'CSW'"
   />
+  <MapasModalCompartir ref="modalCompartir" :mapa="mapasStore.activeMap" />
 </template>
 
 <style lang="scss" scoped>
