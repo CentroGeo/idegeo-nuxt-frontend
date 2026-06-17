@@ -169,7 +169,7 @@ onMounted(async () => {
       <main id="principal" class="contenedor m-b-10 m-y-4">
         <div class="alineacion-izquierda ancho-lectura">
           <div class="flex">
-            <nuxt-link to="/catalogo/mis-archivos" aria-label="regresar a mis archivos">
+            <nuxt-link to="/catalogo/mis-recursos" aria-label="regresar a mis recursos">
               <span
                 class="pictograma-flecha-izquierda pictograma-mediano texto-color-acento"
                 aria-hidden="true"
@@ -181,10 +181,10 @@ onMounted(async () => {
           <CatalogoMenuMisArchivos
             :recurso="editedResource"
             :opciones="[
-              { texto: 'Metadatos', ruta: '/catalogo/mis-archivos/editar/MetadatosBasicos' },
+              { texto: 'Metadatos', ruta: '/catalogo/mis-recursos/editar/MetadatosBasicos' },
               {
                 texto: 'Clave Geoestadística',
-                ruta: '/catalogo/mis-archivos/unir-vectores',
+                ruta: '/catalogo/mis-recursos/unir-vectores',
               },
             ]"
           />
@@ -278,8 +278,8 @@ onMounted(async () => {
                   <nuxt-link
                     class="boton-secundario boton-chico"
                     type="button"
-                    to="/catalogo/mis-archivos"
-                    >Ir a mis archivos
+                    to="/catalogo/mis-recursos"
+                    >Ir a mis recursos
                   </nuxt-link>
                   <button
                     class="boton-primario boton-chico"
@@ -294,8 +294,8 @@ onMounted(async () => {
                   <nuxt-link
                     class="boton-secundario boton-chico"
                     type="button"
-                    to="/catalogo/mis-archivos"
-                    >Ver en mis archivos
+                    to="/catalogo/mis-recursos"
+                    >Ver en mis recursos
                   </nuxt-link>
                   <nuxt-link class="boton boton-primario boton-chico" to="/consulta/capas"
                     >Ver capa en Visualizador
@@ -334,8 +334,8 @@ onMounted(async () => {
                 </button>
               </div>
               <div class="columna-8">
-                <nuxt-link class="boton boton-primario" to="/catalogo/mis-archivos"
-                  >Ir a mis archivos
+                <nuxt-link class="boton boton-primario" to="/catalogo/mis-recursos"
+                  >Ir a mis recursos
                 </nuxt-link>
               </div>
             </div>

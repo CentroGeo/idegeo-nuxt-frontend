@@ -2,6 +2,7 @@
 const route = useRoute();
 const mapasStore = useMapasStore();
 const { data: session } = useAuth();
+const { esAdmin, cargarEsAdmin } = useEsAdmin();
 
 const mapaId = computed(() => Number(route.params.id));
 
@@ -13,6 +14,9 @@ const esOwner = computed(() => {
   return ownerUsername === sessionEmail || ownerUsername === sessionName;
 });
 
+// Un mapa público solo es editable por su dueño o por un administrador.
+const puedeEditar = computed(() => esAdmin.value || esOwner.value);
+
 const modalCompartir = ref(null);
 function abrirCompartir() {
   modalCompartir.value?.abrir();
@@ -23,7 +27,7 @@ function abrirAgregarCapas() {
 }
 
 onMounted(async () => {
-  await mapasStore.cargarMapa(mapaId.value);
+  await Promise.all([mapasStore.cargarMapa(mapaId.value), cargarEsAdmin()]);
 });
 
 onUnmounted(() => {
@@ -37,7 +41,7 @@ onUnmounted(() => {
 
     <div v-else-if="!mapasStore.activeMap" class="m-3">
       <p>No se encontró el mapa solicitado.</p>
-      <NuxtLink to="/catalogo/explorar/mapas" class="boton-secundario">Volver al listado</NuxtLink>
+      <NuxtLink to="/geocontenidos/mapas" class="boton-secundario">Volver al listado</NuxtLink>
     </div>
 
     <template v-else>
@@ -51,7 +55,7 @@ onUnmounted(() => {
         </div>
         <div class="flex">
           <NuxtLink
-            :to="`/consulta/mapas/${mapaId}/visualizar`"
+            :to="`/geocontenidos/mapas/${mapaId}/visualizar`"
             class="boton-secundario"
             target="_blank"
           >
@@ -60,17 +64,22 @@ onUnmounted(() => {
           <button class="boton-secundario" type="button" @click="abrirCompartir">
             <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Compartir
           </button>
-          <button v-if="esOwner" class="boton-primario" type="button" @click="abrirAgregarCapas">
+          <button
+            v-if="puedeEditar"
+            class="boton-primario"
+            type="button"
+            @click="abrirAgregarCapas"
+          >
             <span class="pictograma-mas" aria-hidden="true" /> Agregar capas
           </button>
           <NuxtLink
-            v-if="esOwner"
-            :to="`/consulta/mapas/${mapaId}/editar`"
+            v-if="puedeEditar"
+            :to="`/geocontenidos/mapas/${mapaId}/editar`"
             class="boton-secundario"
           >
             <span class="pictograma-editar" aria-hidden="true" /> Editar
           </NuxtLink>
-          <NuxtLink to="/catalogo/explorar/mapas" class="boton-secundario">Volver</NuxtLink>
+          <NuxtLink to="/geocontenidos/mapas" class="boton-secundario">Volver</NuxtLink>
         </div>
       </header>
 

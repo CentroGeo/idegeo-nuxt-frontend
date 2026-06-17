@@ -13,6 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['actualizado']);
 
 const mapasStore = useMapasStore();
+const { capasNoPublicas, puedeSerPublico } = useMapaPublicable();
 const modal = ref(null);
 const guardando = ref(false);
 const error = ref('');
@@ -38,9 +39,16 @@ function cargarFormulario() {
   form.map_type = props.mapa.map_type ?? 'regular';
   form.highlight_color = props.mapa.highlight_color ?? '#ff51ba';
   form.is_public = props.mapa.is_public ?? true;
+  // Una capa sin publicar impide que el mapa sea público.
+  if (!puedeSerPublico.value) form.is_public = false;
 }
 
 watch(() => props.mapa, cargarFormulario, { immediate: true });
+
+// Si el mapa deja de poder ser público (capas sin publicar), forzar privado.
+watch(puedeSerPublico, (ok) => {
+  if (!ok) form.is_public = false;
+});
 
 function abrir() {
   cargarFormulario();
@@ -59,6 +67,10 @@ async function guardar() {
   }
   if (!form.name.trim()) {
     error.value = 'El nombre es obligatorio.';
+    return;
+  }
+  if (form.is_public && !puedeSerPublico.value) {
+    error.value = 'El mapa no puede ser público mientras tenga capas no publicadas en el catálogo.';
     return;
   }
   guardando.value = true;
@@ -128,7 +140,7 @@ defineExpose({ abrir, cerrar });
 
         <div class="m-t-2">
           <label class="campo-toggle">
-            <input v-model="form.is_public" type="checkbox" />
+            <input v-model="form.is_public" type="checkbox" :disabled="!puedeSerPublico" />
             <span class="campo-etiqueta boton-secundario boton-chico">
               {{ form.is_public ? 'Mapa público' : 'Mapa privado' }}
             </span>
@@ -139,6 +151,11 @@ defineExpose({ abrir, cerrar });
                 ? 'Cualquier persona con el enlace puede ver el mapa.'
                 : 'Sólo tú puedes ver el mapa.'
             }}
+          </p>
+          <p v-if="!puedeSerPublico" class="texto-error m-t-1 m-b-0">
+            Este mapa tiene {{ capasNoPublicas.length }}
+            {{ capasNoPublicas.length === 1 ? 'capa no publicada' : 'capas no publicadas' }}
+            en el catálogo. Para hacerlo público, todas sus capas deben estar publicadas.
           </p>
         </div>
 

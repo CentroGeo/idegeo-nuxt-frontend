@@ -19,7 +19,7 @@ const urlOrigen = computed(() =>
 
 const enlaceFuente = computed(() =>
   mapasStore.activeMap
-    ? `${urlOrigen.value}/consulta/mapas/${mapasStore.activeMap.id}/visualizar`
+    ? `${urlOrigen.value}/geocontenidos/mapas/${mapasStore.activeMap.id}/visualizar`
     : '#'
 );
 

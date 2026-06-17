@@ -143,6 +143,14 @@ export const useMapasStore = defineStore('mapas', () => {
     const data = await bulkAddLayers(mapId, layers);
     if (!data) return null;
     activeLayers.value.push(...data);
+    // El backend degrada el mapa a privado si se agrega una capa no pública.
+    // Refrescar is_public del mapa activo para reflejarlo en la UI.
+    if (activeMap.value?.id === mapId) {
+      const actualizado = await fetchMap(mapId);
+      if (actualizado) {
+        activeMap.value = { ...activeMap.value, is_public: actualizado.is_public };
+      }
+    }
     return data;
   }
 

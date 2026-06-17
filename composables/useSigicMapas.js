@@ -14,13 +14,15 @@ export function useSigicMapas() {
   async function fetchMaps(params = {}) {
     const query = new URLSearchParams(params).toString();
     const url = `${api}/sigic-maps/${query ? `?${query}` : ''}`;
-    const res = await fetch(url);
+    // Enviar token (si hay) para que el dueño vea también sus mapas privados;
+    // anónimo solo recibe los públicos (backend filtra por get_queryset).
+    const res = await fetch(url, { headers: authHeaders() });
     if (!res.ok) return null;
     return res.json();
   }
 
   async function fetchMap(id) {
-    const res = await fetch(`${api}/sigic-maps/${id}/`);
+    const res = await fetch(`${api}/sigic-maps/${id}/`, { headers: authHeaders() });
     if (!res.ok) return null;
     return res.json();
   }
@@ -74,13 +76,15 @@ export function useSigicMapas() {
   // ── Layers ───────────────────────────────────────────────────────────────
 
   async function fetchLayers(mapId) {
-    const res = await fetch(`${api}/sigic-map-layers/by-map/${mapId}/`);
+    const res = await fetch(`${api}/sigic-map-layers/by-map/${mapId}/`, {
+      headers: authHeaders(),
+    });
     if (!res.ok) return null;
     return res.json();
   }
 
   async function fetchLayer(id) {
-    const res = await fetch(`${api}/sigic-map-layers/${id}/`);
+    const res = await fetch(`${api}/sigic-map-layers/${id}/`, { headers: authHeaders() });
     if (!res.ok) return null;
     return res.json();
   }

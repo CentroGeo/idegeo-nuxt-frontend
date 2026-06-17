@@ -17,11 +17,11 @@ const tipoEtiqueta = {
 const previewSrc = computed(() => props.mapa.preview || `${config.app.baseURL}img/icono_sigic.png`);
 
 function abrirMapa() {
-  navigateTo(`/consulta/mapas/${props.mapa.id}`);
+  navigateTo(`/geocontenidos/mapas/${props.mapa.id}`);
 }
 
 function visualizarMapa() {
-  window.open(`/consulta/mapas/${props.mapa.id}/visualizar`, '_blank');
+  window.open(`/geocontenidos/mapas/${props.mapa.id}/visualizar`, '_blank');
 }
 </script>
 

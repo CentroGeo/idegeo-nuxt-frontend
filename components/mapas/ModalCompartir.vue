@@ -16,11 +16,14 @@ const copiado = ref('');
 const haciendoPublico = ref(false);
 
 const mapasStore = useMapasStore();
+const { capasNoPublicas, puedeSerPublico } = useMapaPublicable();
 
 const origen = computed(() => (typeof window !== 'undefined' ? window.location.origin : ''));
 
-const urlVisualizar = computed(() => `${origen.value}/consulta/mapas/${props.mapa?.id}/visualizar`);
-const urlEmbed = computed(() => `${origen.value}/consulta/mapas/${props.mapa?.id}/embed`);
+const urlVisualizar = computed(
+  () => `${origen.value}/geocontenidos/mapas/${props.mapa?.id}/visualizar`
+);
+const urlEmbed = computed(() => `${origen.value}/geocontenidos/mapas/${props.mapa?.id}/embed`);
 
 const snippetEmbed = computed(
   () =>
@@ -42,7 +45,7 @@ async function copiar(texto, clave) {
 }
 
 async function hacerPublico() {
-  if (!props.mapa?.id) return;
+  if (!props.mapa?.id || !puedeSerPublico.value) return;
   haciendoPublico.value = true;
   await mapasStore.actualizarMapa(props.mapa.id, { is_public: true });
   haciendoPublico.value = false;
@@ -71,18 +74,25 @@ defineExpose({ abrir, cerrar });
       <template #cuerpo>
         <div v-if="!esPublico" class="aviso-privado m-b-2">
           <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-          <div class="flex flex-contenido-separado aviso-cuerpo">
-            <span>
-              Este mapa está marcado como privado. Nadie más podrá verlo con el enlace o embed.
-            </span>
-            <button
-              type="button"
-              class="boton-primario boton-chico"
-              :disabled="haciendoPublico"
-              @click="hacerPublico"
-            >
-              {{ haciendoPublico ? 'Guardando…' : 'Hacer público' }}
-            </button>
+          <div class="aviso-cuerpo">
+            <div class="flex flex-contenido-separado">
+              <span>
+                Este mapa está marcado como privado. Nadie más podrá verlo con el enlace o embed.
+              </span>
+              <button
+                type="button"
+                class="boton-primario boton-chico"
+                :disabled="haciendoPublico || !puedeSerPublico"
+                @click="hacerPublico"
+              >
+                {{ haciendoPublico ? 'Guardando…' : 'Hacer público' }}
+              </button>
+            </div>
+            <p v-if="!puedeSerPublico" class="m-0 m-t-1">
+              No puede hacerse público: tiene {{ capasNoPublicas.length }}
+              {{ capasNoPublicas.length === 1 ? 'capa no publicada' : 'capas no publicadas' }}
+              en el catálogo. Publícalas primero.
+            </p>
           </div>
         </div>
 

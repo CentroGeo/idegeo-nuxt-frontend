@@ -226,15 +226,15 @@ onMounted(async () => {
 
         <CatalogoMenuMisArchivos
           :opciones="[
-            { texto: 'Disponibles', ruta: '/catalogo/mis-archivos' },
+            { texto: 'Disponibles', ruta: '/catalogo/mis-recursos' },
             {
               texto: 'Metadatos pendientes',
-              ruta: '/catalogo/mis-archivos/metadatos-pendientes',
+              ruta: '/catalogo/mis-recursos/metadatos-pendientes',
               notificacion: hayMetaPendiente,
             },
             {
               texto: 'Solicitudes de publicación',
-              ruta: '/catalogo/mis-archivos/solicitudes-publicacion',
+              ruta: '/catalogo/mis-recursos/solicitudes-publicacion',
               notificacion: haySolicitudesDeAprobacion,
             },
           ]"
