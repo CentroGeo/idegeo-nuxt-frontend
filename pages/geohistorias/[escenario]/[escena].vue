@@ -4,7 +4,7 @@ const config = useRuntimeConfig();
 const { /* escenario, */ escena: escenaId } = useRoute().params;
 
 defineProps({
-  titulo: { type: String, default: () => '' },
+  titulo: { type: String, default: '' },
 });
 
 /**
@@ -49,20 +49,8 @@ consultarEscena();
         />
       </div>
 
-      <div class="panel-texto p-4">
-        <h1 class="m-t-0 m-b-8">{{ titulo }}</h1>
-
-        <h2 class="m-t-2">{{ escena.datos.name }}</h2>
-
-        <!-- eslint-disable vue/no-v-html -->
-        <p v-html="escena.datos.text_content" />
-
-        <!-- <p>
-          {{ escena.datos }}
-        </p> -->
-
-        <!-- <div>Paginador</div> -->
-      </div>
+      <!-- eslint-disable vue/no-v-html -->
+      <div class="panel-texto p-3" v-html="escena.datos.text_content" />
 
       <div
         v-if="escena.datos.text_position === 'left'"
