@@ -14,34 +14,11 @@
 import { Ckeditor } from '@ckeditor/ckeditor5-vue';
 import CkeditorConfig from '~/utils/geocontenidos/CkeditorConfig';
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: '',
-  },
-});
-const { modelValue } = toRefs(props);
-const emit = defineEmits(['update:modelValue']);
-
-// const editor = ref(null);
+const contenido = defineModel({ type: String, default: '' });
 const editor = shallowRef(null);
 const config = reactive(CkeditorConfig);
-const contenido = ref(props.modelValue || '');
-
-watch(contenido, (nuevoContenido) => {
-  emit('update:modelValue', nuevoContenido);
-});
-watch(modelValue, (nuevoContenidoProp) => {
-  if (nuevoContenidoProp !== contenido.value) {
-    contenido.value = nuevoContenidoProp;
-  }
-});
 
 onMounted(async () => {
-  // const { Ckeditor } = await import('@ckeditor/ckeditor5-vue');
-  // const { ClassicEditor } = await import('ckeditor5');
-  // const [Ckeditor5Vue, { ClassicEditor, Autosave, Essentials, Paragraph, Underline }] =
-  //   await Promise.all([import('@ckeditor/ckeditor5-vue'), import('ckeditor5')]);
   const {
     ClassicEditor,
     Autosave,

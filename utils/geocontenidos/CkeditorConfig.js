@@ -2,7 +2,7 @@ import translations from 'ckeditor5/translations/es.js';
 
 export default {
   root: {
-    placeholder: '¡Escribe o pega tu contenido aquí!',
+    placeholder: 'Escribe el contenido narrativo aquí...',
   },
   toolbar: {
     items: [
