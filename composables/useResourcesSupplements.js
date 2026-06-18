@@ -369,30 +369,31 @@ export function useResourcesSupplements() {
   }
 
   /**
-   * TODO mejorar docstring
-   * Borrar el estilo y regresar mensaje final
-   * @param {Object} resource
-   * @returns {Promise<String>}
+   * Elimina un estilo (SLD) de un recurso local.
+   * @param {Object} params
+   * @param {string|number} params.pk Identificador del recurso
+   * @param {string} params.stylename Nombre del estilo a eliminar
+   * @param {string} params.sourcetype Tipo de fuente del recurso (debe ser distinto a REMOTE)
+   * @param {string} params.token Token de autenticación
+   * @returns {Promise<boolean>} True si se eliminó con éxito, False en caso contrario
    */
-  async function destroySLDs(resource) {
-    // TODO mejorar return
+  async function destroySLDs({ pk, stylename, sourcetype, token }) {
     try {
-      if (resource.sourcetype !== 'REMOTE') {
-        const destroyStylesURL = `${config.public.geonodeApi}/datasets/${resource.pk}/sldstyles/${resource.stylename}`;
+      if (sourcetype !== 'REMOTE') {
+        const destroyStylesURL = `${config.public.geonodeApi}/datasets/${pk}/sldstyles/${stylename}`;
 
         const stylesRes = await gnoxyFetch(destroyStylesURL, {
           method: 'DELETE',
-          // headers: {
-          //   Authorization: `Bearer ${token}`,
-          // },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-        if (stylesRes.ok) {
-          return 'Completado';
-        }
-        return 'No se puede borrar estilos remotos';
+        return stylesRes.ok;
       }
-    } catch {
-      return 'Error';
+      return false;
+    } catch (error) {
+      console.error('Error al eliminar SLD:', error);
+      return false;
     }
   }
 

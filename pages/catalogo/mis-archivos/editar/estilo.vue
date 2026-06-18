@@ -1,4 +1,5 @@
 <script setup>
+import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 import { useResourcesSupplements } from '~/composables/useResourcesSupplements';
 
 definePageMeta({
@@ -23,6 +24,10 @@ const isLoadingGlobal = ref(true);
 const isLoading = ref(false);
 const loadedStylesStatus = ref({});
 const resourcestyles = ref([]);
+
+const modalEliminar = ref(null);
+const estiloAEliminar = ref('');
+const defaultStyle = ref(null);
 
 // Función que usa el nuevo endpoint
 async function guardarArchivo(files) {
@@ -55,6 +60,7 @@ async function guardarArchivo(files) {
       loadedStylesStatus.value[fileName] = fileUpdateStatus;
       const styles = await getSLDs(resourceToEdit.value);
       resourcestyles.value = styles.styleList;
+      defaultStyle.value = styles.defaultStyle;
     }
   } else {
     dragNdDrop.value?.archivoNoValido();
@@ -62,15 +68,34 @@ async function guardarArchivo(files) {
   isLoading.value = false;
 }
 
-async function borrarEstilo(style) {
-  // Levantar advertencia
-  destroySLDs({ selectedPk, style });
+function abrirConfirmacionBorrar(style) {
+  estiloAEliminar.value = style;
+  modalEliminar.value?.abrirModal();
+}
+
+async function confirmarBorrarEstilo() {
+  isLoading.value = true;
+  const exito = await destroySLDs({
+    pk: selectedPk,
+    stylename: estiloAEliminar.value,
+    sourcetype: resourceToEdit.value.sourcetype,
+    token: data.value?.accessToken,
+  });
+
+  if (exito) {
+    const styles = await getSLDs(resourceToEdit.value);
+    resourcestyles.value = styles.styleList;
+    defaultStyle.value = styles.defaultStyle;
+  }
+  modalEliminar.value?.cerrarModal();
+  isLoading.value = false;
 }
 
 onMounted(async () => {
   resourceToEdit.value = await storeResources.fetchResourceByPk(selectedPk);
   const styles = await getSLDs(resourceToEdit.value);
   resourcestyles.value = styles.styleList;
+  defaultStyle.value = styles.defaultStyle;
   isLoadingGlobal.value = false;
 });
 </script>
@@ -131,17 +156,29 @@ onMounted(async () => {
                 ]"
               />
 
-              <h2 class="m-t-0">Estilo</h2>
-              <div>
+              <h2 class="m-t-0">Estilos de la capa</h2>
+              <div class="m-b-5">
                 <table class="tabla-condensada">
                   <thead>
                     <tr>
-                      <th>Estilos de la capa</th>
+                      <th>Nombre del estilo</th>
+                      <th class="alineacion-derecha">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="style in resourcestyles" :key="style">
                       <td>{{ style }}</td>
+                      <td class="alineacion-derecha">
+                        <button
+                          v-if="style !== defaultStyle"
+                          type="button"
+                          class="boton-pictograma boton-sin-contenedor-secundario"
+                          aria-label="Eliminar estilo"
+                          @click="abrirConfirmacionBorrar(style)"
+                        >
+                          <span class="pictograma-eliminar" aria-hidden="true" />
+                        </button>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -188,17 +225,6 @@ onMounted(async () => {
                     <div>
                       <nuxt-link to="/catalogo/mis-archivos">Ver en mis archivos</nuxt-link>
                     </div>
-                    <tr v-for="style in resourcestyles" :key="style">
-                      <td>{{ style }}</td>
-                      <td>
-                        <button
-                          class="boton boton-error boton-pequeno"
-                          @click="borrarEstilo(style)"
-                        >
-                          Eliminar
-                        </button>
-                      </td>
-                    </tr>
                   </div>
 
                   <!--Subida fracasó-->
@@ -218,6 +244,31 @@ onMounted(async () => {
           </div>
         </div>
       </main>
+
+      <ClientOnly>
+        <SisdaiModal ref="modalEliminar">
+          <template #encabezado>
+            <h2 class="m-t-0">¿Deseas eliminar este estilo?</h2>
+          </template>
+          <template #cuerpo>
+            <p>
+              El estilo <b>{{ estiloAEliminar }}</b> será eliminado permanentemente del servidor.
+            </p>
+            <div class="flex flex-contenido-final m-t-5">
+              <button
+                type="button"
+                class="boton-secundario m-r-2"
+                @click="modalEliminar?.cerrarModal()"
+              >
+                Cancelar
+              </button>
+              <button type="button" class="boton-primario" @click="confirmarBorrarEstilo">
+                Eliminar
+              </button>
+            </div>
+          </template>
+        </SisdaiModal>
+      </ClientOnly>
     </template>
   </UiLayoutPaneles>
 </template>
