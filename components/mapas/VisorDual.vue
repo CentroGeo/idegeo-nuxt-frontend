@@ -187,6 +187,7 @@ const estiloControles = computed(() => {
 
           <slot name="izquierdo" />
         </SisdaiMapa>
+        <MapasControlInfo :titulo="mapa.name" />
         <MapasControlCapaBase v-model="baseLayerActual" />
         <MapasLeyendaMapa :capas="capasIzq" :geoserver-url="config.public.geoserverUrl" />
         <div class="visor-coords">
@@ -278,7 +279,11 @@ const estiloControles = computed(() => {
 .visor-mapa-contenedor :deep(.sisdai-mapa-control button) {
   background-color: var(--boton-mapa-fondo) !important;
   color: var(--boton-mapa-texto) !important;
-  border-color: var(--boton-mapa-fondo) !important;
+  border-color: none !important;
+  // Quita el "borde" (box-shadow inset) de los controles primarios del mapa.
+  --boton-primario-borde: transparent;
+  --boton-primario-cursor-borde: transparent;
+  --boton-primario-enfoque-borde: transparent;
 
   &:hover,
   &:focus-visible {

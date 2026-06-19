@@ -150,6 +150,7 @@ const estiloControles = computed(() => {
 
         <slot />
       </SisdaiMapa>
+      <MapasControlInfo :titulo="mapa.name" />
       <MapasControlCapaBase v-model="baseLayerActual" />
       <MapasLeyendaMapa :capas="capasOrdenadas" :geoserver-url="config.public.geoserverUrl" />
       <div class="visor-coords">
@@ -190,6 +191,10 @@ const estiloControles = computed(() => {
   background-color: var(--boton-mapa-fondo) !important;
   color: var(--boton-mapa-texto) !important;
   border-color: var(--boton-mapa-fondo) !important;
+  // Quita el "borde" (box-shadow inset) de los controles primarios del mapa.
+  --boton-primario-borde: transparent;
+  --boton-primario-cursor-borde: transparent;
+  --boton-primario-enfoque-borde: transparent;
 
   &:hover,
   &:focus-visible {
@@ -202,5 +207,14 @@ const estiloControles = computed(() => {
   i {
     color: var(--boton-mapa-texto) !important;
   }
+}
+
+// Divisor (swipe):
+// 1) color de la franja central igual al de los controles del mapa.
+// 2) alto ligado al alto del visor (--altura-visor, basado en vh) en vez del
+//    valor px que sisdai calcula una sola vez → ahora sí sigue el resize.
+.visor-mapa-contenedor :deep(.divisor) {
+  --lina-visible: var(--boton-mapa-fondo) !important;
+  --altura-divisor: var(--altura-visor) !important;
 }
 </style>
