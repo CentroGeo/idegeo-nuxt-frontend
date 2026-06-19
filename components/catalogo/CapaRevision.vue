@@ -34,6 +34,7 @@ const allStyles = ref();
 const serverType = ref();
 const revisionMetadatos = ref(null);
 const modalOpacidad = ref(null);
+const modalMetadatos = ref(null);
 const controlOpacidad = ref();
 const layerOpacity = ref(100);
 const hasAttrTable = ref(null);
@@ -67,6 +68,15 @@ const optionsButtons = ref([
     globo: 'Opacidad',
     action: () => {
       modalOpacidad.value?.abrirModal();
+    },
+  },
+  {
+    excludeFor: 'none',
+    label: 'Ver metadatos',
+    pictogram: 'pictograma-editar',
+    globo: 'Ver metadatos',
+    action: () => {
+      modalMetadatos.value?.abrirModal();
     },
   },
   {
@@ -345,6 +355,13 @@ onMounted(async () => {
                 </template>
               </SisdaiModal>
             </ClientOnly>
+            <CatalogoModalMetadatos
+              v-if="isDownloadable"
+              ref="downloadOneChild"
+              :key="`descarga_${resourceElement.pk}_${'dataLayer'}`"
+              :resource-type="'dataLayer'"
+              :selected-element="resourceElement"
+            />
           </div>
         </div>
       </template>
