@@ -632,7 +632,7 @@ async function removerRevision() {
                   type="button"
                   @click="notifyMetadatosChild(datum)"
                 >
-                  <span class="pictograma-previsualizar"></span>
+                  <span class="pictograma-metadatos"></span>
                 </button>
                 <button
                   v-if="datum[variable].split(', ').includes('Visualizar')"

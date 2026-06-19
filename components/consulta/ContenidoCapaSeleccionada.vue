@@ -76,7 +76,7 @@ const optionsButtons = ref([
   {
     excludeFor: 'none',
     label: 'Ver metadatos',
-    pictogram: 'pictograma-editar',
+    pictogram: 'pictograma-metadatos',
     globo: 'Ver metadatos',
     action: () => {
       emit('metadataClicked');
