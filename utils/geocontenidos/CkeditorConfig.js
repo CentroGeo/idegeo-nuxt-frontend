@@ -45,7 +45,7 @@ export default {
       'outdent',
       'indent',
     ],
-    shouldNotGroupWhenFull: false,
+    shouldNotGroupWhenFull: true,
   },
   plugins: [],
   licenseKey: 'GPL',
@@ -139,7 +139,7 @@ export default {
     toolbar: ['mediaEmbed:breakText', 'mediaEmbed:wrapText'],
   },
   menuBar: {
-    isVisible: true,
+    isVisible: false,
   },
   style: {
     definitions: [

@@ -68,10 +68,12 @@ function clickVista({ coordenadas, capa, vector }) {
   emits('clickVista', { coordenadas });
 
   if (!capa) return;
+  if (capa.id !== id_marcadores) return;
 
-  if (capa.id === id_marcadores) {
-    emits('clickMarcador', vector);
-  }
+  emits(
+    'clickMarcador',
+    props.marcadores.find(({ id }) => vector.id === id)
+  );
 }
 </script>
 

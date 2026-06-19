@@ -65,6 +65,7 @@ function crearMarca() {
     lat: undefined,
     lng: undefined,
     title: 'Nuevo marcador',
+    image_url: null,
     content: '',
     icon: String.fromCharCode(parseInt(pictogramas['ayuda'], 16)),
     color: 'pink',
@@ -103,17 +104,13 @@ async function guardarCambios() {
   for await (const marcador of gMarcadores.actualizar) {
     modal.mensaje = `Actualizando marcador ${marcador.title}`;
     const datos = await API(`scene-markers/${marcador.id}//`, 'PUT', marcador);
-    if (datos?.success === false) {
-      return mostrarError(datos);
-    }
+    if (datos?.success === false) return mostrarError(datos);
   }
 
   if (gMarcadores.almacenar.length) {
     modal.mensaje = `Almacenando nuevos marcadores`;
     const datos = await API(`scene-markers/bulk-add/${escenaId}//`, 'POST', gMarcadores.almacenar);
-    if (datos?.success === false) {
-      return mostrarError(datos);
-    }
+    if (datos?.success === false) return mostrarError(datos);
   }
 
   modal.titulo = 'Guardado con éxito';
@@ -160,33 +157,58 @@ async function guardarCambios() {
           @click-vista="clickVista"
         />
 
-        <div v-if="escena.idMarcadorActivo" class="flex flex-contenido-separado" style="gap: 0">
-          <fieldset class="columna-8">
-            <label for="lng">Longitud</label>
-            <input
-              id="lng"
-              v-model="gMarcadores.byId(escena.idMarcadorActivo).lng"
-              type="number"
-              step="any"
-              max="180"
-              min="-180"
-              required
-            />
+        <template v-if="escena.idMarcadorActivo">
+          <div class="flex flex-contenido-separado" style="gap: 0">
+            <fieldset class="columna-8">
+              <label for="lng">Longitud</label>
+              <input
+                id="lng"
+                v-model="gMarcadores.byId(escena.idMarcadorActivo).lng"
+                type="number"
+                step="any"
+                max="180"
+                min="-180"
+                required
+              />
+            </fieldset>
+
+            <fieldset class="columna-8">
+              <label for="lat">Latitud</label>
+              <input
+                id="lat"
+                v-model="gMarcadores.byId(escena.idMarcadorActivo).lat"
+                type="number"
+                step="any"
+                max="90"
+                min="-90"
+                required
+              />
+            </fieldset>
+          </div>
+
+          <fieldset class="m-t-0">
+            <label for="icono">Icono</label>
+            <select id="icono" v-model="gMarcadores.byId(escena.idMarcadorActivo).icon" required>
+              <option
+                v-for="pictograma in Object.keys(pictogramas).sort()"
+                :key="pictograma"
+                :value="String.fromCharCode(parseInt(pictogramas[pictograma], 16))"
+              >
+                {{ pictograma.split('-').join(' ') }}
+              </option>
+            </select>
           </fieldset>
 
-          <fieldset class="columna-8">
-            <label for="lat">Latitud</label>
+          <fieldset>
+            <label for="color">Color del marcador</label>
             <input
-              id="lat"
-              v-model="gMarcadores.byId(escena.idMarcadorActivo).lat"
-              type="number"
-              step="any"
-              max="90"
-              min="-90"
+              id="color"
+              v-model="gMarcadores.byId(escena.idMarcadorActivo).color"
+              type="color"
               required
             />
           </fieldset>
-        </div>
+        </template>
       </div>
 
       <div class="columna-8">
@@ -220,26 +242,18 @@ async function guardarCambios() {
             </fieldset>
 
             <fieldset>
+              <label for="imagen">Url de la imagen (opcional)</label>
+              <input
+                id="imagen"
+                v-model="marcador.image_url"
+                placeholder="https://ejemplo.com/imagen.jpg"
+                type="url"
+              />
+            </fieldset>
+
+            <fieldset>
               <label>Descripción</label>
-              <GeocontenidosEditor v-model="marcador.content" />
-            </fieldset>
-
-            <fieldset>
-              <label for="icono">Icono</label>
-              <select id="icono" v-model="marcador.icon" required>
-                <option
-                  v-for="pictograma in Object.keys(pictogramas).sort()"
-                  :key="pictograma"
-                  :value="String.fromCharCode(parseInt(pictogramas[pictograma], 16))"
-                >
-                  {{ pictograma.split('-').join(' ') }}
-                </option>
-              </select>
-            </fieldset>
-
-            <fieldset>
-              <label for="color">Color del marcador</label>
-              <input id="color" v-model="marcador.color" type="color" required />
+              <GeocontenidosEditorTexto v-model="marcador.content" />
             </fieldset>
           </template>
         </GeocontenidosPestanias>

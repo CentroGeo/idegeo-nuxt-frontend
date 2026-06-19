@@ -8,7 +8,7 @@ import {
   // SisdaiLeyendaWms,
   SisdaiMapa,
 } from '@centrogeomx/sisdai-mapas';
-import EditorTexto from '~/components/geocontenidos/EditorTexto.vue';
+import EditorTexto from '~/components/geocontenidos/editorTexto.vue';
 
 const config = useRuntimeConfig();
 const { data: userData } = useAuth();
