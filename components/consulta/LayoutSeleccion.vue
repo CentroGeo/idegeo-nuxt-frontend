@@ -27,6 +27,7 @@ const shareChild = ref(null);
 const mapChild = ref(null);
 const borrarChild = ref(null);
 const owsChild = ref(null);
+const metadatosChild = ref(null);
 
 function notifyDownloadAllChild() {
   shownModal.value = 'downloadAll';
@@ -47,6 +48,13 @@ function notifyTablaChild(resource) {
   modalResource.value = resource;
   nextTick(() => {
     tablaChild.value?.abrirModalTabla();
+  });
+}
+function notifyMetadatosChild(resource) {
+  shownModal.value = 'metadatosModal';
+  modalResource.value = resource;
+  nextTick(() => {
+    metadatosChild.value?.abrirModalMetadatos();
   });
 }
 function notifyOpacityChild(resource) {
@@ -197,6 +205,7 @@ const dividirMapa = computed({
         @open-opacity="(resource) => notifyOpacityChild(resource)"
         @open-download="(resource) => notifyDownloadOneChild(resource)"
         @open-tabla="(resource) => notifyTablaChild(resource)"
+        @open-metadata="(resource) => notifyMetadatosChild(resource)"
         @open-mapa="(resource) => notifyMapaChild(resource)"
         @open-o-w-s="notifyOWSChild"
       />
@@ -236,6 +245,13 @@ const dividirMapa = computed({
         @notify-download="changeModal('downloadOne')"
       />
 
+      <ConsultaModalMetadatos
+        v-if="shownModal === 'metadatosModal'"
+        ref="metadatosChild"
+        :key="`tabla_${modalResource.pk}_${resourceType}`"
+        :selected-element="modalResource"
+      />
+
       <ConsultaModalMapa
         v-if="shownModal === 'mapModal'"
         ref="mapChild"
@@ -250,6 +266,12 @@ const dividirMapa = computed({
         :key="`ows_${owsLink}`"
         :ows-link="owsLink"
         :service="'OWS'"
+      />
+      <ConsultaModalMetadatos
+        v-if="shownModal === 'metadatos'"
+        ref="metadatosChild"
+        :key="`metadatos_${resourceType}`"
+        :selected-element="modalResource"
       />
     </div>
   </div>
