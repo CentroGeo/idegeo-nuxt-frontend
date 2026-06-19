@@ -29,9 +29,7 @@ async function consultarEscena() {
 }
 consultarEscena();
 
-function clickMarcador(marcador) {
-  alert(JSON.stringify(marcador.id));
-}
+const marcador_visible = ref(null);
 </script>
 
 <template>
@@ -39,11 +37,12 @@ function clickMarcador(marcador) {
     <GeocontenidosLoader v-if="escena.cargando" />
 
     <template v-else>
-      <!-- eslint-disable vue/no-v-html -->
-      <div
+      <GeocontenidosEscenaTexto
         v-if="escena.datos.text_position === 'left'"
         class="panel-texto p-3 borde-r borde-color-secundario"
-        v-html="escena.datos.text_content"
+        :contenido="escena.datos.text_content"
+        :marcador="marcador_visible"
+        @al-cerrar="marcador_visible = null"
       />
 
       <div class="panel-mapa">
@@ -54,15 +53,16 @@ function clickMarcador(marcador) {
           }"
           :capas="escena.datos.layers"
           :marcadores="escena.datos.markers"
-          @clickMarcador="clickMarcador"
+          @clickMarcador="(marcador) => (marcador_visible = marcador)"
         />
       </div>
 
-      <!-- eslint-disable vue/no-v-html -->
-      <div
+      <GeocontenidosEscenaTexto
         v-if="escena.datos.text_position === 'right'"
         class="panel-texto p-3 borde-l borde-color-secundario"
-        v-html="escena.datos.text_content"
+        :contenido="escena.datos.text_content"
+        :marcador="marcador_visible"
+        @al-cerrar="marcador_visible = null"
       />
     </template>
   </div>
