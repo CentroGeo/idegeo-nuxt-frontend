@@ -267,12 +267,6 @@ const dividirMapa = computed({
         :ows-link="owsLink"
         :service="'OWS'"
       />
-      <ConsultaModalMetadatos
-        v-if="shownModal === 'metadatos'"
-        ref="metadatosChild"
-        :key="`metadatos_${resourceType}`"
-        :selected-element="modalResource"
-      />
     </div>
   </div>
 </template>
