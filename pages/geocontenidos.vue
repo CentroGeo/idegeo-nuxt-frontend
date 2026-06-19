@@ -7,12 +7,21 @@ const route = useRoute();
 // Las vistas de mapa a pantalla completa (visualizar/embed) se renderizan sin
 // el chrome del módulo (navegación lateral + paneles).
 const enMapaStandalone = computed(() => /\/mapas\/[^/]+\/(visualizar|embed)$/.test(route.path));
+
+// Colapsar el panel lateral izquierdo (menú del módulo).
+const colapsado = ref(false);
+function alternarColapsar() {
+  colapsado.value = !colapsado.value;
+}
 </script>
 
 <template>
   <NuxtPage v-if="enMapaStandalone" />
   <div v-else class="modulo-geocontenidos flex">
     <UiNavegacionLateral
+      :funcion-colapsar="alternarColapsar"
+      :estado-colapable="colapsado"
+      id-colapsable="geocontenidos-paneles"
       :sub-paginas="[
         {
           pictograma: 'pictograma-proyectos',
@@ -33,7 +42,7 @@ const enMapaStandalone = computed(() => /\/mapas\/[^/]+\/(visualizar|embed)$/.te
     />
 
     <div class="contenedor-contenido">
-      <UiLayoutPaneles>
+      <UiLayoutPaneles id="geocontenidos-paneles" :estado-colapable="colapsado">
         <template #catalogo>
           <nav class="menu-lateral">
             <div class="menu-lateral-contenedor">
