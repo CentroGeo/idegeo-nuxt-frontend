@@ -49,7 +49,6 @@ defineExpose({
       </template>
 
       <template #cuerpo>
-        <!-- {{ filtrarMetadatos(selectedElement) }} -->
         <div v-for="(valor, attributo) in filtrarMetadatos(selectedElement)" :key="attributo">
           <div v-if="valor" class="m-b-2 columna-16">
             <label class="m-0">{{ attributo }}</label>

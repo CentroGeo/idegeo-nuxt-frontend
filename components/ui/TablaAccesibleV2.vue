@@ -33,6 +33,7 @@ const idAleatorio = 'id-' + Math.random().toString(36).substring(2);
 const shownModal = ref('ninguno');
 const modalResource = ref(null);
 const downloadOneChild = ref(null);
+const metadatosChild = ref(null);
 const releaseRequest = ref(null);
 const resourceType = ref('');
 const modalEliminar = ref(null);
@@ -154,6 +155,13 @@ function openAddRequestToMyReviewsModal(resource) {
   modalAgregarMisRevisiones.value.abrirModal();
 }
 
+function notifyMetadatosChild(resource) {
+  shownModal.value = 'metadatosModal';
+  modalResource.value = resource.recurso_completo;
+  nextTick(() => {
+    metadatosChild.value?.abrirModalMetadatos();
+  });
+}
 /**
  * Hace la petición para agregar la solicitud a revisión.
  */
@@ -617,6 +625,16 @@ async function removerRevision() {
                   <span class="pictograma-previsualizar"></span>
                 </button>
                 <button
+                  v-if="datum[variable].split(', ').includes('Ver')"
+                  v-globo-informacion:izquierda="'Ver metadatos'"
+                  class="boton-pictograma boton-secundario"
+                  aria-label="Ver metadatos"
+                  type="button"
+                  @click="notifyMetadatosChild(datum)"
+                >
+                  <span class="pictograma-previsualizar"></span>
+                </button>
+                <button
                   v-if="datum[variable].split(', ').includes('Visualizar')"
                   v-globo-informacion:izquierda="'Visualizar'"
                   class="boton-pictograma boton-secundario"
@@ -745,6 +763,12 @@ async function removerRevision() {
       ref="downloadOneChild"
       :key="`${modalResource.pk}_${resourceType}`"
       :resource-type="resourceType"
+      :selected-element="modalResource"
+    />
+    <ConsultaModalMetadatos
+      v-if="shownModal === 'metadatosModal'"
+      ref="metadatosChild"
+      :key="`tabla_${modalResource.pk}_${resourceType}`"
       :selected-element="modalResource"
     />
 
