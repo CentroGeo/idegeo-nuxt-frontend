@@ -28,6 +28,10 @@ async function consultarEscena() {
   escena.cargando = false;
 }
 consultarEscena();
+
+function clickMarcador(marcador) {
+  alert(JSON.stringify(marcador.id));
+}
 </script>
 
 <template>
@@ -35,10 +39,14 @@ consultarEscena();
     <GeocontenidosLoader v-if="escena.cargando" />
 
     <template v-else>
+      <!-- eslint-disable vue/no-v-html -->
       <div
-        v-if="escena.datos.text_position === 'right'"
-        class="panel-mapa borde-r borde-color-secundario"
-      >
+        v-if="escena.datos.text_position === 'left'"
+        class="panel-texto p-3 borde-r borde-color-secundario"
+        v-html="escena.datos.text_content"
+      />
+
+      <div class="panel-mapa">
         <GeocontenidosMapaEscena
           :vista="{
             acercamiento: escena.datos.zoom,
@@ -46,25 +54,16 @@ consultarEscena();
           }"
           :capas="escena.datos.layers"
           :marcadores="escena.datos.markers"
+          @clickMarcador="clickMarcador"
         />
       </div>
 
       <!-- eslint-disable vue/no-v-html -->
-      <div class="panel-texto p-3" v-html="escena.datos.text_content" />
-
       <div
-        v-if="escena.datos.text_position === 'left'"
-        class="panel-mapa borde-l borde-color-secundario"
-      >
-        <GeocontenidosMapaEscena
-          :vista="{
-            acercamiento: escena.datos.zoom,
-            centro: [escena.datos.map_center_long, escena.datos.map_center_lat],
-          }"
-          :capas="escena.datos.layers"
-          :marcadores="escena.datos.markers"
-        />
-      </div>
+        v-if="escena.datos.text_position === 'right'"
+        class="panel-texto p-3 borde-l borde-color-secundario"
+        v-html="escena.datos.text_content"
+      />
     </template>
   </div>
 </template>
