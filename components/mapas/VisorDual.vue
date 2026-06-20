@@ -27,6 +27,14 @@ function emitirVista({ acercamiento, centro }) {
 
 const config = useRuntimeConfig();
 const { gnoxyFetch } = useGnoxyUrl();
+
+// Teselas: capas públicas se piden directo a GeoServer (sin el proxy Nitro) →
+// más rápido. Las privadas van por gnoxy (inyecta auth).
+// Nota: el fetch directo requiere CORS habilitado en GeoServer.
+const fetchDirecto = (url) => fetch(url);
+function consultaCapa(capa) {
+  return capa.dataset_is_published === true ? fetchDirecto : gnoxyFetch;
+}
 const mapasStore = useMapasStore();
 
 const mapaIzqRef = ref(null);
@@ -168,7 +176,7 @@ const estiloControles = computed(() => {
               v-if="capa.layer_type === 'wms'"
               :capa="capa.name"
               :fuente="wmsFuente"
-              :consulta="gnoxyFetch"
+              :consulta="consultaCapa(capa)"
               :estilo="capa.style || undefined"
               :opacidad="capa.opacity"
               :visible="capa.visible"
@@ -176,9 +184,13 @@ const estiloControles = computed(() => {
               :mosaicos="true"
             />
 
-            <SisdaiCapaXyz
+            <MapasCapaTeselada
               v-else-if="capa.layer_type === 'wmts'"
-              :fuente="mapasStore.buildWmtsUrl(capa)"
+              :id="`capa-${capa.id}`"
+              :fuente-wmts="mapasStore.buildWmtsUrl(capa)"
+              :fuente-wms="wmsFuente"
+              :capa="capa.name"
+              :estilo="capa.style || ''"
               :opacidad="capa.opacity"
               :visible="capa.visible"
               :posicion="capa.stack_order"
@@ -187,6 +199,7 @@ const estiloControles = computed(() => {
 
           <slot name="izquierdo" />
         </SisdaiMapa>
+        <MapasControlInfo :titulo="mapa.name" />
         <MapasControlCapaBase v-model="baseLayerActual" />
         <MapasLeyendaMapa :capas="capasIzq" :geoserver-url="config.public.geoserverUrl" />
         <div class="visor-coords">
@@ -209,7 +222,7 @@ const estiloControles = computed(() => {
               v-if="capa.layer_type === 'wms'"
               :capa="capa.name"
               :fuente="wmsFuente"
-              :consulta="gnoxyFetch"
+              :consulta="consultaCapa(capa)"
               :estilo="capa.style || undefined"
               :opacidad="capa.opacity"
               :visible="capa.visible"
@@ -217,9 +230,13 @@ const estiloControles = computed(() => {
               :mosaicos="true"
             />
 
-            <SisdaiCapaXyz
+            <MapasCapaTeselada
               v-else-if="capa.layer_type === 'wmts'"
-              :fuente="mapasStore.buildWmtsUrl(capa)"
+              :id="`capa-${capa.id}`"
+              :fuente-wmts="mapasStore.buildWmtsUrl(capa)"
+              :fuente-wms="wmsFuente"
+              :capa="capa.name"
+              :estilo="capa.style || ''"
               :opacidad="capa.opacity"
               :visible="capa.visible"
               :posicion="capa.stack_order"
@@ -244,14 +261,17 @@ const estiloControles = computed(() => {
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   width: 100%;
+  height: 100%;
 }
 
 .panel-mapa {
   min-width: 0;
+  height: 100%;
 }
 
 .visor-mapa-contenedor {
   position: relative;
+  height: 100%;
 }
 
 .visor-coords {
@@ -269,8 +289,7 @@ const estiloControles = computed(() => {
 }
 
 .visor-mapa {
-  --altura-visor: calc(100vh - 112px);
-  height: var(--altura-visor) !important;
+  height: 100%;
   width: 100%;
 }
 
@@ -278,7 +297,11 @@ const estiloControles = computed(() => {
 .visor-mapa-contenedor :deep(.sisdai-mapa-control button) {
   background-color: var(--boton-mapa-fondo) !important;
   color: var(--boton-mapa-texto) !important;
-  border-color: var(--boton-mapa-fondo) !important;
+  border-color: none !important;
+  // Quita el "borde" (box-shadow inset) de los controles primarios del mapa.
+  --boton-primario-borde: transparent;
+  --boton-primario-cursor-borde: transparent;
+  --boton-primario-enfoque-borde: transparent;
 
   &:hover,
   &:focus-visible {

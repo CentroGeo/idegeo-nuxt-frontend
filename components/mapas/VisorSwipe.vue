@@ -31,6 +31,14 @@ function alMoverVista({ acercamiento, centro }) {
 
 const config = useRuntimeConfig();
 const { gnoxyFetch } = useGnoxyUrl();
+
+// Teselas: capas públicas se piden directo a GeoServer (sin el proxy Nitro) →
+// más rápido. Las privadas van por gnoxy (inyecta auth).
+// Nota: el fetch directo requiere CORS habilitado en GeoServer.
+const fetchDirecto = (url) => fetch(url);
+function consultaCapa(capa) {
+  return capa.dataset_is_published === true ? fetchDirecto : gnoxyFetch;
+}
 const mapasStore = useMapasStore();
 
 const mapaRef = ref(null);
@@ -129,7 +137,7 @@ const estiloControles = computed(() => {
             v-if="capa.layer_type === 'wms'"
             :capa="capa.name"
             :fuente="wmsFuente"
-            :consulta="gnoxyFetch"
+            :consulta="consultaCapa(capa)"
             :estilo="capa.style || undefined"
             :opacidad="capa.opacity"
             :visible="capa.visible"
@@ -138,9 +146,13 @@ const estiloControles = computed(() => {
             :mosaicos="true"
           />
 
-          <SisdaiCapaXyz
+          <MapasCapaTeselada
             v-else-if="capa.layer_type === 'wmts'"
-            :fuente="mapasStore.buildWmtsUrl(capa)"
+            :id="`capa-${capa.id}`"
+            :fuente-wmts="mapasStore.buildWmtsUrl(capa)"
+            :fuente-wms="wmsFuente"
+            :capa="capa.name"
+            :estilo="capa.style || ''"
             :opacidad="capa.opacity"
             :visible="capa.visible"
             :posicion="capa.stack_order"
@@ -150,6 +162,7 @@ const estiloControles = computed(() => {
 
         <slot />
       </SisdaiMapa>
+      <MapasControlInfo :titulo="mapa.name" />
       <MapasControlCapaBase v-model="baseLayerActual" />
       <MapasLeyendaMapa :capas="capasOrdenadas" :geoserver-url="config.public.geoserverUrl" />
       <div class="visor-coords">
@@ -163,11 +176,11 @@ const estiloControles = computed(() => {
 .visor-mapa-contenedor {
   position: relative;
   width: 100%;
+  height: 100%;
 }
 
 .visor-mapa {
-  --altura-visor: calc(100vh - 112px);
-  height: var(--altura-visor) !important;
+  height: 100%;
   width: 100%;
 }
 
@@ -190,6 +203,10 @@ const estiloControles = computed(() => {
   background-color: var(--boton-mapa-fondo) !important;
   color: var(--boton-mapa-texto) !important;
   border-color: var(--boton-mapa-fondo) !important;
+  // Quita el "borde" (box-shadow inset) de los controles primarios del mapa.
+  --boton-primario-borde: transparent;
+  --boton-primario-cursor-borde: transparent;
+  --boton-primario-enfoque-borde: transparent;
 
   &:hover,
   &:focus-visible {
@@ -202,5 +219,16 @@ const estiloControles = computed(() => {
   i {
     color: var(--boton-mapa-texto) !important;
   }
+}
+
+// Divisor (swipe):
+// 1) color de la franja central igual al de los controles del mapa.
+// 2) alto ligado al alto del visor (--altura-visor, basado en vh) en vez del
+//    valor px que sisdai calcula una sola vez → ahora sí sigue el resize.
+.visor-mapa-contenedor :deep(.divisor) {
+  --lina-visible: var(--boton-mapa-fondo) !important;
+  // --altura-visor lo hereda del contenedor padre (p. ej. .contenedor-mapa);
+  // fallback por si no se define.
+  --altura-divisor: var(--altura-visor, 88.5vh) !important;
 }
 </style>
