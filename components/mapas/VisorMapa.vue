@@ -27,6 +27,14 @@ function alMoverVista({ acercamiento, centro }) {
 
 const config = useRuntimeConfig();
 const { gnoxyFetch } = useGnoxyUrl();
+
+// Teselas: capas públicas se piden directo a GeoServer (sin el proxy Nitro) →
+// más rápido. Las privadas van por gnoxy (inyecta auth).
+// Nota: el fetch directo requiere CORS habilitado en GeoServer.
+const fetchDirecto = (url) => fetch(url);
+function consultaCapa(capa) {
+  return capa.dataset_is_published === true ? fetchDirecto : gnoxyFetch;
+}
 const mapasStore = useMapasStore();
 
 const mapaRef = ref(null);
@@ -128,7 +136,7 @@ const estiloControles = computed(() => {
             v-if="capa.layer_type === 'wms'"
             :capa="capa.name"
             :fuente="wmsFuente"
-            :consulta="gnoxyFetch"
+            :consulta="consultaCapa(capa)"
             :estilo="capa.style || undefined"
             :opacidad="capa.opacity"
             :visible="capa.visible"
@@ -136,9 +144,13 @@ const estiloControles = computed(() => {
             :mosaicos="true"
           />
 
-          <SisdaiCapaXyz
+          <MapasCapaTeselada
             v-else-if="capa.layer_type === 'wmts'"
-            :fuente="mapasStore.buildWmtsUrl(capa)"
+            :id="`capa-${capa.id}`"
+            :fuente-wmts="mapasStore.buildWmtsUrl(capa)"
+            :fuente-wms="wmsFuente"
+            :capa="capa.name"
+            :estilo="capa.style || ''"
             :opacidad="capa.opacity"
             :visible="capa.visible"
             :posicion="capa.stack_order"
@@ -165,11 +177,11 @@ const estiloControles = computed(() => {
 .visor-mapa-contenedor {
   position: relative;
   width: 100%;
+  height: 100%;
 }
 
 .visor-mapa {
-  --altura-visor: calc(88.5vh);
-  height: var(--altura-visor) !important;
+  height: 100%;
   width: 100%;
 }
 
