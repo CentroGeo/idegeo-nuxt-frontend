@@ -138,7 +138,7 @@ const vistaDelMapa = computed(() => {
 
       <div class="m-b-4">
         <label>Contenido de la escena</label>
-        <GeocontenidosEditorTexto v-model="formulario.text_content" />
+        <UiEditorTexto v-model="formulario.text_content" />
       </div>
 
       <div class="m-b-4">

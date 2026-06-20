@@ -1,6 +1,7 @@
 <template>
   <ClientOnly>
     <component
+      class="editor-texto"
       :is="Ckeditor"
       v-if="editor && config.plugins.length > 0"
       v-model="contenido"
@@ -129,4 +130,11 @@ onMounted(async () => {
 
 <style lang="scss">
 @import 'ckeditor5/ckeditor5.css';
+
+.ck-editor
+  .ck-editor__top
+  .ck-sticky-panel
+  .ck-sticky-panel__content.ck-sticky-panel__content_sticky {
+  top: 52px !important;
+}
 </style>

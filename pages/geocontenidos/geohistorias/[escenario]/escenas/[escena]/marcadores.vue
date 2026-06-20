@@ -146,7 +146,7 @@ async function guardarCambios() {
 
         <p>Haz click en el mapa para seleccionar la ubicación del marcador.</p>
 
-        <GeocontenidosMapaEscena
+        <GeocontenidosEscenaMapa
           class="borde borde-color-secundario"
           :vista="{
             acercamiento: escena.datos.zoom,
@@ -253,7 +253,7 @@ async function guardarCambios() {
 
             <fieldset>
               <label>Descripción</label>
-              <GeocontenidosEditorTexto v-model="marcador.content" />
+              <UiEditorTexto v-model="marcador.content" />
             </fieldset>
           </template>
         </GeocontenidosPestanias>

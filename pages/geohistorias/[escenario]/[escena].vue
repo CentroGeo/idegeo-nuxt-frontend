@@ -46,7 +46,7 @@ const marcador_visible = ref(null);
       />
 
       <div class="panel-mapa">
-        <GeocontenidosMapaEscena
+        <GeocontenidosEscenaMapa
           :vista="{
             acercamiento: escena.datos.zoom,
             centro: [escena.datos.map_center_long, escena.datos.map_center_lat],
@@ -71,7 +71,7 @@ const marcador_visible = ref(null);
 <style lang="scss" scoped>
 .escena {
   width: 100%;
-  height: calc(100vh - 100px - 51px);
+  height: calc(100vh - 80px - 51px);
   gap: 0;
 
   .panel-texto {
