@@ -45,6 +45,10 @@ async function reordenar(orden) {
   await mapasStore.reordenarCapas(orden);
 }
 
+function abrirAgregarCapas() {
+  mapasStore.abrirModalAgregarCapas();
+}
+
 async function eliminarCapa(id) {
   await mapasStore.eliminarCapa(id);
 }
@@ -187,7 +191,14 @@ a {
   flex: 1;
   min-width: 600px;
   padding: 5px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  margin-left: 10px;
   border: 3px solid #e5c743;
+  /* Alto definido: el visor (.visor-mapa) usa height:100% y lo llena.
+     --altura-visor lo hereda el divisor del swipe. Ajustable. */
+  height: 47rem;
+  --altura-visor: 47rem;
 }
 
 .boton-eliminar {
