@@ -21,6 +21,7 @@ const props = defineProps({
   },
 });
 const storeCatalogo = useCatalogoStore();
+const storeResources = useResourcesCatalogoStore();
 const config = useRuntimeConfig();
 const route = useRoute();
 const router = useRouter();
@@ -157,7 +158,13 @@ function openAddRequestToMyReviewsModal(resource) {
 
 function notifyMetadatosChild(resource) {
   shownModal.value = 'metadatosModal';
-  modalResource.value = resource.recurso_completo;
+  if (resource.recurso_completo) {
+    modalResource.value = resource.recurso_completo;
+  } else {
+    modalResource.value = (async () => {
+      return await storeResources.fetchResourceByPk(resource.pk);
+    })().then((resp) => (modalResource.value = resp));
+  }
   nextTick(() => {
     metadatosChild.value?.abrirModalMetadatos();
   });
@@ -768,7 +775,7 @@ async function removerRevision() {
     <ConsultaModalMetadatos
       v-if="shownModal === 'metadatosModal'"
       ref="metadatosChild"
-      :key="`tabla_${modalResource.pk}_${resourceType}`"
+      :key="`tabla`"
       :selected-element="modalResource"
     />
 
