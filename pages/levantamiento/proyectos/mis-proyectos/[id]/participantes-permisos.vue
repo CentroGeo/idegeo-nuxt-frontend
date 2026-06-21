@@ -292,32 +292,34 @@ defineExpose({
         <h6>Permisos asignados</h6>
         <div class="flex usuarios-asignados">
           <div
-            v-for="participante in storeLevantamiento.participantes"
-            :key="participante.id"
+            v-for="i_participante in storeLevantamiento.participantes"
+            :key="i_participante.id"
             class="correo-participante borde-redondeado-8 fondo-color-acento p-2 flex flex-contenido-separado"
           >
             <div>
-              <div class="m-b-minimo texto-tamanio-3 asignado-email">{{ participante.correo }}</div>
+              <div class="m-b-minimo texto-tamanio-3 asignado-email">
+                {{ i_participante.correo }}
+              </div>
               <div class="flex">
                 <span
                   class="p-x-1 p-y-minimo borde borde-color-acento borde-redondeado-8 texto-color-secundario"
-                  >{{ participante.rol }}</span
+                  >{{ i_participante.rol }}</span
                 >
                 <span class="asignado-fecha texto-tamanio-2"
-                  >Asignado el {{ formatearFecha(participante.created_date) }}</span
+                  >Asignado el {{ formatearFecha(i_participante.created_date) }}</span
                 >
               </div>
             </div>
             <div class="flex">
               <button
                 class="boton-secundario boton boton-chico"
-                @click="abrirModalCambiarPermiso(participante)"
+                @click="abrirModalCambiarPermiso(i_participante)"
               >
                 Cambiar permiso
               </button>
               <button
                 class="boton-secundario boton boton-chico"
-                @click="abrirModalEliminarPermiso(participante)"
+                @click="abrirModalEliminarPermiso(i_participante)"
               >
                 Eliminar
               </button>
