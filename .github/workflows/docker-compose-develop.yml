@@ -33,7 +33,7 @@ jobs:
 
   build:
     name: Build SIGIC Nuxt Frontend image (develop)
-    runs-on: [self-hosted, build-develop, sigic-nuxt-frontend]
+    runs-on: ubuntu-latest
     environment: develop
     if: github.event_name == 'push'
 
