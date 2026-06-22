@@ -306,7 +306,7 @@ function DescargarMapa() {
 
         <SisdaiModal ref="modalDescarga" tamanio-modal="modal-grande">
           <template #encabezado>
-            <h1 class="m-t-0">Descargar mapa como imágen</h1>
+            <h1 class="m-t-0">Descargar mapa como imagen</h1>
           </template>
 
           <template #cuerpo>
