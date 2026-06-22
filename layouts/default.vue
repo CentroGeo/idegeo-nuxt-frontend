@@ -1,7 +1,7 @@
 <script setup>
 import SisdaiMenuAccesibilidad from '~/components/base/SisdaiMenuAccesibilidad.vue';
 import SisdaiNavegacionGobMx from '@centrogeomx/sisdai-componentes/src/componentes/navegacion-gob-mx/SisdaiNavegacionGobMx.vue';
-import SisdaiPiePaginaGobMx from '@centrogeomx/sisdai-componentes/src/componentes/pie-pagina-gob-mx/SisdaiPiePaginaGobMx.vue';
+import SisdaiPiePaginaGobMx from '~/components/base/SisdaiPiePaginaGobMxCustom.vue';
 import MainNavegacion from '~/components/base/MainNavegacion.vue';
 import { useAccesibilidadStore } from '~/stores/accesibilidad';
 
