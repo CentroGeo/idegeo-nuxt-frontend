@@ -1,4 +1,6 @@
 <script setup>
+definePageMeta({ middleware: 'auth' });
+
 import { SisdaiLeyendaWms } from '@centrogeomx/sisdai-mapas';
 import { valoresPorDefecto as valoresModal } from '~/components/geocontenidos/loaderModal.vue';
 import { wait } from '~/utils/consulta';

@@ -1,4 +1,6 @@
 <script setup>
+definePageMeta({ middleware: 'auth' });
+
 import pictogramas from '~/utils/geocontenidos/pictogramas.json';
 
 const { escenario, escena: escenaId } = useRoute().params;

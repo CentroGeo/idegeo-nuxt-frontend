@@ -1,4 +1,6 @@
 <script setup>
+definePageMeta({ middleware: 'auth' });
+
 const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
 const { status } = useAuth();
