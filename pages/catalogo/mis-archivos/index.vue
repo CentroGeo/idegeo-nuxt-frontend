@@ -65,7 +65,7 @@ function setActions(recurso) {
     //return 'Editar, Ver, Publicar, Remover';
     return 'Editar, Ver, Publicar';
   } else if (recurso.is_published === true) {
-    return 'Ver, Descargar';
+    return 'Ver, Descargar, Volver a editar';
   } else {
     return 'Editar, Ver, Publicar, Descargar, Remover';
   }

@@ -49,6 +49,8 @@ const comentarios = ref('');
 const revisor = ref('');
 const recursoSolicitud = ref({});
 const modalCancelarSolicitud = ref(null);
+const modalVolverEditar = ref(null);
+const recursoReabrir = ref(null);
 const dictTable = ref({
   pk: 'pk',
   titulo: 'Título',
@@ -480,6 +482,26 @@ async function removerRevision() {
     console.error(error);
   }
 }
+
+function abrirModalVolverEditar(resource) {
+  recursoReabrir.value = resource;
+  modalVolverEditar.value.abrirModal();
+}
+
+async function volverAEditar() {
+  try {
+    const response = await $fetch('/api/reabrir-edicion', {
+      method: 'POST',
+      body: { resource_pk: recursoReabrir.value.pk, token: token },
+    });
+    modalVolverEditar.value.cerrarModal();
+    if (response !== 'Error') {
+      irARutaConQuery(recursoReabrir.value);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
 </script>
 
 <template>
@@ -675,6 +697,16 @@ async function removerRevision() {
                   @click="notifyDownloadOneChild(datum)"
                 >
                   <span class="pictograma-archivo-descargar"></span>
+                </button>
+                <button
+                  v-if="datum[variable].split(', ').includes('Volver a editar')"
+                  v-globo-informacion:izquierda="'Volver a editar'"
+                  class="boton-pictograma boton-secundario"
+                  aria-label="Volver a editar"
+                  type="button"
+                  @click="abrirModalVolverEditar(datum)"
+                >
+                  <span class="pictograma-editar"></span>
                 </button>
                 <button
                   v-if="datum[variable].split(', ').includes('Cancelar')"
@@ -878,6 +910,30 @@ async function removerRevision() {
           </button>
           <button class="boton-primario boton-chico" type="button" @click="removerRevision">
             Remover
+          </button>
+        </template>
+      </SisdaiModal>
+      <SisdaiModal ref="modalVolverEditar">
+        <template #encabezado>
+          <h2>Volver a editar</h2>
+        </template>
+        <template #cuerpo>
+          <p>
+            Al volver a editar <b>{{ recursoReabrir?.titulo }}</b>, la capa saldrá del catálogo
+            público y deberá pasar de nuevo por el proceso de revisión desde cero. ¿Deseas
+            continuar?
+          </p>
+        </template>
+        <template #pie>
+          <button
+            class="boton-secundario boton-chico"
+            type="button"
+            @click="modalVolverEditar.cerrarModal()"
+          >
+            Cancelar
+          </button>
+          <button class="boton-primario boton-chico" type="button" @click="volverAEditar">
+            Volver a editar
           </button>
         </template>
       </SisdaiModal>
