@@ -7,7 +7,7 @@ export const useResourcesCatalogoStore = defineStore('resourcesCatalogo', () => 
   const storeConsulta = useConsultaStore();
   //const storeCatalogo = useCatalogoStore();
   const { data } = useAuth();
-  const userEmail = data.value?.user.email;
+  const userEmail = computed(() => data.value?.user.email);
 
   // El recurso de cada tipo con actualización más reciente. Se muestran en catalogo/explorar
   const latestResources = reactive({
@@ -180,10 +180,10 @@ export const useResourcesCatalogoStore = defineStore('resourcesCatalogo', () => 
       // Agregar toda la lógica de queryparams correspondientes por sección
       if (section === 'disponibles') {
         queryParams['filter{complete_metadata}'] = 'true';
-        queryParams['filter{owner.username}'] = userEmail;
+        queryParams['filter{owner.username}'] = userEmail.value;
       } else if (section === 'pendientes') {
         queryParams['filter{complete_metadata}'] = 'false';
-        queryParams['filter{owner.username}'] = userEmail;
+        queryParams['filter{owner.username}'] = userEmail.value;
       }
 
       // Excluimos los servicios usando queryparams
@@ -227,10 +227,10 @@ export const useResourcesCatalogoStore = defineStore('resourcesCatalogo', () => 
       // Agregar toda la lógica de queryparams correspondientes por sección
       if (section === 'disponibles') {
         queryParams['filter{complete_metadata}'] = 'true';
-        queryParams['filter{owner.username}'] = userEmail;
+        queryParams['filter{owner.username}'] = userEmail.value;
       } else if (section === 'pendientes') {
         queryParams['filter{complete_metadata}'] = 'false';
-        queryParams['filter{owner.username}'] = userEmail;
+        queryParams['filter{owner.username}'] = userEmail.value;
       }
 
       // Excluimos los servicios usando queryparams
@@ -277,7 +277,7 @@ export const useResourcesCatalogoStore = defineStore('resourcesCatalogo', () => 
         'filter{complete_metadata}': 'true',
         'filter{resource_type.in}': resourceTypeGeonode[resourceType],
         page_size: 1,
-        'filter{owner.username}': userEmail,
+        'filter{owner.username}': userEmail.value,
       };
       if (resourceType === 'dataLayer') {
         queryParams['filter{has_geometry}'] = 'true';
@@ -307,7 +307,7 @@ export const useResourcesCatalogoStore = defineStore('resourcesCatalogo', () => 
         'filter{complete_metadata}': 'true',
         'filter{resource_type.in}': resourceTypeGeonode[resourceType],
         page_size: myTotalsByType[resourceType],
-        'filter{owner.username}': userEmail,
+        'filter{owner.username}': userEmail.value,
       };
       if (resourceType === 'dataLayer') {
         queryParams['filter{has_geometry}'] = 'true';

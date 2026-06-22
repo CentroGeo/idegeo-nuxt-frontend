@@ -1,8 +1,7 @@
 import { getServerSession } from '#auth';
 
-const config = useRuntimeConfig();
-
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   const { serviceId } = await readBody(event);
 
   const session = await getServerSession(event);

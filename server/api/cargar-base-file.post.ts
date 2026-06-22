@@ -9,9 +9,8 @@ export const config = {
   },
 };
 
-const configEnv = useRuntimeConfig();
-
 export default defineEventHandler(async (event) => {
+  const configEnv = useRuntimeConfig();
   const form = formidable({ multiples: false });
 
   // Parseo del form data recibido
