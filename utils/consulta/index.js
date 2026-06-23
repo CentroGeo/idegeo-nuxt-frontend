@@ -10,6 +10,37 @@ export const resourceTypeGeonode = {
   [resourceTypeDic.document]: 'document',
 };
 
+export const OGC_CATEGORY_IDENTIFIERS = new Set([
+  'biota',
+  'boundaries',
+  'climatologyMeteorologyAtmosphere',
+  'economy',
+  'elevation',
+  'environment',
+  'farming',
+  'geoscientificInformation',
+  'health',
+  'imageryBaseMapsEarthCover',
+  'inlandWaters',
+  'intelligenceMilitary',
+  'location',
+  'oceans',
+  'planningCadastre',
+  'population',
+  'society',
+  'structure',
+  'transportation',
+  'utilitiesCommunication',
+]);
+
+export const SIGIC_CATEGORY_IDENTIFIERS = new Set([
+  'medioAmbienteRecursosNaturales',
+  'infraestructuraServiciosUrbanosRegionales',
+  'territorioLimitesCatastro',
+  'sociedadDemografiaEconomia',
+  'sensoresRemotosMapasBase',
+]);
+
 export const categoriesInSpanish = {
   Biota: 'Biota',
   Boundaries: 'Fronteras',
@@ -33,6 +64,12 @@ export const categoriesInSpanish = {
   'Utilities Communication': 'Servicios Públicos y Comunicación',
   'Sin Clasificar': 'Sin Clasificar',
   'Catálogo externo': 'Catálogo externo',
+  'Medio ambiente y recursos naturales': 'Medio ambiente y recursos naturales',
+  'Infraestructura y servicios urbanos regionales':
+    'Infraestructura y servicios urbanos regionales',
+  'Territorio, límites y catastro': 'Territorio, límites y catastro',
+  'Sociedad, demografía y economía': 'Sociedad, demografía y economía',
+  'Sensores remotos y mapas base': 'Sensores remotos y mapas base',
 };
 export const categoriesNamesInSpanish = {
   biota: 'Biota',
@@ -55,6 +92,11 @@ export const categoriesNamesInSpanish = {
   structure: 'Estructura',
   transportation: 'Transporte',
   utilitiesCommunication: 'Servicios Públicos y Comunicación',
+  medioAmbienteRecursosNaturales: 'Medio ambiente y recursos naturales',
+  infraestructuraServiciosUrbanosRegionales: 'Infraestructura y servicios urbanos regionales',
+  territorioLimitesCatastro: 'Territorio, límites y catastro',
+  sociedadDemografiaEconomia: 'Sociedad, demografía y economía',
+  sensoresRemotosMapasBase: 'Sensores remotos y mapas base',
 };
 export const categoriesNames = {
   externalCatalog: 'Catálogo externo',
@@ -78,6 +120,11 @@ export const categoriesNames = {
   structure: 'Structure',
   transportation: 'Transportation',
   utilitiesCommunication: 'Utilities Communication',
+  medioAmbienteRecursosNaturales: 'Medio ambiente y recursos naturales',
+  infraestructuraServiciosUrbanosRegionales: 'Infraestructura y servicios urbanos regionales',
+  territorioLimitesCatastro: 'Territorio, límites y catastro',
+  sociedadDemografiaEconomia: 'Sociedad, demografía y economía',
+  sensoresRemotosMapasBase: 'Sensores remotos y mapas base',
 };
 export const categoriesValues = {
   'Catálogo externo': 'externalCatalog',
@@ -101,6 +148,11 @@ export const categoriesValues = {
   Structure: 'structure',
   Transportation: 'transportation',
   'Utilities Communication': 'utilitiesCommunication',
+  'Medio ambiente y recursos naturales': 'medioAmbienteRecursosNaturales',
+  'Infraestructura y servicios urbanos regionales': 'infraestructuraServiciosUrbanosRegionales',
+  'Territorio, límites y catastro': 'territorioLimitesCatastro',
+  'Sociedad, demografía y economía': 'sociedadDemografiaEconomia',
+  'Sensores remotos y mapas base': 'sensoresRemotosMapasBase',
 };
 
 /**
