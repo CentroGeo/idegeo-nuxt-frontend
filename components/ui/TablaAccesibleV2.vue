@@ -656,7 +656,7 @@ async function volverAEditar() {
                   type="button"
                   @click="openResourceReview(datum)"
                 >
-                  <span class="pictograma-ayuda"></span>
+                  <span class="pictograma-buscar"></span>
                 </button>
                 <button
                   v-if="datum[variable].split(', ').includes('Añadir')"
@@ -676,7 +676,7 @@ async function volverAEditar() {
                   type="button"
                   @click="notifyReleaseRequest(datum)"
                 >
-                  <span class="pictograma-ayuda"></span>
+                  <span class="pictograma-archivo-subir"></span>
                 </button>
                 <button
                   v-if="datum[variable].split(', ').includes('Comentarios')"
@@ -686,7 +686,7 @@ async function volverAEditar() {
                   type="button"
                   @click="abrirModalComentarios(datum)"
                 >
-                  <span class="pictograma-ayuda"></span>
+                  <span class="pictograma-chat"></span>
                 </button>
                 <button
                   v-if="datum[variable].split(', ').includes('Descargar')"
