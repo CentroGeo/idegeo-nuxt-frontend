@@ -21,7 +21,6 @@ const props = defineProps({
   },
 });
 const storeCatalogo = useCatalogoStore();
-const storeResources = useResourcesCatalogoStore();
 const config = useRuntimeConfig();
 const route = useRoute();
 const router = useRouter();
@@ -161,9 +160,7 @@ function notifyMetadatosChild(resource) {
   if (resource.recurso_completo) {
     modalResource.value = resource.recurso_completo;
   } else {
-    modalResource.value = (async () => {
-      return await storeResources.fetchResourceByPk(resource.pk);
-    })().then((resp) => (modalResource.value = resp));
+    modalResource.value = resource;
   }
   resourceType.value = tipoRecurso(resource);
   nextTick(() => {
