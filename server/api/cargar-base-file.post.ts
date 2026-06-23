@@ -9,9 +9,8 @@ export const config = {
   },
 };
 
-const configEnv = useRuntimeConfig();
-
 export default defineEventHandler(async (event) => {
+  const configEnv = useRuntimeConfig();
   const form = formidable({ multiples: false });
 
   // Parseo del form data recibido
@@ -27,6 +26,28 @@ export default defineEventHandler(async (event) => {
 
   if (!base_file || !token) {
     throw createError({ statusCode: 400, message: 'Archivo o token faltante' });
+  }
+
+  const quotaRes = await fetch(`${configEnv.public.geonodeApi}/data-importer/jobs/quota/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!quotaRes.ok) {
+    throw createError({
+      statusCode: quotaRes.status,
+      message: 'No fue posible validar los espacios disponibles',
+    });
+  }
+
+  const quota = await quotaRes.json();
+
+  if (!quota.can_upload) {
+    throw createError({
+      statusCode: 409,
+      message: 'Alcanzaste el límite de archivos y capas pendientes de aprobación.',
+    });
   }
 
   // Crear FormData para enviar a GeoNode

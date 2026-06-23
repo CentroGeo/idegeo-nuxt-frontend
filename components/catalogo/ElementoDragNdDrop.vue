@@ -3,6 +3,13 @@ import { convertirBytes } from '~/utils/catalogo';
 // emit para pasar los archivos al componente padre
 const emit = defineEmits(['pasarArchivo']);
 
+const props = defineProps({
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const archivos = ref({});
 const archivosArriba = ref(false);
 const archivoValido = ref(false);
@@ -10,15 +17,23 @@ const archivoValido = ref(false);
 const onDropZone = ref(null);
 const { files } = useDropZone(onDropZone, { onDrop });
 async function onDrop() {
+  if (props.disabled) return;
+
   archivos.value = files.value;
   archivosArriba.value = true;
 }
 
 const { open, onChange } = useFileDialog();
 onChange(async (files) => {
+  if (props.disabled) return;
+
   archivos.value = files;
   archivosArriba.value = true;
 });
+
+const abrirSelector = () => {
+  if (!props.disabled) open();
+};
 
 const removerArchivos = () => {
   archivos.value = {};
@@ -54,7 +69,9 @@ defineExpose({
       <div
         ref="onDropZone"
         class="contenedor-dragnddrop borde borde-redondeado-16 p-1 m-b-3"
-        @click="open()"
+        :class="{ 'contenedor-dragnddrop-deshabilitado': props.disabled }"
+        :aria-disabled="props.disabled"
+        @click="abrirSelector"
       >
         <div
           v-if="archivosArriba"
@@ -96,7 +113,11 @@ defineExpose({
                 <p>Arrastra o suelta tu archivo</p>
               </div>
 
-              <label class="boton boton-secundario boton-chico" @click.stop="open()">
+              <label
+                class="boton boton-secundario boton-chico"
+                :aria-disabled="props.disabled"
+                @click.stop="abrirSelector"
+              >
                 Elige Archivo
               </label>
             </div>
@@ -112,7 +133,7 @@ defineExpose({
             class="boton-primario boton-chico"
             aria-label="Guardar"
             type="button"
-            :disabled="!archivosArriba"
+            :disabled="props.disabled || !archivosArriba"
             @click="emit('pasarArchivo', archivos)"
           >
             Guardar
@@ -121,7 +142,7 @@ defineExpose({
             class="boton-secundario boton-chico"
             aria-label="Eliminar"
             type="button"
-            :disabled="!archivosArriba"
+            :disabled="props.disabled || !archivosArriba"
             @click="removerArchivos"
           >
             Eliminar
@@ -137,6 +158,12 @@ defineExpose({
   height: 300px;
   border-style: dashed;
   cursor: pointer;
+}
+
+.contenedor-dragnddrop-deshabilitado {
+  cursor: not-allowed;
+  opacity: 0.55;
+  pointer-events: none;
 }
 #identificadorCAMPOFILE {
   width: 0.1px;

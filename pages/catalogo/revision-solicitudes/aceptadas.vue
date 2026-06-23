@@ -58,7 +58,8 @@ function updateResources() {
       tipo_recurso: tipoRecurso(d.resource),
       actualizacion: d.updated_at,
       propietario: d.owner.username,
-      acciones: 'Ver, Comentarios',
+      acciones: storeCatalogo.userInfo.is_superuser ? 'Ver, Comentarios, Remover' : 'Ver, Comentarios',
+      recurso_completo: d.resource,
       comentarios: d.rejection_reason,
       revisor: d.reviewer?.username,
     };

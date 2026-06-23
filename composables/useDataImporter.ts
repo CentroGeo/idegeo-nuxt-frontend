@@ -43,6 +43,13 @@ export interface DataImportJob {
   updated_at: string;
 }
 
+export interface DataImporterQuota {
+  limit: number;
+  used: number;
+  remaining: number;
+  can_upload: boolean;
+}
+
 export interface CreateTableroPayload {
   name: string;
   description?: string;
@@ -183,6 +190,19 @@ export function useDataImporter() {
     return resp.json();
   }
 
+  async function getQuota(token?: string | null): Promise<DataImporterQuota> {
+    const resp = await gnoxyFetch(`${baseUrl}/quota/`, {
+      headers: authHeaders(token),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Error ${resp.status} consultando cuota`);
+    }
+
+    return resp.json();
+  }
+
   async function listJobs(token?: string | null): Promise<DataImportJob[]> {
     const url = `${baseUrl}/`;
     const resp = await gnoxyFetch(url, { headers: authHeaders(token) });
@@ -218,6 +238,7 @@ export function useDataImporter() {
 
   return {
     uploadFile,
+    getQuota,
     pollJob,
     updateSchema,
     previewGeo,

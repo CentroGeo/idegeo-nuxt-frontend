@@ -10,7 +10,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "start": "nuxt start",
-    "postinstall": "nuxt prepare && node scripts/patch-focus-trap.js",
+    "postinstall": "nuxt prepare && node scripts/patch-focus-trap.js && node scripts/patch-nuxt-auth-navigation.js",
     "reinstall": "npm run clean && npm i",
     "reinstall:ci": "npm run clean:ci && npm ci",
     "format": "prettier --write .",

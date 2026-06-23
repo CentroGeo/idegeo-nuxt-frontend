@@ -1,4 +1,6 @@
 <script setup>
+definePageMeta({ middleware: 'auth' });
+
 const { status, signIn, data: userData } = useAuth();
 const { fetchSitios, eliminarSitio, togglePublic } = useTableroApi();
 

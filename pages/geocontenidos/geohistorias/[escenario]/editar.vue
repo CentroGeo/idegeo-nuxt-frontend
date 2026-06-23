@@ -1,4 +1,6 @@
 <script setup>
+definePageMeta({ middleware: 'auth' });
+
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
 const config = useRuntimeConfig();

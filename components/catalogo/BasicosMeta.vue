@@ -1,14 +1,8 @@
 <script setup>
 import SisdaiCampoBase from '@centrogeomx/sisdai-componentes/src/componentes/campo-base/SisdaiCampoBase.vue';
 import SisdaiSelector from '@centrogeomx/sisdai-componentes/src/componentes/selector/SisdaiSelector.vue';
-/**
- * @typedef {Object} Props
- * @property {Object} [recurso={}] - Indica el recurso al que se le va a modificar los metadatos básicos.
- * @property {String} [resourcePk=''] - Indica la propiedad pk del recurso.
- * @property {String} [resourceType=''] - Indica el tipo de recurso.
- * @property {Boolean} [isModal=false] - Indica si el formulario va a ir en un modal o no
- */
-/** @type {Props} */
+import { OGC_CATEGORY_IDENTIFIERS, SIGIC_CATEGORY_IDENTIFIERS } from '~/utils/consulta';
+
 const props = defineProps({
   recurso: {
     type: Object,
@@ -45,27 +39,22 @@ const campoResumen = computed({
   get: () => storeMetadatos.metadata.abstract,
   set: (value) => storeMetadatos.updateAttr('abstract', value),
 });
-
 const campoFecha = computed({
   get: () => storeMetadatos.metadata.date,
   set: (value) => storeMetadatos.updateAttr('date', value),
 });
-
 const campoTipoFecha = computed({
   get: () => storeMetadatos.metadata.date_type,
   set: (value) => storeMetadatos.updateAttr('date_type', value),
-});
-
-const campoCategoria = computed({
-  get: () => storeMetadatos.metadata.category,
-  set: (value) => storeMetadatos.updateAttr('category', value),
 });
 const campoPalabrasClave = computed({
   get: () => storeMetadatos.metadata.keywords,
   set: (value) => storeMetadatos.updateAttr('keywords', value),
 });
 
-const dictCategoria = [
+// ── Categorías ──────────────────────────────────────────────────────────────
+
+const dictCategoriaOGC = [
   { farming: 'Agricultura' },
   { inlandWaters: 'Aguas Continentales' },
   { biota: 'Biota' },
@@ -88,26 +77,71 @@ const dictCategoria = [
   { location: 'Ubicación' },
 ];
 
+const dictCategoriaSIGIC = [
+  { medioAmbienteRecursosNaturales: 'Medio ambiente y recursos naturales' },
+  { infraestructuraServiciosUrbanosRegionales: 'Infraestructura y servicios urbanos regionales' },
+  { territorioLimitesCatastro: 'Territorio, límites y catastro' },
+  { sociedadDemografiaEconomia: 'Sociedad, demografía y economía' },
+  { sensoresRemotosMapasBase: 'Sensores remotos y mapas base' },
+];
+
+// Estado local de los tres selectores
+const categoriaOGC = ref('');
+const categoriaSIGIC = ref('');
+const tipoCategoria = ref('');
+
+// Hidrata los tres selectores cuando el store termina de cargar el recurso.
+// El guard `!tipoCategoria.value` evita sobreescribir selecciones del usuario.
+watch(
+  () => storeMetadatos.metadata.category,
+  (newId) => {
+    if (!newId || tipoCategoria.value) return;
+    if (OGC_CATEGORY_IDENTIFIERS.has(newId)) {
+      categoriaOGC.value = newId;
+      tipoCategoria.value = 'ogc';
+    } else if (SIGIC_CATEGORY_IDENTIFIERS.has(newId)) {
+      categoriaSIGIC.value = newId;
+      tipoCategoria.value = 'sigic';
+    }
+  },
+  { immediate: true }
+);
+
+// Cuando el usuario elige una categoría OGC, la guarda en el store.
+watch(categoriaOGC, (val) => {
+  if (val) storeMetadatos.updateAttr('category', val);
+});
+
+// Cuando el usuario elige una categoría SIGIC, la guarda en el store.
+watch(categoriaSIGIC, (val) => {
+  if (val) storeMetadatos.updateAttr('category', val);
+});
+
+// Cuando el usuario cambia el tercer selector, aplica la categoría
+// ya seleccionada del tipo correspondiente (o limpia si no hay ninguna).
+watch(tipoCategoria, (val) => {
+  if (val === 'ogc') {
+    storeMetadatos.updateAttr('category', categoriaOGC.value || '');
+  } else if (val === 'sigic') {
+    storeMetadatos.updateAttr('category', categoriaSIGIC.value || '');
+  }
+});
+
+// ── Imagen ───────────────────────────────────────────────────────────────────
+
 const dragNdDrop = ref(null);
 const img_files = ['.jpg', '.jpeg', '.png', '.webp'];
 async function guardarImagen(files) {
   const token = ref(data.value?.accessToken);
-
   if (img_files.map((end) => files[0]?.name.endsWith(end)).includes(true)) {
     const formData = new FormData();
-
-    // Enviamos SOLO el primer file
     formData.append('file', files[0]);
     formData.append('token', token.value);
     formData.append('pk', props.resourcePk);
-
-    const endpoint = `${config.app.baseURL}api/metadatos-thumbnail`;
-    // Mandamos el formdata a subirse por
-    const response = await fetch(endpoint, {
+    const response = await fetch(`${config.app.baseURL}api/metadatos-thumbnail`, {
       method: 'PUT',
       body: formData,
     });
-
     console.warn(await response.json());
   } else {
     dragNdDrop.value?.archivoNoValido();
@@ -130,7 +164,6 @@ async function guardarImagen(files) {
       <p class="texto-peso-600">
         Miniatura imagen no mayor a 9kb tamaño 120x120px. Archivos Png o JPG
       </p>
-      <!-- Drag & Drop -->
       <ClientOnly>
         <CatalogoElementoDragNdDrop ref="dragNdDrop" @pasar-archivo="(i) => guardarImagen(i)" />
       </ClientOnly>
@@ -158,6 +191,7 @@ async function guardarImagen(files) {
             />
           </ClientOnly>
         </div>
+
         <div class="columna-8">
           <ClientOnly>
             <SisdaiSelector
@@ -171,6 +205,7 @@ async function guardarImagen(files) {
             </SisdaiSelector>
           </ClientOnly>
         </div>
+
         <div class="columna-8">
           <ClientOnly>
             <SisdaiCampoBase
@@ -182,17 +217,42 @@ async function guardarImagen(files) {
             />
           </ClientOnly>
         </div>
+
         <div class="columna-16">
           <ClientOnly>
-            <SisdaiSelector v-model="campoCategoria" etiqueta="Categoría*">
-              <option value="">----</option>
+            <!-- Selector 1: Categoría OGC -->
+            <SisdaiSelector v-model="categoriaOGC" etiqueta="Categoría OGC">
+              <option value="">Selecciona una categoría OGC</option>
               <option
-                v-for="value in dictCategoria"
-                :key="Object.keys(value)"
-                :value="Object.keys(value)"
+                v-for="value in dictCategoriaOGC"
+                :key="Object.keys(value)[0]"
+                :value="Object.keys(value)[0]"
               >
-                {{ value[Object.keys(value)] }}
+                {{ value[Object.keys(value)[0]] }}
               </option>
+            </SisdaiSelector>
+
+            <!-- Selector 2: Categoría SIGIC -->
+            <SisdaiSelector v-model="categoriaSIGIC" class="m-t-3" etiqueta="Categoría SIGIC">
+              <option value="">Selecciona una categoría SIGIC</option>
+              <option
+                v-for="value in dictCategoriaSIGIC"
+                :key="Object.keys(value)[0]"
+                :value="Object.keys(value)[0]"
+              >
+                {{ value[Object.keys(value)[0]] }}
+              </option>
+            </SisdaiSelector>
+
+            <!-- Selector 3: tipo de visualización -->
+            <SisdaiSelector
+              v-model="tipoCategoria"
+              class="m-t-3"
+              etiqueta="¿Qué categoría deseas que se visualice?*"
+            >
+              <option value="">Selecciona una opción</option>
+              <option value="ogc" :disabled="!categoriaOGC">Categoría OGC</option>
+              <option value="sigic" :disabled="!categoriaSIGIC">Categoría SIGIC</option>
             </SisdaiSelector>
 
             <SisdaiCampoBase

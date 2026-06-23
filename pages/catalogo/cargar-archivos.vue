@@ -1,7 +1,7 @@
 <script setup>
 import { useAuth, useRuntimeConfig } from '#imports';
 import { useCatalogoStore } from '@/stores/catalogo';
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { convertirBytes } from '~/utils/catalogo';
 
 definePageMeta({
@@ -18,18 +18,75 @@ const archivosEnCarga = ref([]);
 const hayCargas = ref(false);
 const { data } = useAuth();
 const { gnoxyFetch } = useGnoxyUrl();
-const { uploadFile, pollJob, importToGeonode } = useDataImporter();
+const { uploadFile, getQuota, pollJob, importToGeonode } = useDataImporter();
 
 const base_files = ['.geojson', '.gpkg'];
 const docs_files = ['.txt', '.pdf'];
 const FORMATOS_TABULARES = ['csv', 'xlsx', 'xls', 'json'];
 
+const cuota = ref(null);
+const cuotaCargando = ref(true);
+const cuotaError = ref('');
+const mensajeCuota = ref('');
+
+const puedeCargar = computed(() => cuota.value?.can_upload === true);
+
+async function actualizarCuota() {
+  const token = data.value?.accessToken;
+
+  if (!token) {
+    cuotaCargando.value = true;
+    return;
+  }
+
+  cuotaCargando.value = true;
+  cuotaError.value = '';
+
+  try {
+    cuota.value = await getQuota(token);
+  } catch (error) {
+    cuota.value = null;
+    cuotaError.value = error?.message || 'No fue posible consultar los espacios disponibles.';
+  } finally {
+    cuotaCargando.value = false;
+  }
+}
+
+watch(
+  () => data.value?.accessToken,
+  (token) => {
+    if (token) actualizarCuota();
+  },
+  { immediate: true }
+);
+
 async function guardarArchivo(files) {
+  mensajeCuota.value = '';
+
+  const listaArchivos = Array.from(files || []);
+
+  await actualizarCuota();
+
+  if (!cuota.value) {
+    mensajeCuota.value = 'No fue posible validar los espacios disponibles.';
+    return;
+  }
+
+  if (!cuota.value.can_upload) {
+    mensajeCuota.value = 'Alcanzaste el límite de archivos y capas pendientes de aprobación.';
+    return;
+  }
+
+  if (listaArchivos.length > cuota.value.remaining) {
+    mensajeCuota.value = `Solo tienes ${cuota.value.remaining} espacios disponibles.`;
+    return;
+  }
+
   archivosEnCarga.value = [];
   hayCargas.value = true;
   const token = ref(data.value?.accessToken);
 
-  const nuevosArchivos = Array.from(files).map((file) =>
+  const nuevosArchivos = listaArchivos.map((file) =>
     reactive({
       nombre: file.name,
       extension: file.name.split('.').slice(-1)[0],
@@ -49,7 +106,7 @@ async function guardarArchivo(files) {
   archivosEnCarga.value.push(...nuevosArchivos);
 
   nuevosArchivos.forEach(async (archivo, idx) => {
-    const file = files[idx];
+    const file = listaArchivos[idx];
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
 
     // Flujo SIGIC para tabulares
@@ -59,13 +116,15 @@ async function guardarArchivo(files) {
       try {
         const importJob = await uploadFile(file, data.value?.accessToken);
         archivo.jobId = importJob.id;
+        await actualizarCuota();
         await esperarAnalisis(archivo);
         archivo.geoCapabilidad = calcularGeoCapabilidad(archivo.jobSchema);
         archivo.estatus = 'decision_tabular';
         archivo.mensaje = '';
-      } catch {
+      } catch (error) {
         archivo.estatus = 'error_carga';
-        archivo.mensaje = 'Error al analizar el archivo.';
+        archivo.mensaje = error?.message || 'Error al analizar el archivo.';
+        await actualizarCuota();
       }
       return;
     }
@@ -97,6 +156,12 @@ async function guardarArchivo(files) {
       });
 
       const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || result.statusMessage || `Error ${response.status} al subir el archivo`
+        );
+      }
 
       // Evaluar respuesta
       if (!result.success) {
@@ -143,9 +208,12 @@ async function guardarArchivo(files) {
         archivo.estatus = 'error_carga';
         archivo.mensaje = 'Respuesta inesperada del servidor';
       }
+
+      await actualizarCuota();
     } catch (error) {
       archivo.estatus = 'error_carga';
-      archivo.mensaje = 'Error de red';
+      archivo.mensaje = error?.message || 'Error de red';
+      await actualizarCuota();
       console.error(error);
     }
   });
@@ -191,6 +259,7 @@ async function subirComoTabular(archivo) {
         archivo.estatus = 'carga_finalizada';
         archivo.mensaje = 'Archivo cargado correctamente como tabla.';
         statusOk.value = true;
+        await actualizarCuota();
         return;
       }
       if (jobData.status === 'error') throw new Error(jobData.error_message || 'Error importando');
@@ -256,8 +325,36 @@ async function monitorLayerImport(executionId, archivo) {
           <!-- Si el archivo contiene datos de coordenadas pero estos no siguen la
             nomenclatura establecida, serán procesados como cualquier otro valor numérico sin
             interpretación geoespacial.-->
+
+          <div v-if="cuotaCargando" class="fondo-color-neutro borde borde-redondeado-8 p-2 m-y-2">
+            Consultando espacios disponibles...
+          </div>
+
+          <div
+            v-else-if="cuota"
+            class="fondo-color-informacion texto-color-informacion borde borde-redondeado-8 p-2 m-y-2"
+          >
+            <p>
+              <strong>{{ cuota.used }} de {{ cuota.limit }} espacios utilizados.</strong>
+            </p>
+            <p>
+              Te quedan {{ cuota.remaining }}
+              {{ cuota.remaining === 1 ? 'espacio disponible' : 'espacios disponibles' }}.
+            </p>
+            <p v-if="!cuota.can_upload" class="texto-color-error m-t-1">
+              Alcanzaste el límite. Se liberará espacio cuando un administrador apruebe contenido.
+            </p>
+          </div>
+
+          <p v-if="cuotaError || mensajeCuota" class="texto-color-error m-y-2">
+            {{ mensajeCuota || cuotaError }}
+          </p>
+
           <ClientOnly>
-            <CatalogoElementoDragNdDrop @pasar-archivo="(i) => guardarArchivo(i)" />
+            <CatalogoElementoDragNdDrop
+              :disabled="cuotaCargando || !puedeCargar"
+              @pasar-archivo="(i) => guardarArchivo(i)"
+            />
           </ClientOnly>
 
           <h2 v-if="hayCargas">Cargas</h2>
