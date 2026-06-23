@@ -293,7 +293,10 @@ async function monitorLayerImport(executionId, archivo) {
       if (data.status === 'FAILED') {
         clearInterval(interval);
         archivo.estatus = 'error_carga';
-        archivo.mensaje = 'Error al procesar en GeoNode';
+        archivo.mensaje =
+          'No fue posible procesar tu archivo. Verifica que use un sistema de coordenadas ' +
+          'compatible: EPSG:4326 (WGS 84) o EPSG:3857 (Web Mercator). ' +
+          'Si el problema persiste, convierte el archivo antes de subirlo.';
       }
     } catch (e) {
       console.error('Error consultando ejecución:', e);
@@ -449,6 +452,23 @@ async function monitorLayerImport(executionId, archivo) {
                   >
                     Se detectaron {{ archivo.numero_geometrias }} geometrías <br />
                     Sistema de referencia {{ archivo.proyeccion }}
+                  </div>
+
+                  <div
+                    v-if="
+                      archivo.proyeccion &&
+                      archivo.estatus === 'carga_finalizada' &&
+                      !['EPSG:4326', 'EPSG:3857'].includes(archivo.proyeccion)
+                    "
+                    class="texto-color-advertencia fondo-color-advertencia borde borde-color-advertencia borde-redondeado-2 p-2 m-t-1"
+                  >
+                    <strong>⚠ Sistema de coordenadas convertido automáticamente</strong><br />
+                    Tu archivo fue cargado en <strong>{{ archivo.proyeccion }}</strong
+                    >. La plataforma lo convirtió a EPSG:4326 para su correcta visualización.<br /><br />
+                    Sistemas de referencia válidos para el visor:<br />
+                    • <strong>EPSG:4326</strong> — WGS 84 (recomendado)<br />
+                    • <strong>EPSG:3857</strong> — Web Mercator<br /><br />
+                    No es necesario realizar ninguna acción adicional.
                   </div>
 
                   <div
