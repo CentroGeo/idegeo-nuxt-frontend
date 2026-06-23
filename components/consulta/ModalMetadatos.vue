@@ -36,7 +36,7 @@ defineExpose({
       </template>
 
       <template #cuerpo>
-        <div class="alineacion-izquierda ancho-lectura">
+        <div class="contenedor alineacion-izquierda ancho-lectura">
           <CatalogoBasicosMeta
             v-if="seccionActual === Direction.BASICO"
             :recurso="props.selectedElement"
@@ -61,23 +61,23 @@ defineExpose({
             :is-modal="true"
             :is-preview="true"
           />
-          <button
-            class="boton-secundario boton-chico"
-            aria-label="Ir a mis archivos"
-            :disabled="seccionActual === Direction.BASICO"
-            @click="seccionActual -= 1"
-          >
-            Regresar
-          </button>
-          <button
-            aria-label="Siguiente"
-            class="boton-primario boton-chico"
-            :disabled="seccionActual === Direction.OPCIONAL"
-            @click="seccionActual += 1"
-          >
-            Siguiente
-          </button>
         </div>
+        <button
+          class="boton-secundario boton-chico separacion"
+          aria-label="Ir a mis archivos"
+          :disabled="seccionActual === Direction.BASICO"
+          @click="seccionActual -= 1"
+        >
+          Regresar
+        </button>
+        <button
+          aria-label="Siguiente"
+          class="boton-primario boton-chico separacion"
+          :disabled="seccionActual === Direction.OPCIONAL"
+          @click="seccionActual += 1"
+        >
+          Siguiente
+        </button>
       </template>
 
       <template #pie>
@@ -92,12 +92,13 @@ defineExpose({
 <style lang="scss" scoped>
 .contenedor {
   margin: 0px;
-  padding: 8px;
+  padding: 16px;
   align-items: center;
 }
 
-.tarjeta {
-  background-color: var(--color-neutro-0);
-  border: 1px solid var(--color-secundario-8);
+.separacion {
+  margin: 16px;
+  padding: 16px;
+  font-size: 16px;
 }
 </style>
