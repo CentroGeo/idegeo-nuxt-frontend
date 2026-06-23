@@ -69,46 +69,38 @@ const dictCategoriaSIGIC = [
   { sensoresRemotosMapasBase: 'Sensores remotos y mapas base' },
 ];
 
-// Estado local de los tres selectores
-const categoriaOGC = ref('');
-const categoriaSIGIC = ref('');
-const tipoCategoria = ref('');
-
-// Hidrata los tres selectores cuando el store termina de cargar el recurso.
-// El guard `!tipoCategoria.value` evita sobreescribir selecciones del usuario.
-watch(
-  () => storeMetadatos.metadata.category,
-  (newId) => {
-    if (!newId || tipoCategoria.value) return;
-    if (OGC_CATEGORY_IDENTIFIERS.has(newId)) {
-      categoriaOGC.value = newId;
-      tipoCategoria.value = 'ogc';
-    } else if (SIGIC_CATEGORY_IDENTIFIERS.has(newId)) {
-      categoriaSIGIC.value = newId;
-      tipoCategoria.value = 'sigic';
-    }
+// Categorías sincronizadas con el store
+const categoriaOGC = computed({
+  get: () => storeMetadatos.metadata.categoriaOGC || '',
+  set: (val) => {
+    storeMetadatos.updateAttr('categoriaOGC', val);
+    if (val && tipoCategoria.value === 'ogc') storeMetadatos.updateAttr('category', val);
   },
-  { immediate: true }
-);
-
-// Cuando el usuario elige una categoría OGC, la guarda en el store.
-watch(categoriaOGC, (val) => {
-  if (val) storeMetadatos.updateAttr('category', val);
 });
 
-// Cuando el usuario elige una categoría SIGIC, la guarda en el store.
-watch(categoriaSIGIC, (val) => {
-  if (val) storeMetadatos.updateAttr('category', val);
+const categoriaSIGIC = computed({
+  get: () => storeMetadatos.metadata.categoriaSIGIC || '',
+  set: (val) => {
+    storeMetadatos.updateAttr('categoriaSIGIC', val);
+    if (val && tipoCategoria.value === 'sigic') storeMetadatos.updateAttr('category', val);
+  },
 });
 
-// Cuando el usuario cambia el tercer selector, aplica la categoría
-// ya seleccionada del tipo correspondiente (o limpia si no hay ninguna).
-watch(tipoCategoria, (val) => {
-  if (val === 'ogc') {
-    storeMetadatos.updateAttr('category', categoriaOGC.value || '');
-  } else if (val === 'sigic') {
-    storeMetadatos.updateAttr('category', categoriaSIGIC.value || '');
-  }
+const tipoCategoria = computed({
+  get: () => {
+    if (storeMetadatos.metadata.category) {
+      if (OGC_CATEGORY_IDENTIFIERS.has(storeMetadatos.metadata.category)) return 'ogc';
+      if (SIGIC_CATEGORY_IDENTIFIERS.has(storeMetadatos.metadata.category)) return 'sigic';
+    }
+    return '';
+  },
+  set: (val) => {
+    if (val === 'ogc' && categoriaOGC.value)
+      storeMetadatos.updateAttr('category', categoriaOGC.value);
+    else if (val === 'sigic' && categoriaSIGIC.value)
+      storeMetadatos.updateAttr('category', categoriaSIGIC.value);
+    else storeMetadatos.updateAttr('category', '');
+  },
 });
 
 // ── Imagen ───────────────────────────────────────────────────────────────────
@@ -203,7 +195,7 @@ async function guardarImagen(files) {
         <div class="columna-16">
           <ClientOnly>
             <!-- Selector 1: Categoría OGC -->
-            <SisdaiSelector v-model="categoriaOGC" etiqueta="Categoría OGC">
+            <SisdaiSelector v-model="categoriaOGC" etiqueta="Categoría OGC *">
               <option value="">Selecciona una categoría OGC</option>
               <option
                 v-for="value in dictCategoriaOGC"
@@ -215,7 +207,7 @@ async function guardarImagen(files) {
             </SisdaiSelector>
 
             <!-- Selector 2: Categoría SIGIC -->
-            <SisdaiSelector v-model="categoriaSIGIC" class="m-t-3" etiqueta="Categoría SIGIC">
+            <SisdaiSelector v-model="categoriaSIGIC" class="m-t-3" etiqueta="Categoría SIGIC *">
               <option value="">Selecciona una categoría SIGIC</option>
               <option
                 v-for="value in dictCategoriaSIGIC"
