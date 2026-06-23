@@ -1,5 +1,6 @@
 <script setup>
 import SisdaiSelector from '@centrogeomx/sisdai-componentes/src/componentes/selector/SisdaiSelector.vue';
+import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 import { SisdaiLeyendaArcgis, SisdaiLeyendaWms } from '@centrogeomx/sisdai-mapas';
 import { useResourcesSupplements } from '~/composables/useResourcesSupplements';
 
@@ -24,6 +25,48 @@ const props = defineProps({
 });
 const { resourceElement } = toRefs(props);
 const isResourceReady = ref(false);
+
+const { data } = useAuth();
+const token = data.value?.accessToken;
+const modalVolverEditar = ref(null);
+
+// Variable que determina si el usuario loggeado es el dueño
+const esMiArchivo = computed(() => {
+  const email = data.value?.user?.email;
+  return !!email && resourceElement.value.owner?.username === email;
+});
+
+function onEditarClick() {
+  // Si esya publicada la despublica, se requiere confirmación
+  if (resourceElement.value.is_published === true) {
+    modalVolverEditar.value.abrirModal();
+  } else {
+  // De lo contrario a edición directo
+    navigateTo({
+      path: '/catalogo/mis-archivos/editar/MetadatosBasicos',
+      query: { data: resourceElement.value.pk, type: storeConsulta.resourceType },
+    });
+  }
+}
+
+async function confirmarVolverAEditar() {
+  try {
+    const response = await $fetch('/api/reabrir-edicion', {
+      method: 'POST',
+      body: { resource_pk: resourceElement.value.pk, token: token },
+    });
+    modalVolverEditar.value.cerrarModal();
+    if (response !== 'Error') {
+      navigateTo({
+        path: '/catalogo/mis-archivos/editar/MetadatosBasicos',
+        query: { data: resourceElement.value.pk, type: storeConsulta.resourceType },
+      });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 const selectedStyle = ref(null);
 const actualButtons = ref({});
 const serverType = ref(null);
@@ -71,6 +114,18 @@ const optionsButtons = ref([
     action: () => {
       emit('opacidadClicked');
     },
+  },
+  {
+    excludeFor: 'none',
+    isEdit: true,
+    get label() {
+      return resourceElement.value.is_published ? 'Volver a editar' : 'Editar';
+    },
+    pictogram: 'pictograma-editar',
+    get globo() {
+      return resourceElement.value.is_published ? 'Volver a editar' : 'Editar';
+    },
+    action: () => onEditarClick(),
   },
   {
     excludeFor: 'none',
@@ -130,6 +185,10 @@ async function updateFunctions() {
   // Se excluye el botón OWS para recursos privados
   if (resourceElement.value.is_approved === false && resourceElement.value.is_published === false) {
     buttons = buttons.filter((d) => d.label !== 'Vínculo OWS');
+  }
+  // Mostrar botón de edición solo para el dueño
+  if (!esMiArchivo.value) {
+    buttons = buttons.filter((d) => !d.isEdit);
   }
   actualButtons.value = buttons;
 }
@@ -214,6 +273,34 @@ watch(selectedStyle, (nv) => {
         Enlace Open Web Services (OWS)
       </button>
     </div>
+    <ClientOnly>
+      <SisdaiModal ref="modalVolverEditar">
+        <template #encabezado><h2>Volver a editar</h2></template>
+        <template #cuerpo>
+          <p>
+            Al volver a editar <b>{{ resourceElement.title }}</b>, la capa saldrá del catálogo
+            público y deberá pasar de nuevo por el proceso de revisión desde cero. ¿Deseas
+            continuar?
+          </p>
+        </template>
+        <template #pie>
+          <button
+            class="boton-secundario boton-chico"
+            type="button"
+            @click="modalVolverEditar.cerrarModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            class="boton-primario boton-chico"
+            type="button"
+            @click="confirmarVolverAEditar"
+          >
+            Volver a editar
+          </button>
+        </template>
+      </SisdaiModal>
+    </ClientOnly>
   </div>
   <div v-else class="flex flex-contenido-centrado">
     <img
