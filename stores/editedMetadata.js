@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia';
-import { categoriesNames, unaccentUppercase } from '~/utils/consulta';
+import {
+  categoriesNames,
+  unaccentUppercase,
+  OGC_CATEGORY_IDENTIFIERS,
+  SIGIC_CATEGORY_IDENTIFIERS,
+} from '~/utils/consulta';
 
 export const useEditedMetadataStore = defineStore('editedMetadata', () => {
   const config = useRuntimeConfig();
@@ -15,6 +20,8 @@ export const useEditedMetadataStore = defineStore('editedMetadata', () => {
     date_type: undefined,
     date: undefined,
     category: undefined,
+    categoriaOGC: undefined,
+    categoriaSIGIC: undefined,
     keywords: undefined,
     //metadata_author_pk: undefined,
     //metadata_author: undefined,
@@ -78,7 +85,13 @@ export const useEditedMetadataStore = defineStore('editedMetadata', () => {
           const formatedDate = new Date(metadataResponse[key]).toISOString();
           metadata[key] = formatedDate.slice(0, 10);
         } else if (key === 'category') {
-          metadata[key] = metadataResponse.category?.identifier;
+          const identifier = metadataResponse.category?.identifier;
+          metadata[key] = identifier;
+          if (identifier && OGC_CATEGORY_IDENTIFIERS.has(identifier)) {
+            metadata.categoriaOGC = identifier;
+          } else if (identifier && SIGIC_CATEGORY_IDENTIFIERS.has(identifier)) {
+            metadata.categoriaSIGIC = identifier;
+          }
         } else if (key === 'keywords') {
           metadata[key] = metadataResponse.keywords.map((d) => d.name).join(',');
         } /* else if (key === 'metadata_author') {
