@@ -26,6 +26,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isPreview: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const storeMetadatos = useEditedMetadataStore();
@@ -117,6 +121,8 @@ async function guardarImagen(files) {
       :resource="props.recurso"
       :title="'Metadatos básicos'"
       :exclude-links="props.isModal"
+      :is-preview="isPreview"
+      ,
     />
     <p class="m-t-2 m-b-0">* Campos obligatorios</p>
 
