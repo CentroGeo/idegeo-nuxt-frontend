@@ -66,7 +66,7 @@ const optionsButtons = ref([
   {
     excludeFor: 'none',
     label: 'Cambiar opacidad',
-    pictogram: 'pictograma-editar',
+    pictogram: 'pictograma-contraste',
     globo: 'Opacidad',
     action: () => {
       emit('opacidadClicked');
