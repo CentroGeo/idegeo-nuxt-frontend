@@ -67,7 +67,7 @@ const mostrarGeocontenidos = computed(() => config.public.enableGeocontenidos);
       <li v-if="mostrarLevantamiento && status === 'authenticated'">
         <NuxtLink class="nav-hipervinculo" to="/levantamiento">Levantamiento</NuxtLink>
       </li>
-      <li v-if="mostrarGeocontenidos">
+      <li v-if="mostrarGeocontenidos && status === 'authenticated'">
         <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
       </li>
       <li v-if="mostrarAcercaDe">
