@@ -250,6 +250,7 @@ const dividirMapa = computed({
         ref="metadatosChild"
         :key="`tabla_${modalResource.pk}_${resourceType}`"
         :selected-element="modalResource"
+        :resource-type="resourceType"
       />
 
       <ConsultaModalMapa
