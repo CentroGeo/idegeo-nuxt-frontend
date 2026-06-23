@@ -1,5 +1,15 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
+const props = defineProps({
+  resourceType: {
+    type: String,
+    default: '',
+  },
+  selectedElement: {
+    type: Object,
+    default: () => ({}),
+  },
+});
 
 const modalMetadatos = ref(null);
 const Direction = {
@@ -29,25 +39,25 @@ defineExpose({
         <div class="alineacion-izquierda ancho-lectura">
           <CatalogoBasicosMeta
             v-if="seccionActual === Direction.BASICO"
-            :recurso="editedResource"
-            :resource-pk="selectedPk"
-            :resource-type="type"
+            :recurso="props.selectedElement"
+            :resource-pk="props.selectedElement.pk"
+            :resource-type="resourceType"
             :is-modal="true"
             :is-preview="true"
           />
           <CatalogoUbicacionMeta
             v-else-if="seccionActual === Direction.ATRIBUTOS"
-            :resource="editedResource"
-            :resource-pk="selectedPk"
-            :resource-type="type"
+            :resource="props.selectedElement"
+            :resource-pk="props.selectedElement.pk"
+            :resource-type="resourceType"
             :is-modal="true"
             :is-preview="true"
           />
           <CatalogoOpcionalesMeta
             v-else-if="seccionActual === Direction.OPCIONAL"
-            :recurso="editedResource"
-            :resource-pk="selectedPk"
-            :resource-type="type"
+            :recurso="props.selectedElement"
+            :resource-pk="props.selectedElement.pk"
+            :resource-type="resourceType"
             :is-modal="true"
             :is-preview="true"
           />

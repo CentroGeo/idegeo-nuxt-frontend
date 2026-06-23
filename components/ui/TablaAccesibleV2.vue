@@ -165,6 +165,7 @@ function notifyMetadatosChild(resource) {
       return await storeResources.fetchResourceByPk(resource.pk);
     })().then((resp) => (modalResource.value = resp));
   }
+  resourceType.value = tipoRecurso(resource);
   nextTick(() => {
     metadatosChild.value?.abrirModalMetadatos();
   });
@@ -775,7 +776,8 @@ async function removerRevision() {
     <ConsultaModalMetadatos
       v-if="shownModal === 'metadatosModal'"
       ref="metadatosChild"
-      :key="`tabla`"
+      :key="`${modalResource.pk}_${resourceType}`"
+      :resource-type="resourceType === 'Capa Geográfica' ? 'dataLayer' : resourceType"
       :selected-element="modalResource"
     />
 
