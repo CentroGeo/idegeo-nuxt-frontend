@@ -333,7 +333,9 @@ export function useResourcesSupplements() {
 
     try {
       if (resource.sourcetype !== 'REMOTE') {
-        const stylesURL = `${config.public.geonodeApi}/datasets/${resource.pk}/sldstyles/`;
+        // Se añade un timestamp (?t=Date.now()) para evitar que el navegador devuelva una respuesta
+        // vieja de su caché cuando se actualizan o suben nuevos estilos.
+        const stylesURL = `${config.public.geonodeApi}/datasets/${resource.pk}/sldstyles/?t=${Date.now()}`;
         const stylesRes = await gnoxyFetch(stylesURL);
 
         if (!stylesRes.ok) {

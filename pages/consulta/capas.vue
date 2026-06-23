@@ -293,9 +293,14 @@ function DescargarMapa() {
             :url="urlCapaFondo"
             :fuente="urlCapaFondo"
           />
+          <!-- 
+            Se añade el estilo seleccionado a la propiedad :key para forzar a Vue 
+            a desmontar y volver a montar la capa (descartando la caché vieja de imágenes) 
+            cuando el usuario cambie el estilo.
+          -->
           <SisdaiCapaWms
             v-for="resource in owsLayers"
-            :key="`wms-${resource.pk}-${resource.position_}`"
+            :key="`wms-${resource.pk}-${resource.position_}-${storeSelected.byPk(resource.pk).estilo}`"
             :capa="getLayerName(resource)"
             :consulta="gnoxyFetch"
             :fuente="findServer(resource)"
