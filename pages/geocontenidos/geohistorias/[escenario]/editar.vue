@@ -16,7 +16,7 @@ const escenario = reactive({
   },
   url_id: '',
 });
-let escenarioEstatico = '';
+let valores_estaticos = '';
 
 const { api, modal, mostrarModalCargando, mostrarModalError, mostrarModalExito } = useApi();
 
@@ -26,7 +26,7 @@ const { api, modal, mostrarModalCargando, mostrarModalError, mostrarModalExito }
 async function consultarEscenario() {
   if (escenario_id === 'nuevo') return;
 
-  mostrarModalCargando('Cargando escena...');
+  mostrarModalCargando('Cargando escenario...');
 
   const { respuesta, datos } = await api(`scenarios/${escenario_id}`);
 
@@ -36,12 +36,8 @@ async function consultarEscenario() {
     return;
   }
 
-  escenario.description = datos.description;
-  escenario.is_public = datos.is_public;
-  escenario.name = datos.name;
-  escenario.scenes_layout_styles = datos.scenes_layout_styles;
-  escenario.url_id = datos.url_id;
-  escenarioEstatico = JSON.stringify(escenario);
+  Object.assign(escenario, datos);
+  valores_estaticos = JSON.stringify(escenario);
   modal.visible = false;
 }
 consultarEscenario();
@@ -69,7 +65,7 @@ const distribucionLayout = computed({
 const datos_validos = computed(
   () =>
     !(
-      escenarioEstatico === JSON.stringify(escenario) ||
+      valores_estaticos === JSON.stringify(escenario) ||
       escenario.name === '' ||
       escenario.description === ''
     )
@@ -78,15 +74,15 @@ const datos_validos = computed(
 const accion_guardar = ref('');
 async function guardarCambios() {
   if (!datos_validos.value) return;
-
   mostrarModalCargando(`Almacenando información...`);
 
-  const { datos } = await api(
-    `scenarios/${escenario_id !== 'nuevo' ? `${escenario_id}/` : ''}/`,
-    escenario_id === 'nuevo' ? 'POST' : 'PUT',
-    escenario
-  );
-  if (datos?.success === false) return mostrarModalError(datos.errors);
+  const url = `scenarios/${escenario_id !== 'nuevo' ? `${escenario_id}/` : ''}/`;
+  const { datos } = await api(url, escenario_id === 'nuevo' ? 'POST' : 'PUT', escenario);
+
+  if (datos?.success === false) {
+    mostrarModalError(datos.errors);
+    return;
+  }
 
   mostrarModalExito();
   await wait(1500);
