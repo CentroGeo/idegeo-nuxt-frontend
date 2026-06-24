@@ -4,10 +4,26 @@ import SisdaiSelector from '@centrogeomx/sisdai-componentes/src/componentes/sele
 import { OGC_CATEGORY_IDENTIFIERS, SIGIC_CATEGORY_IDENTIFIERS } from '~/utils/consulta';
 
 const props = defineProps({
-  recurso: { type: Object, default: () => ({}) },
-  resourcePk: { type: String, default: '' },
-  resourceType: { type: String, default: '' },
-  isModal: { type: Boolean, default: false },
+  recurso: {
+    type: Object,
+    default: () => ({}),
+  },
+  resourcePk: {
+    type: String,
+    default: '',
+  },
+  resourceType: {
+    type: String,
+    default: '',
+  },
+  isModal: {
+    type: Boolean,
+    default: false,
+  },
+  isPreview: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const storeMetadatos = useEditedMetadataStore();
@@ -131,6 +147,8 @@ async function guardarImagen(files) {
       :resource="props.recurso"
       :title="'Metadatos básicos'"
       :exclude-links="props.isModal"
+      :is-preview="isPreview"
+      ,
     />
     <p class="m-t-2 m-b-0">* Campos obligatorios</p>
 
