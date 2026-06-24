@@ -809,7 +809,7 @@ async function volverAEditar() {
       ref="metadatosChild"
       :key="`${modalResource.pk}_${resourceType}`"
       :review-pk="modalResource.pk"
-      :resource-type="resourceType === 'dataLayer' ? 'datasets' : 'documents'"
+      :resource-type="resourceType === 'document' ? 'documents' : 'datasets'"
     />
 
     <ClientOnly>
