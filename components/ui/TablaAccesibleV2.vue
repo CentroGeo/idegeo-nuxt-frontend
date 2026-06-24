@@ -166,7 +166,7 @@ function notifyMetadatosChild(resource) {
   }
   resourceType.value = tipoRecurso(resource);
   nextTick(() => {
-    metadatosChild.value?.abrirModalMetadatos();
+    metadatosChild.value?.abrirModalRevision();
   });
 }
 /**
@@ -433,14 +433,13 @@ async function confirmarEliminar() {
   await wait(3000);
   isBeingDeleted.value = false;
   if (wasDeletionSuccesful.value) {
-      setTimeout(() => {                                                                                                                                                            
-          modalEliminar.value?.cerrarModal();                                                                                                                                         
-          const router = useRouter();                                                                                                                                                 
-          router.go(0);                                                                                                                                                               
-        }, 2000);                                                                                                                                                                     
-      } 
-     }                                                                                                                                                                              
-        
+    setTimeout(() => {
+      modalEliminar.value?.cerrarModal();
+      const router = useRouter();
+      router.go(0);
+    }, 2000);
+  }
+}
 
 /**
  * Cierra el modal de eliminación. Se usa cuando el proceso de eliminación falla
@@ -805,12 +804,12 @@ async function volverAEditar() {
       :resource-type="resourceType"
       :selected-element="modalResource"
     />
-    <ConsultaModalMetadatos
+    <CatalogoModalRevisionMeta
       v-if="shownModal === 'metadatosModal'"
       ref="metadatosChild"
       :key="`${modalResource.pk}_${resourceType}`"
-      :resource-type="resourceType === 'Capa Geográfica' ? 'dataLayer' : resourceType"
-      :selected-element="modalResource"
+      :review-pk="modalResource.pk"
+      :resource-type="resourceType === 'dataLayer' ? 'datasets' : 'documents'"
     />
 
     <ClientOnly>
@@ -823,14 +822,17 @@ async function volverAEditar() {
           <p v-else></p>
         </template>
         <template #cuerpo>
-        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="m-b-2">
-          <span v-if="resourceToDelete?.is_published">
-            El recurso <strong style="font-weight: bold;">{{ resourceToDeleteTitle }}</strong> está publicado en el catálogo. Al eliminarlo, se borrará permanentemente del servidor y no será posible recuperarlo.
-          </span>
-          <span v-else>
-            El recurso <strong style="font-weight: bold;">{{ resourceToDeleteTitle }}</strong> será eliminado permanentemente del servidor y no será posible recuperarlo.
-          </span>
-        </p>
+          <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="m-b-2">
+            <span v-if="resourceToDelete?.is_published">
+              El recurso <strong style="font-weight: bold">{{ resourceToDeleteTitle }}</strong> está
+              publicado en el catálogo. Al eliminarlo, se borrará permanentemente del servidor y no
+              será posible recuperarlo.
+            </span>
+            <span v-else>
+              El recurso <strong style="font-weight: bold">{{ resourceToDeleteTitle }}</strong> será
+              eliminado permanentemente del servidor y no será posible recuperarlo.
+            </span>
+          </p>
 
           <!--Botones-->
           <div
@@ -863,12 +865,18 @@ async function volverAEditar() {
               />
             </div>
           </div>
-          <!-- Alerta de éxito -->                                                                                                                                                
-              <div v-if="wasDeletionSuccesful === true && !isBeingDeleted" class="flex" style="gap: 0px">                                                                             
-                <p class="columna-14 texto-color-confirmacion fondo-color-confirmacion borde borde-color-confirmacion p-2 borde-redondeado-8">                                        
-                  <span class="pictograma-aprobado" /> El recurso fue eliminado con éxito del servidor.                                                                               
-                </p>                                                                                                                                                                  
-              </div>
+          <!-- Alerta de éxito -->
+          <div
+            v-if="wasDeletionSuccesful === true && !isBeingDeleted"
+            class="flex"
+            style="gap: 0px"
+          >
+            <p
+              class="columna-14 texto-color-confirmacion fondo-color-confirmacion borde borde-color-confirmacion p-2 borde-redondeado-8"
+            >
+              <span class="pictograma-aprobado" /> El recurso fue eliminado con éxito del servidor.
+            </p>
+          </div>
 
           <!--Alerta de que fracasó la eliminación-->
           <div
@@ -886,8 +894,7 @@ async function volverAEditar() {
               <button class="boton-primario boton-chico" @click="irAmisArchivos">Regresar</button>
             </div>
           </div>
-      </template>
-
+        </template>
       </SisdaiModal>
 
       <!-- Modal Añadir a Mis revisiones -->
@@ -968,9 +975,9 @@ async function volverAEditar() {
         </template>
         <template #cuerpo>
           <p>
-            Al volver a editar <b>{{ recursoReabrir?.titulo }}</b>, la capa saldrá del catálogo
-            público y deberá pasar de nuevo por el proceso de revisión desde cero. ¿Deseas
-            continuar?
+            Al volver a editar <b>{{ recursoReabrir?.titulo }}</b
+            >, la capa saldrá del catálogo público y deberá pasar de nuevo por el proceso de
+            revisión desde cero. ¿Deseas continuar?
           </p>
         </template>
         <template #pie>

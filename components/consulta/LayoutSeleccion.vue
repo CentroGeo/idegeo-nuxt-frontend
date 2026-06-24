@@ -54,7 +54,7 @@ function notifyMetadatosChild(resource) {
   shownModal.value = 'metadatosModal';
   modalResource.value = resource;
   nextTick(() => {
-    metadatosChild.value?.abrirModalMetadatos();
+    metadatosChild.value?.abrirModalRevision();
   });
 }
 function notifyOpacityChild(resource) {
@@ -245,12 +245,12 @@ const dividirMapa = computed({
         @notify-download="changeModal('downloadOne')"
       />
 
-      <ConsultaModalMetadatos
+      <CatalogoModalRevisionMeta
         v-if="shownModal === 'metadatosModal'"
         ref="metadatosChild"
         :key="`tabla_${modalResource.pk}_${resourceType}`"
-        :selected-element="modalResource"
-        :resource-type="resourceType"
+        :review-pk="modalResource.pk"
+        :resource-type="resourceType === 'dataLayer' ? 'datasets' : 'documents'"
       />
 
       <ConsultaModalMapa
