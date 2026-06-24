@@ -217,17 +217,18 @@ onUnmounted(() => {
           style="font-size: 12px; margin-left: 4px; text-align: center"
         >
           {{ catalogueElement.styles?.length === 0 ? 1 : catalogueElement.styles?.length }}
-        </span></span>
+        </span></span
+      >
 
-      <span                                                                                                                                                                       
-            v-if="isLoggedIn && esSuperusuaria"                                                                                                                                       
-            v-globo-informacion:arriba="'Eliminar'"                                                                                                                              
-            class="pictograma-eliminar pictograma-mediano picto"                                                                                                                      
-            style="cursor: pointer;"                                                                                                                                                  
-            role="button"                                                                                                                                                             
-            aria-label="Eliminar capa"                                                                                                                                                
-            @click.stop="emit('delete', catalogueElement)"                                                                                                                            
-          />  
+      <span
+        v-if="isLoggedIn && esSuperusuaria"
+        v-globo-informacion:arriba="'Eliminar'"
+        class="pictograma-eliminar pictograma-mediano picto"
+        style="cursor: pointer"
+        role="button"
+        aria-label="Eliminar capa"
+        @click.stop="emit('delete', catalogueElement)"
+      />
     </div>
   </div>
 </template>
