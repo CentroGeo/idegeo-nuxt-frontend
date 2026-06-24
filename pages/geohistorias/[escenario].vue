@@ -43,12 +43,13 @@ async function validarEscena(scenes) {
  * @param {Number|String} Identificador de la escena
  */
 async function redirigir(escenaId) {
-  await navigateTo(`${config.public.basePath}/geohistorias/${idEscenario}/${escenaId}`);
+  await navigateTo(`/geohistorias/${idEscenario}/${escenaId}`);
 }
 </script>
 
 <template>
   <main class="escenario">
+    <!-- {{ escenario.datos.scenes }} -->
     <GeocontenidosLoader v-if="escenario.cargando" />
 
     <template v-else>
@@ -60,6 +61,7 @@ async function redirigir(escenaId) {
       />
 
       <NuxtPage
+        :titulo="escenario.datos.name"
         :style="`--ancho-panel-texto: ${escenario.datos.scenes_layout_styles.text_panel}%`"
       />
 
