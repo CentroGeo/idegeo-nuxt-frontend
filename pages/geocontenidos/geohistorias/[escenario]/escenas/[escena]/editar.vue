@@ -1,14 +1,6 @@
 <script setup>
 definePageMeta({ middleware: 'auth' });
 
-import {
-  // SisdaiCapaArcgis,
-  // SisdaiCapaWms,
-  SisdaiCapaXyz,
-  // SisdaiLeyendaArcgis,
-  // SisdaiLeyendaWms,
-  SisdaiMapa,
-} from '@centrogeomx/sisdai-mapas';
 import useApi from '~/composables/geocontenidos/useApi';
 import { wait } from '~/utils/consulta';
 
@@ -21,6 +13,8 @@ const escena = reactive({
   map_center_lat: null,
   map_center_long: null,
   zoom: null,
+  layers: [],
+  markers: [],
 });
 let valores_estaticos = '';
 
@@ -129,24 +123,58 @@ const vistaDelMapa = computed(() => {
     <section class="m-b-4">
       <h2>Vista previa interactiva</h2>
 
-      <p>Arrastra el mapa y zoom para ajustar la vista</p>
+      <div class="grid">
+        <div class="columna-8-mov columna-6-esc">
+          <p class="m-t-0">Ajusta el mapa y zoom para ajustar la vista</p>
 
-      <ClientOnly>
-        <SisdaiMapa :vista="vistaDelMapa" @al-mover-vista="alMoverVista">
-          <template #panel-encabezado-vis>
-            <ul class="lista-sin-estilo">
-              <li>Latitud: {{ escena.map_center_lat }}</li>
-              <li>Longitud: {{ escena.map_center_long }}</li>
-              <li>Nivel de acercamiento: {{ escena.zoom }}</li>
-            </ul>
-          </template>
+          <fieldset>
+            <label for="lng">Longitud</label>
+            <input
+              id="lng"
+              v-model="escena.map_center_long"
+              type="number"
+              step="any"
+              max="180"
+              min="-180"
+              required
+            />
+          </fieldset>
 
-          <SisdaiCapaXyz
-            :posicion="0"
-            fuente="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          />
-        </SisdaiMapa>
-      </ClientOnly>
+          <fieldset>
+            <label for="lat">Latitud</label>
+            <input
+              id="lat"
+              v-model="escena.map_center_lat"
+              type="number"
+              step="any"
+              max="90"
+              min="-90"
+              required
+            />
+          </fieldset>
+
+          <fieldset>
+            <label for="zoom">Nivel de acercamiento</label>
+            <input
+              id="zoom"
+              v-model="escena.zoom"
+              type="number"
+              step="any"
+              max="90"
+              min="-90"
+              required
+            />
+          </fieldset>
+        </div>
+
+        <GeocontenidosEscenaMapa
+          :vista="vistaDelMapa"
+          @al-mover-vista="alMoverVista"
+          class="columna-8-mov columna-10-esc"
+          :capas="escena.layers"
+          :marcadores="escena.markers"
+        />
+      </div>
     </section>
 
     <section class="flex flex-contenido-final">

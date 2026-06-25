@@ -127,7 +127,7 @@ async function guardarCambios() {
   <form class="gestion-marcadores" @submit.prevent="guardarCambios">
     <section>
       <GeocontenidosTituloVolver
-        :volver="`/geohistorias/${escenario}/escenas`"
+        :volver="`geohistorias/${escenario}/escenas`"
         titulo="Agregar/Editar marcadores"
       />
 

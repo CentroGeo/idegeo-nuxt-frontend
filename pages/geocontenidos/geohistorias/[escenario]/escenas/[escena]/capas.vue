@@ -205,7 +205,7 @@ async function guardarCambios() {
 <template>
   <form class="gestor-capas" @submit.prevent="guardarCambios">
     <GeocontenidosTituloVolver
-      :volver="`/geohistorias/${escenario}/escenas`"
+      :volver="`geohistorias/${escenario}/escenas`"
       titulo="Agregar/Editar capas"
     />
 
@@ -312,6 +312,7 @@ async function guardarCambios() {
               :nombre="capa.name"
               :titulo="capa.dataset_title"
               :sin-control="true"
+              :sin-control-clases="true"
             />
             <!-- 
               :titulo="capa.dataset_title || 'cargando...'"
