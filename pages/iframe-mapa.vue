@@ -1,8 +1,10 @@
 <script setup>
 import {
   // SisdaiCapaArcgis,
+  // SisdaiLeyendaArcgis,
   SisdaiCapaWms,
   SisdaiCapaXyz,
+  SisdaiLeyendaWms,
   // utiles,
   SisdaiMapa,
 } from '@centrogeomx/sisdai-mapas';
@@ -45,16 +47,15 @@ async function consultarCapas(capas) {
 
     const { dataset } = await respuesta.json();
     recursos.push({
+      alternate: dataset.alternate,
+      estilo: capa.estilo,
+      opacidad: capa.opacidad,
       pk: capa.pk,
       posicion: capa.posicion,
-      estilo: capa.estilo,
-      alternate: dataset.alternate,
-      opacidad: capa.opacidad,
-      posicion: capa.posicion,
+      titulo: dataset.title,
       visible: capa.visible,
     });
   }
-  // console.log(recursos);
 
   return recursos;
 }
@@ -71,50 +72,57 @@ onMounted(async () => {
 
 <template>
   <div class="contenedor-ifrme grid">
-    <div class="mapa columna-11">
-      <ClientOnly>
-        <SisdaiMapa class="gema" :vista="vistaDelMapa">
-          <SisdaiCapaXyz :posicion="0" />
+    <ClientOnly>
+      <SisdaiMapa class="mapa gema columna-5-mov columna-11-esc" :vista="vistaDelMapa">
+        <SisdaiCapaXyz :posicion="0" id="capa-base" style="display: none" />
 
-          <SisdaiCapaWms
-            v-for="capa in capas_consultadas"
-            :key="`wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
-            :capa="capa.alternate"
-            :consulta="gnoxyFetch"
-            :estilo="capa.estilo"
-            :fuente="`${config.public.geoserverUrl}/ows`"
-            :mosaicos="true"
-            :opacidad="capa.opacidad"
-            :posicion="capa.posicion + 1"
-            :visible="capa.visible"
-          />
-          <!-- 
-            :fuente="findServer(resource)"
-            :lado="storeSelected.byPk(resource.pk).lado"
-            :cuadro-informativo="
-              (url) =>
-                buildLayerInfo(url, getLayerName(resource), resource.title, resource.sourcetype)
-            "
-          -->
-        </SisdaiMapa>
-      </ClientOnly>
+        <SisdaiCapaWms
+          v-for="capa in capas_consultadas"
+          :key="`capa-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
+          :id="`capa-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
+          :capa="capa.alternate"
+          :consulta="gnoxyFetch"
+          :estilo="capa.estilo"
+          :fuente="`${config.public.geoserverUrl}/ows`"
+          :mosaicos="true"
+          :opacidad="capa.opacidad"
+          :posicion="capa.posicion + 1"
+          :visible="capa.visible"
+          style="display: none"
+        />
+        <!-- 
+          :fuente="findServer(resource)"
+          :lado="storeSelected.byPk(resource.pk).lado"
+          :cuadro-informativo="
+            (url) =>
+              buildLayerInfo(url, getLayerName(resource), resource.title, resource.sourcetype)
+          "
+        -->
+      </SisdaiMapa>
+    </ClientOnly>
+    <div class="leyendas columna-3-mov columna-5-esc p-3">
+      <p class="texto-tamanio-6 m-0">
+        <strong>Simbología</strong>
+      </p>
 
-      <!-- <p>mapa</p> -->
-    </div>
-    <div class="leyendas columna-5">
-      <p>leyendas</p>
-
-      <!-- <code>{{ vistaDelMapa }}</code> -->
-      <code>
-        {{ capas_consultadas }}
-      </code>
+      <SisdaiLeyendaWms
+        v-for="capa in capas_consultadas"
+        class="m-t-2"
+        :fuente="`${config.public.geoserverUrl}/wms`"
+        :key="`leyenda-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
+        :nombre="capa.alternate"
+        :sin-control-clases="true"
+        :titulo="capa.titulo"
+        :visible="capa.visible"
+        @alCambiarVisibilidad="([v]) => (capa.visible = v)"
+      />
     </div>
   </div>
 </template>
 
 <style lang="scss">
 .contenedor-ifrme {
-  background-color: blanchedalmond;
+  /*background-color: blanchedalmond;*/
   height: 100%;
   left: 0;
   position: absolute;
@@ -123,11 +131,18 @@ onMounted(async () => {
   z-index: 99999;
   gap: 0;
 
-  .mapa {
-    background-color: cadetblue;
+  .sisdai-mapa.gema.mapa .contenedor-vis-paneles {
+    /* background-color: cadetblue; */
+    grid-template-rows: 0 0 auto 0 0;
+
+    .contenido-vis {
+      grid-row: 3 / span 3;
+    }
   }
+
   .leyendas {
-    background-color: cornflowerblue;
+    /* background-color: cornflowerblue; */
+    overflow: auto;
   }
 }
 </style>
