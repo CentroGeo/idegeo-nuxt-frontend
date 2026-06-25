@@ -99,24 +99,32 @@ onMounted(async () => {
           "
         -->
       </SisdaiMapa>
-    </ClientOnly>
-    <div class="leyendas columna-3-mov columna-5-esc p-3">
-      <p class="texto-tamanio-6 m-0">
-        <strong>Simbología</strong>
-      </p>
+      <div class="leyendas columna-3-mov columna-5-esc p-3">
+        <p class="texto-tamanio-6 m-0">
+          <strong>Simbología</strong>
+        </p>
 
-      <SisdaiLeyendaWms
-        v-for="capa in capas_consultadas"
-        class="m-t-2"
-        :fuente="`${config.public.geoserverUrl}/wms`"
-        :key="`leyenda-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
-        :nombre="capa.alternate"
-        :sin-control-clases="true"
-        :titulo="capa.titulo"
-        :visible="capa.visible"
-        @alCambiarVisibilidad="([v]) => (capa.visible = v)"
-      />
-    </div>
+        <SisdaiLeyendaWms
+          v-for="capa in capas_consultadas"
+          class="m-t-2"
+          :fuente="`${config.public.geoserverUrl}/wms`"
+          :key="`leyenda-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
+          :nombre="capa.alternate"
+          :sin-control-clases="true"
+          :titulo="capa.titulo"
+          :visible="capa.visible"
+          @alCambiarVisibilidad="([v]) => (capa.visible = v)"
+        />
+      </div>
+
+      <template #fallback>
+        <img
+          :src="`${config.app.baseURL}img/logo_sigic.svg`"
+          class="imagen-muestra color-invertir"
+          alt="SIGIC"
+        />
+      </template>
+    </ClientOnly>
   </div>
 </template>
 
