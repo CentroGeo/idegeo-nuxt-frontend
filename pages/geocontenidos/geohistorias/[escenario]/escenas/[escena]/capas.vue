@@ -4,6 +4,8 @@ import { valoresPorDefecto as valoresModal } from '~/components/geocontenidos/lo
 import { wait } from '~/utils/consulta';
 import { GestionCapas } from '~/utils/geocontenidos/GestionCapas';
 
+definePageMeta({ middleware: 'auth' });
+
 const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
 const { data: userData } = useAuth();

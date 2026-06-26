@@ -1,5 +1,5 @@
 <script setup>
-definePageMeta({ middleware: 'redireccionar-modulo-geocontenidos' });
+definePageMeta({ middleware: ['auth', 'redireccionar-modulo-geocontenidos'] });
 
 const ruta = '/geocontenidos';
 const route = useRoute();

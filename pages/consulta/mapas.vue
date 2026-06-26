@@ -32,7 +32,7 @@ onUnmounted(() => {
               class="boton-secundario boton-chico"
               target="_blank"
             >
-              <i class="fa-solid fa-eye" aria-hidden="true"></i> Visualizar
+              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Visualizar
             </NuxtLink>
             <button class="boton-secundario boton-chico" type="button" @click="deseleccionar">
               Cerrar

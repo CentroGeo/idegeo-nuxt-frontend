@@ -8,9 +8,8 @@ export const config = {
     bodyParser: false,
   },
 };
-const configEnv = useRuntimeConfig();
-
 export default defineEventHandler(async (event) => {
+  const configEnv = useRuntimeConfig();
   // Parsea FormData con formidable
   const form = formidable({ multiples: false });
   console.log('form', form);
@@ -22,10 +21,34 @@ export default defineEventHandler(async (event) => {
     });
   });
   const { doc_file } = data.files;
+  const token = data?.fields?.token?.[0];
 
-  if (!doc_file) {
-    throw createError({ statusCode: 400, message: 'Archivo faltante' });
+  if (!doc_file || !token) {
+    throw createError({ statusCode: 400, message: 'Archivo o token faltante' });
   }
+
+  const quotaRes = await fetch(`${configEnv.public.geonodeApi}/data-importer/jobs/quota/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!quotaRes.ok) {
+    throw createError({
+      statusCode: quotaRes.status,
+      message: 'No fue posible validar los espacios disponibles',
+    });
+  }
+
+  const quota = await quotaRes.json();
+
+  if (!quota.can_upload) {
+    throw createError({
+      statusCode: 409,
+      message: 'Alcanzaste el límite de archivos y capas pendientes de aprobación.',
+    });
+  }
+
   const formData = new FormData();
   formData.append('title', doc_file[0].originalFilename);
 
@@ -43,7 +66,7 @@ export default defineEventHandler(async (event) => {
     const res = await fetch(`${configEnv.public.geonodeUrl}/documents/upload?no__redirect=true/`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${data?.fields?.token?.[0]}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData as unknown as BodyInit,
     });

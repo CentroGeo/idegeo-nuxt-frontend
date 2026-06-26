@@ -158,8 +158,11 @@ function alternar() {
 }
 
 .leyenda-item img {
+  align-self: flex-start;
+  width: auto;
   max-width: 100%;
   height: auto;
+  object-fit: contain;
 }
 
 .flex {
