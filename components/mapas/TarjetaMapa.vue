@@ -7,6 +7,31 @@ const props = defineProps({
 });
 
 const config = useRuntimeConfig();
+const { data } = useAuth();
+const storeCatalogo = useCatalogoStore();
+
+const estaLogueado = computed(() => !!data.value);
+const usuarioActual = computed(() => data.value?.user?.email);
+
+const esSuperusuaria = computed(() => storeCatalogo.userInfo?.is_superuser || false);
+
+const esDueno = computed(() => {
+  if (!estaLogueado.value) return false;
+  const owner = props.mapa.owner;
+  return (
+    owner?.username === usuarioActual.value ||
+    owner?.username === storeCatalogo.userInfo?.username ||
+    owner?.pk === storeCatalogo.userInfo?.pk
+  );
+});
+
+const mostrarConfiguracion = computed(() => esSuperusuaria.value || esDueno.value);
+
+onMounted(async () => {
+  if (estaLogueado.value && !storeCatalogo.userInfo?.pk) {
+    await storeCatalogo.getUserInfo();
+  }
+});
 
 const tipoEtiqueta = {
   regular: 'Mapa simple',
@@ -50,6 +75,7 @@ function visualizarMapa() {
       <UiNumeroElementos :numero="mapa.layers_count ?? 0" :etiqueta="'Capas'" />
 
       <button
+        v-if="mostrarConfiguracion"
         class="boton-primario flex flex-contenido-centrado"
         style="width: 100%; margin: 8px"
         @click="abrirMapa"
@@ -61,7 +87,11 @@ function visualizarMapa() {
         style="width: 100%; margin: 8px"
         @click="visualizarMapa"
       >
-        <i class="fa-solid fa-eye" aria-hidden="true" style="margin-right: 6px"></i>
+        <i
+          class="fa-solid fa-arrow-up-right-from-square"
+          aria-hidden="true"
+          style="margin-right: 6px"
+        ></i>
         Visualizar mapa
       </button>
     </div>

@@ -59,7 +59,7 @@ onUnmounted(() => {
             class="boton-secundario"
             target="_blank"
           >
-            <i class="fa-solid fa-eye" aria-hidden="true"></i> Visualizar
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Visualizar
           </NuxtLink>
           <button class="boton-secundario" type="button" @click="abrirCompartir">
             <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Compartir
