@@ -6,6 +6,8 @@ const { data } = useAuth();
 const storeSelected = useSelectedResources2Store();
 const storeConsulta = useConsultaStore();
 const storeResources = useResourcesConsultaStore();
+const storeCatalogo = useCatalogoStore();
+const esSuperusuaria = computed(() => storeCatalogo.userInfo?.is_superuser || false);
 const props = defineProps({
   catalogueElement: {
     type: Object,
@@ -90,7 +92,7 @@ const geomDict = {
     class: 'pictograma-alerta',
   },
 };
-const emit = defineEmits(['triggerFetch']);
+const emit = defineEmits(['triggerFetch', 'delete']);
 
 // Para triggerear la función de observar
 let observer;
@@ -104,7 +106,7 @@ const iconOptions = {
       position: 'arriba',
     },
     {
-      tooltipText: `Variables disponibles`,
+      tooltipText: `Visualizaciones disponibles`,
       class: 'pictograma-visualizador',
       position: 'arriba',
     },
@@ -134,7 +136,10 @@ watch(capasSeleccionadas, () => {
   storeResources.fetchResourcesByPk(storeConsulta.resourceType, storeSelected.pks);
 });
 
-onMounted(() => {
+onMounted(async () => {
+  if (isLoggedIn.value && !storeCatalogo.userInfo?.pk) {
+    await storeCatalogo.getUserInfo();
+  }
   // Esto es para observar cuando la tarjeta entra en la vista
   observer = new IntersectionObserver(
     async (entries) => {
@@ -208,12 +213,22 @@ onUnmounted(() => {
         aria-hidden="true"
       >
         <span
-          v-if="button.tooltipText === 'Variables disponibles'"
+          v-if="button.tooltipText === 'Visualizaciones disponibles'"
           style="font-size: 12px; margin-left: 4px; text-align: center"
         >
           {{ catalogueElement.styles?.length === 0 ? 1 : catalogueElement.styles?.length }}
         </span></span
       >
+
+      <span
+        v-if="isLoggedIn && esSuperusuaria"
+        v-globo-informacion:arriba="'Eliminar'"
+        class="pictograma-eliminar pictograma-mediano picto"
+        style="cursor: pointer"
+        role="button"
+        aria-label="Eliminar capa"
+        @click.stop="emit('delete', catalogueElement)"
+      />
     </div>
   </div>
 </template>
