@@ -91,7 +91,7 @@ const codigo_iframe = `<iframe width="560" height="315" src="${currentPath.value
                 type="button"
                 class="boton-primario boton-pictograma boton-grande twitter-share-button"
                 aria-label="Copiar vínculo al portapapeles"
-                @click="copyToClipboard()"
+                @click="() => copyToClipboard()"
               >
                 <span class="pictograma-enlace-subrayado" aria-hidden="true" />
               </button>
@@ -109,7 +109,7 @@ const codigo_iframe = `<iframe width="560" height="315" src="${currentPath.value
             <button
               class="boton-primario boton-pictograma boton-grande"
               aria-label="Copiar código al portapapeles"
-              @click="copyToClipboard(codigo_iframe, 'Código copiado con éxito')"
+              @click="() => copyToClipboard(codigo_iframe, 'Código copiado con éxito')"
             >
               <span class="pictograma-copiar" aria-hidden="true" />
             </button>
