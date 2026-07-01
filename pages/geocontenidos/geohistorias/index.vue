@@ -1,9 +1,11 @@
 <script setup>
+import { valoresPorDefecto as valoresModal } from '~/components/geocontenidos/loaderModal.vue';
+import { wait } from '~/utils/consulta';
+
 definePageMeta({ middleware: 'auth' });
 
 const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
-const { status, data: userData } = useAuth();
 const estaLogueado = computed(() => status.value === 'authenticated');
 
 const escenarios = ref([]);
@@ -19,51 +21,58 @@ async function cargarEscenarios() {
 }
 cargarEscenarios();
 
-// --- Modal de confirmación de eliminación ---
-const modalEliminar = ref(null);
-const resourceToDelete = ref(null);
-const resourceToDeleteTitle = computed(() => resourceToDelete.value?.name ?? '');
-const isBeingDeleted = ref(false);
-const wasDeletionSuccesful = ref(null);
-
-function abrirModalEliminar(escenario) {
-  resourceToDelete.value = escenario;
-  wasDeletionSuccesful.value = null;
-  modalEliminar.value?.abrir();
-}
-
-function cancelarEliminar() {
-  resourceToDelete.value = null;
-  modalEliminar.value?.cerrar();
-}
-
-async function confirmarEliminar() {
-  if (!resourceToDelete.value) return;
-  isBeingDeleted.value = true;
-  const token = userData.value?.accessToken;
-  const respuesta = await gnoxyFetch(
-    `${config.public.geonodeApi}/scenarios/${resourceToDelete.value.id}/`,
-    {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
-  isBeingDeleted.value = false;
-  if (respuesta.ok) {
-    wasDeletionSuccesful.value = true;
-    escenarios.value = escenarios.value.filter((e) => e.id !== resourceToDelete.value.id);
-    setTimeout(() => modalEliminar.value?.cerrar(), 1200);
-  } else {
-    wasDeletionSuccesful.value = false;
-  }
-}
-
 function formatearFecha(fecha) {
   return new Date(fecha).toLocaleDateString('es-MX', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+}
+
+const { geonodeApi } = config.public;
+async function API(endPoint, method = 'GET', body = {}) {
+  const parametros = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+
+  if (method !== 'GET' && method !== 'DELETE') {
+    parametros.body = JSON.stringify(body);
+  }
+
+  const respuesta = await gnoxyFetch(`${geonodeApi}/${endPoint}`, parametros);
+
+  if (method === 'DELETE' && respuesta.ok) {
+    return { success: true };
+  }
+
+  return await respuesta.json();
+}
+
+const modal = reactive({ ...valoresModal });
+function mostrarError({ errors }) {
+  modal.cargando = false;
+  modal.titulo = 'Error';
+  modal.pictograma = 'cerrar';
+  modal.mensaje = errors.join(` `);
+  modal.permitirCerrar = true;
+}
+async function Eliminar(id) {
+  modal.visible = true;
+  modal.cargando = true;
+
+  modal.mensaje = `Eliminando escenario...`;
+
+  const datos = await API(`scenarios/${id}/`, 'DELETE');
+  if (datos?.success === false) {
+    return mostrarError(datos);
+  }
+
+  modal.titulo = 'Eliminado con éxito';
+  modal.cargando = false;
+  modal.mensaje = '';
+  await wait(1500);
+  reloadNuxtApp();
 }
 </script>
 
@@ -152,10 +161,7 @@ function formatearFecha(fecha) {
                 <span class="pictograma-agregar m-r-1" />
                 Crear escena
               </NuxtLink>
-              <button
-                class="boton boton-chico boton-primario"
-                @click="abrirModalEliminar(escenario)"
-              >
+              <button class="boton boton-chico boton-primario" @click="Eliminar(escenario.id)">
                 <span class="pictograma-eliminar m-r-1" />
                 Eliminar
               </button>
@@ -169,53 +175,7 @@ function formatearFecha(fecha) {
       <p class="h3">No hay escenarios disponibles.</p>
     </div>
 
-    <ClientOnly>
-      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
-        <template #encabezado>
-          <h2 class="m-t-0">Eliminar escenario</h2>
-        </template>
-
-        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="alerta-advertencia-modal">
-          <span v-if="resourceToDelete?.is_published">
-            El recurso <strong style="font-weight: bold">{{ resourceToDeleteTitle }}</strong> está
-            publicado en el catálogo. Al eliminarlo, se borrará permanentemente del servidor y no
-            será posible recuperarlo.
-          </span>
-          <span v-else>
-            El recurso <strong style="font-weight: bold">{{ resourceToDeleteTitle }}</strong> será
-            eliminado permanentemente del servidor y no será posible recuperarlo.
-          </span>
-        </p>
-
-        <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
-          <span class="pictograma-aprobado m-r-1" />
-          El escenario fue eliminado correctamente.
-        </p>
-
-        <p v-else class="texto-color-error">No se pudo eliminar el escenario. Intenta de nuevo.</p>
-
-        <template #pie>
-          <div class="flex brecha-2 flex-contenido-final">
-            <button
-              class="boton boton-secundario"
-              :disabled="isBeingDeleted"
-              @click="cancelarEliminar"
-            >
-              Cancelar
-            </button>
-            <button
-              v-if="wasDeletionSuccesful === null"
-              class="boton boton-primario"
-              :disabled="isBeingDeleted"
-              @click="confirmarEliminar"
-            >
-              <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
-              Eliminar
-            </button>
-          </div>
-        </template>
-      </GeocontenidosSisdaiModal>
-    </ClientOnly>
+    <GeocontenidosLoaderModal v-bind="modal" />
   </div>
 </template>
 
