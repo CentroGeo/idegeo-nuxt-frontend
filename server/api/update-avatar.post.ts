@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
     }
     const json = await response.json();
     return json.avatar_url;
-  } catch (error) {
+  } catch {
     return 'Error';
   }
 });

@@ -1,4 +1,4 @@
-export default defineNuxtRouteMiddleware((to, from) => {
+export default defineNuxtRouteMiddleware(() => {
   const { status } = useAuth();
   // Si no está autenticado y no está cargando, redirigir al inicio
   if (status.value !== 'authenticated') {

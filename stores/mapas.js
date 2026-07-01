@@ -6,7 +6,6 @@ export const useMapasStore = defineStore('mapas', () => {
   const {
     fetchMaps,
     fetchMap,
-    fetchLayers,
     createMap,
     updateMap,
     deleteMap,
@@ -49,10 +48,16 @@ export const useMapasStore = defineStore('mapas', () => {
   }
 
   function buildWmtsUrl(layer) {
-    const style = layer.style || 'default';
+    // KVP GetTile: STYLE vacío = estilo por defecto del layer (el literal
+    // 'default' es inválido en GWC). OL sustituye {z}/{y}/{x}.
+    const name = encodeURIComponent(layer.name);
+    const style = encodeURIComponent(layer.style || '');
     return (
-      `${config.public.geoserverUrl}/gwc/service/wmts/rest/` +
-      `${layer.name}/${style}/EPSG:3857/EPSG:3857:{z}/{y}/{x}?format=image/png`
+      `${config.public.geoserverUrl}/gwc/service/wmts` +
+      `?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0` +
+      `&LAYER=${name}&STYLE=${style}` +
+      `&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}` +
+      `&FORMAT=image/png`
     );
   }
 
@@ -75,11 +80,12 @@ export const useMapasStore = defineStore('mapas', () => {
 
   async function cargarMapa(id) {
     isLoadingMap.value = true;
-    const [mapData, layersData] = await Promise.all([fetchMap(id), fetchLayers(id)]);
+    const mapData = await fetchMap(id);
     isLoadingMap.value = false;
     if (!mapData) return false;
     activeMap.value = mapData;
-    activeLayers.value = layersData ?? [];
+    // El detalle ya trae las capas completas → una sola petición (1 RTT).
+    activeLayers.value = mapData.layers ?? [];
     return true;
   }
 

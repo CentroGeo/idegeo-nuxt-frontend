@@ -4,9 +4,9 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const form = formidable({ multiples: false });
   const data = await new Promise<{
-    // @ts-ignore
+    // @ts-expect-error tipos de formidable no disponibles
     fields: Fields;
-    // @ts-ignore
+    // @ts-expect-error tipos de formidable no disponibles
     files: Files;
   }>((resolve, reject) => {
     form.parse(event.node.req, (err, fields, files) => {

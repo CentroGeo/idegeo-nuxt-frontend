@@ -17,13 +17,12 @@ const haciendoPublico = ref(false);
 
 const mapasStore = useMapasStore();
 const { capasNoPublicas, puedeSerPublico } = useMapaPublicable();
+const { urlAbsoluta } = useUrlAbsoluta();
 
-const origen = computed(() => (typeof window !== 'undefined' ? window.location.origin : ''));
-
-const urlVisualizar = computed(
-  () => `${origen.value}/geocontenidos/mapas/${props.mapa?.id}/visualizar`
+const urlVisualizar = computed(() =>
+  urlAbsoluta(`/geocontenidos/mapas/${props.mapa?.id}/visualizar`)
 );
-const urlEmbed = computed(() => `${origen.value}/geocontenidos/mapas/${props.mapa?.id}/embed`);
+const urlEmbed = computed(() => urlAbsoluta(`/geocontenidos/mapas/${props.mapa?.id}/embed`));
 
 const snippetEmbed = computed(
   () =>

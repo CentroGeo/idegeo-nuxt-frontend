@@ -7,9 +7,9 @@ export default defineEventHandler(async (event) => {
   const form = formidable({ multiples: false });
 
   const data = await new Promise<{
-    // @ts-ignore
+    // @ts-expect-error tipos de formidable no disponibles
     fields: Fields;
-    // @ts-ignore
+    // @ts-expect-error tipos de formidable no disponibles
     files: Files;
   }>((resolve, reject) => {
     form.parse(event.node.req, (err, fields, files) => {
@@ -77,7 +77,6 @@ export default defineEventHandler(async (event) => {
         }
       );
       const { requests } = await resStatus.json();
-      // @ts-ignore
       const current = requests.find((d) => d.exec_id === executionID);
       status = current.status; //puede ser running, finished y failed
       console.warn(status);

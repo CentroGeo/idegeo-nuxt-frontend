@@ -1,4 +1,4 @@
-import { defineEventHandler, proxyRequest, getQuery, createError } from 'h3';
+import { defineEventHandler, proxyRequest, getQuery } from 'h3';
 import { getServerSession } from '#auth';
 
 export default defineEventHandler(async (event) => {

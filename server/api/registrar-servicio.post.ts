@@ -13,8 +13,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const url = `${config.public.geonodeApi}/services/`;
-  let responseStatus = undefined;
-  let message = undefined;
+  let responseStatus;
+  let message;
 
   try {
     const response = await fetch(url, {

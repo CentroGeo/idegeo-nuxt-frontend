@@ -282,6 +282,7 @@ function eliminar(capa) {
   border-left: 1px solid var(--color-neutro-1);
   overflow-y: auto;
   height: 100%;
+  max-width: 280px;
   min-width: 280px;
 }
 

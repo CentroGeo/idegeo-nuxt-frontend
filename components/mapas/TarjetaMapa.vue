@@ -7,6 +7,7 @@ const props = defineProps({
 });
 
 const config = useRuntimeConfig();
+const { rutaApp } = useUrlAbsoluta();
 const { data } = useAuth();
 const storeCatalogo = useCatalogoStore();
 
@@ -46,7 +47,8 @@ function abrirMapa() {
 }
 
 function visualizarMapa() {
-  window.open(`/geocontenidos/mapas/${props.mapa.id}/visualizar`, '_blank');
+  // window.open no pasa por el router, así que hay que incluir el base URL.
+  window.open(rutaApp(`/geocontenidos/mapas/${props.mapa.id}/visualizar`), '_blank');
 }
 </script>
 
