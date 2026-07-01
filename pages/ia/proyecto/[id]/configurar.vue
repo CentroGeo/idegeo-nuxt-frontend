@@ -31,7 +31,7 @@ const campoBusqueda = ref('');
 
 const agregaCatalogoModal = ref(null);
 const seleccionCatalogoModal = ref(null);
-/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars, @typescript-eslint/no-unused-vars */
 const dictTipoRecurso = {
   dataLayer: 'capas',
   dataTable: 'tablas',
@@ -265,7 +265,7 @@ function cargarArchivosGeonode() {
   archivosGeonode.value = [...archivosGeonode.value, ...nuevosArchivos];
   archivosTabla.value = [...archivosSeleccionados.value, ...archivosGeonode.value];
 }
-/* eslint-enable no-unused-vars */
+/* eslint-enable no-unused-vars, @typescript-eslint/no-unused-vars */
 
 // Método para manejar la selección de archivos
 const manejarSeleccionArchivos = (event) => {

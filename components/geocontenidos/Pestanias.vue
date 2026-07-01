@@ -47,7 +47,8 @@ function mover(movimiento = 1) {
     pestania;
   do {
     pestania = pestanias.value[calcularNuevoIndex(movimiento + i)];
-    movimiento < 0 ? i-- : i++;
+    if (movimiento < 0) i--;
+    else i++;
   } while (pestania.deshabilitada);
 
   seleccion.value = pestania.id;

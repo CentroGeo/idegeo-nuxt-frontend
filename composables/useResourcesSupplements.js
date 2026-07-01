@@ -425,7 +425,7 @@ export function useResourcesSupplements() {
     const dataParams = new URLSearchParams(params);
     const url = `${config.public.geonodeApi}/services/?${dataParams.toString()}`;
     const data = [];
-    let status = 'ok';
+    let status;
 
     try {
       // Obtenemos la información de todos los harvesters

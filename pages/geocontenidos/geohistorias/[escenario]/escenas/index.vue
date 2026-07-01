@@ -1,8 +1,8 @@
 <script setup>
-definePageMeta({ middleware: 'auth' });
-
 import { valoresPorDefecto as valoresModal } from '~/components/geocontenidos/loaderModal.vue';
 import { wait } from '~/utils/consulta';
+
+definePageMeta({ middleware: 'auth' });
 
 const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();

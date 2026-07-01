@@ -1,10 +1,10 @@
 <template>
   <ClientOnly>
     <component
-      class="editor-texto"
       :is="Ckeditor"
       v-if="editor && config.plugins.length > 0"
       v-model="contenido"
+      class="editor-texto"
       :editor="editor"
       :config="config"
     />

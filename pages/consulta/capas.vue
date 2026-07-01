@@ -176,7 +176,7 @@ watch(
     const attributesPks = Object.keys(attributes.value);
     const { news, olds } = arrayNewsOlds(attributesPks, selectedPks);
     news.forEach(async (r) => await addAttribute(r));
-    olds.forEach((resource) => delete attributes.value[resource]);
+    olds.forEach((resource) => Reflect.deleteProperty(attributes.value, resource));
   },
   { deep: true }
 );

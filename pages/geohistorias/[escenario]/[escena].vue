@@ -53,7 +53,7 @@ const marcador_visible = ref(null);
           }"
           :capas="escena.datos.layers"
           :marcadores="escena.datos.markers"
-          @clickMarcador="(marcador) => (marcador_visible = marcador)"
+          @click-marcador="(marcador) => (marcador_visible = marcador)"
         />
       </div>
 

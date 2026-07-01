@@ -61,18 +61,16 @@ watch(clasesSelecciondas, (nv, ov) => {
 });
 
 function alternarClasesBody() {
-  clasesSelecciondas.value.includes('a11y-tipografia')
-    ? body.classList.add('a11y-tipografia')
-    : body.classList.remove('a11y-tipografia');
-  clasesSelecciondas.value.includes('a11y-simplificada')
-    ? body.classList.add('a11y-simplificada')
-    : body.classList.remove('a11y-simplificada');
-  clasesSelecciondas.value.includes('a11y-hipervinculos')
-    ? body.classList.add('a11y-hipervinculos')
-    : body.classList.remove('a11y-hipervinculos');
-  clasesSelecciondas.value.includes('a11y-oscura')
-    ? body.classList.add('a11y-oscura')
-    : body.classList.remove('a11y-oscura');
+  body.classList.toggle('a11y-tipografia', clasesSelecciondas.value.includes('a11y-tipografia'));
+  body.classList.toggle(
+    'a11y-simplificada',
+    clasesSelecciondas.value.includes('a11y-simplificada')
+  );
+  body.classList.toggle(
+    'a11y-hipervinculos',
+    clasesSelecciondas.value.includes('a11y-hipervinculos')
+  );
+  body.classList.toggle('a11y-oscura', clasesSelecciondas.value.includes('a11y-oscura'));
 }
 
 const tema = ref('auto');

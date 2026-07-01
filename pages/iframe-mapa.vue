@@ -25,7 +25,7 @@ function obtenerVistaDelMapa() {
   const { vista } = Object.fromEntries(params.entries());
 
   if (vista) {
-    const [acercamiento, latitud, longitud, swipe] = vista.split('/');
+    const [acercamiento, latitud, longitud] = vista.split('/');
     vistaDelMapa.value = { acercamiento, centro: [longitud, latitud] };
   }
 }
@@ -74,12 +74,12 @@ onMounted(async () => {
   <div class="contenedor-ifrme grid">
     <ClientOnly>
       <SisdaiMapa class="mapa gema columna-5-mov columna-11-esc" :vista="vistaDelMapa">
-        <SisdaiCapaXyz :posicion="0" id="capa-base" style="display: none" />
+        <SisdaiCapaXyz id="capa-base" :posicion="0" style="display: none" />
 
         <SisdaiCapaWms
           v-for="capa in capas_consultadas"
-          :key="`capa-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
           :id="`capa-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
+          :key="`capa-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
           :capa="capa.alternate"
           :consulta="gnoxyFetch"
           :estilo="capa.estilo"
@@ -106,14 +106,14 @@ onMounted(async () => {
 
         <SisdaiLeyendaWms
           v-for="capa in capas_consultadas"
+          :key="`leyenda-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
           class="m-t-2"
           :fuente="`${config.public.geoserverUrl}/wms`"
-          :key="`leyenda-wms-${capa.pk}-${capa.posicion}-${capa.estilo}`"
           :nombre="capa.alternate"
           :sin-control-clases="true"
           :titulo="capa.titulo"
           :visible="capa.visible"
-          @alCambiarVisibilidad="([v]) => (capa.visible = v)"
+          @al-cambiar-visibilidad="([v]) => (capa.visible = v)"
         />
       </div>
 

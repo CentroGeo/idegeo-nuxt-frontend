@@ -99,11 +99,11 @@ function clickVista({ coordenadas, capa, vector }) {
       <!-- @al-finalizar-carga="(v) => console.log('C: alFinalizarCarga', v)" -->
 
       <SisdaiCapaVectorial
+        :id="id_marcadores"
         :estilo="estilo_marcador"
         :fuente="capa_marcadores"
-        :globoInformativo="(marcador) => marcador.title"
+        :globo-informativo="(marcador) => marcador.title"
         :posicion="capas.length + 2"
-        :id="id_marcadores"
       />
     </SisdaiMapa>
   </ClientOnly>

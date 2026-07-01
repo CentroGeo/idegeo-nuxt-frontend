@@ -13,9 +13,9 @@ export default defineEventHandler((event) => {
       event.node.req.headers['x-forwarded-host'] = xfh || event.node.req.headers.host;
       event.node.req.headers['x-forwarded-prefix'] =
         event.node.req.headers['x-forwarded-prefix'] || '';
-      if (process.dev) console.log('[nitro] trust proxy headers applied');
+      if (import.meta.dev) console.log('[nitro] trust proxy headers applied');
     }
   } catch (err) {
-    if (process.dev) console.warn('[nitro] trust proxy failed:', err);
+    if (import.meta.dev) console.warn('[nitro] trust proxy failed:', err);
   }
 });

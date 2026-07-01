@@ -105,7 +105,7 @@ async function fetchMetadata() {
       return res[type];
     }
   } catch {
-    ('Error');
+    return 'Error';
   }
 }
 
