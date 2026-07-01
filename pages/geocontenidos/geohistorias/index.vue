@@ -4,6 +4,7 @@ import { wait } from '~/utils/consulta';
 
 definePageMeta({ middleware: 'auth' });
 
+const { status } = useAuth();
 const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
 const estaLogueado = computed(() => status.value === 'authenticated');
