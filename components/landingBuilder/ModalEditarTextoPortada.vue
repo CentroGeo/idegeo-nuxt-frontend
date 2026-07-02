@@ -8,6 +8,10 @@ const inputTitulo = ref(null);
 
 const titulo = ref('');
 const subtitulo = ref('');
+const colorTitulo = ref('#FFFFFF');
+const colorSubtitulo = ref('#FFFFFF');
+
+const PATRON_COLOR_HEX = /^#[0-9A-F]{6}$/i;
 const error = ref('');
 
 const LIMITE_TITULO = 80;
@@ -16,6 +20,8 @@ const LIMITE_SUBTITULO = 180;
 function abrirModal(valores = {}) {
   titulo.value = valores.titulo || '';
   subtitulo.value = valores.subtitulo || '';
+  colorTitulo.value = valores.colorTitulo || '#FFFFFF';
+  colorSubtitulo.value = valores.colorSubtitulo || '#FFFFFF';
   error.value = '';
 
   modalEditarTexto.value?.abrirModal();
@@ -44,11 +50,23 @@ function guardarTextos() {
     return;
   }
 
+  if (!PATRON_COLOR_HEX.test(colorTitulo.value)) {
+    error.value = 'El color del título debe tener el formato #RRGGBB.';
+    return;
+  }
+
+  if (!PATRON_COLOR_HEX.test(colorSubtitulo.value)) {
+    error.value = 'El color del subtítulo debe tener el formato #RRGGBB.';
+    return;
+  }
+
   error.value = '';
 
   emit('guardar-textos', {
     titulo: tituloLimpio,
     subtitulo: subtituloLimpio,
+    colorTitulo: colorTitulo.value.toUpperCase(),
+    colorSubtitulo: colorSubtitulo.value.toUpperCase(),
   });
 
   cerrarModal();
@@ -109,6 +127,12 @@ defineExpose({
               placeholder="Escribe el título principal"
               autocomplete="off"
             />
+
+            <LandingBuilderSelectorColorHex
+              id="portada-color-titulo"
+              v-model="colorTitulo"
+              etiqueta="Color del título"
+            />
           </div>
 
           <div class="modal-editar-texto__campo">
@@ -122,8 +146,14 @@ defineExpose({
               id="portada-subtitulo"
               v-model="subtitulo"
               :maxlength="LIMITE_SUBTITULO"
-              rows="4"
+              rows="3"
               placeholder="Escribe el texto descriptivo de la portada"
+            />
+
+            <LandingBuilderSelectorColorHex
+              id="portada-color-subtitulo"
+              v-model="colorSubtitulo"
+              etiqueta="Color del subtítulo"
             />
           </div>
 
@@ -147,12 +177,11 @@ defineExpose({
 <style scoped lang="scss">
 .modal-editar-texto {
   :deep(.modal-contenedor) {
-    width: min(620px, calc(100vw - 32px));
+    width: min(600px, calc(100vw - 32px));
     max-width: 100%;
-    max-height: calc(100dvh - 32px);
+    max-height: none;
     box-sizing: border-box;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   :deep(.modal-cabecera),
@@ -163,35 +192,45 @@ defineExpose({
     box-sizing: border-box;
   }
 
+  :deep(.modal-cabecera) {
+    padding-bottom: 8px;
+  }
+
+  :deep(.modal-cuerpo) {
+    max-height: none;
+    overflow: visible;
+  }
+
   &__encabezado {
     display: flex;
     width: 100%;
     min-width: 0;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 24px;
+    gap: 16px;
   }
 
   &__titulo {
     margin: 0;
-    font-size: 1.25rem;
-    line-height: 1.3;
+    font-size: 1.125rem;
+    line-height: 1.25;
   }
 
   &__descripcion {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
     color: var(--texto-secundario);
-    font-size: 0.9375rem;
+    font-size: 0.8125rem;
+    line-height: 1.35;
   }
 
   &__cerrar {
     display: inline-flex;
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 7px;
     border: 0;
     border-radius: 4px;
     background: transparent;
@@ -209,8 +248,8 @@ defineExpose({
     }
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
     }
   }
 
@@ -220,7 +259,7 @@ defineExpose({
     max-width: 100%;
     min-width: 0;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
   }
 
   &__campo {
@@ -228,7 +267,7 @@ defineExpose({
     width: 100%;
     min-width: 0;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 
     input,
     textarea {
@@ -239,7 +278,7 @@ defineExpose({
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 92px;
       resize: vertical;
     }
   }
@@ -248,21 +287,23 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
 
     label {
+      font-size: 0.875rem;
       font-weight: 600;
     }
 
     span {
       color: var(--texto-secundario);
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       white-space: nowrap;
     }
   }
 
   &__error {
     margin: 0;
+    font-size: 0.8125rem;
     overflow-wrap: anywhere;
   }
 
@@ -270,8 +311,8 @@ defineExpose({
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding-top: 8px;
+    gap: 10px;
+    padding-top: 0;
   }
 }
 
@@ -279,19 +320,37 @@ defineExpose({
   .modal-editar-texto {
     :deep(.modal-contenedor) {
       width: calc(100vw - 24px);
-      max-height: calc(100dvh - 24px);
+      max-height: calc(100dvh - 16px);
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    :deep(.modal-cuerpo) {
+      overflow: visible;
     }
 
     &__encabezado {
-      gap: 12px;
+      gap: 10px;
     }
 
     &__titulo {
-      font-size: 1.0625rem;
+      font-size: 1rem;
     }
 
     &__descripcion {
-      font-size: 0.875rem;
+      font-size: 0.75rem;
+    }
+
+    &__formulario {
+      gap: 14px;
+    }
+
+    &__campo {
+      gap: 5px;
+
+      textarea {
+        min-height: 86px;
+      }
     }
 
     &__acciones {

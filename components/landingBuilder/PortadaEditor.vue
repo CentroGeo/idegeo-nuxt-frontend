@@ -3,12 +3,34 @@ const modalCambiarPortada = ref(null);
 const modalEditarTextoPortada = ref(null);
 const portadaEditor = ref(null);
 const mostrarAcciones = ref(false);
+const reposicionando = ref(false);
+const arrastrandoFondo = ref(false);
+
+const posicionFondo = ref({
+  x: 50,
+  y: 50,
+});
+
+const posicionFondoGuardada = ref({
+  x: 50,
+  y: 50,
+});
+
+const inicioArrastre = ref({
+  punteroX: 0,
+  punteroY: 0,
+  posicionX: 50,
+  posicionY: 50,
+});
 
 const tituloPortada = ref('Constructor de landing page');
 
 const subtituloPortada = ref(
   'Personaliza los textos, el logotipo y la información principal que se mostrará en la página de inicio.'
 );
+
+const colorTituloPortada = ref('#FFFFFF');
+const colorSubtituloPortada = ref('#FFFFFF');
 
 const fondoActual = ref({
   tipo: 'video',
@@ -28,30 +50,36 @@ const nombreArchivoDescarga = computed(() => {
   return fondoActual.value.tipo === 'video' ? 'portada-sigic.mp4' : 'portada-sigic.jpg';
 });
 
+const estiloFondo = computed(() => ({
+  objectPosition: `${posicionFondo.value.x}% ${posicionFondo.value.y}%`,
+}));
+
 function esDispositivoTactil() {
   return import.meta.client && window.matchMedia('(hover: none), (pointer: coarse)').matches;
 }
 
 function mostrarAccionesConPuntero(event) {
-  if (event.pointerType === 'mouse') {
+  if (!reposicionando.value && event.pointerType === 'mouse') {
     mostrarAcciones.value = true;
   }
 }
 
 function ocultarAccionesConPuntero(event) {
-  if (event.pointerType === 'mouse') {
+  if (!reposicionando.value && event.pointerType === 'mouse') {
     mostrarAcciones.value = false;
   }
 }
 
 function alternarAccionesPortada() {
-  if (esDispositivoTactil()) {
+  if (!reposicionando.value && esDispositivoTactil()) {
     mostrarAcciones.value = !mostrarAcciones.value;
   }
 }
 
 function mostrarAccionesConTeclado() {
-  mostrarAcciones.value = true;
+  if (!reposicionando.value) {
+    mostrarAcciones.value = true;
+  }
 }
 
 function ocultarAccionesConTeclado(event) {
@@ -82,12 +110,118 @@ function abrirModalEditarTextoPortada() {
   modalEditarTextoPortada.value?.abrirModal({
     titulo: tituloPortada.value,
     subtitulo: subtituloPortada.value,
+    colorTitulo: colorTituloPortada.value,
+    colorSubtitulo: colorSubtituloPortada.value,
   });
 }
 
 function guardarTextosPortada(valores) {
   tituloPortada.value = valores.titulo;
   subtituloPortada.value = valores.subtitulo;
+  colorTituloPortada.value = valores.colorTitulo;
+  colorSubtituloPortada.value = valores.colorSubtitulo;
+}
+
+function limitarValor(valor, minimo, maximo) {
+  return Math.min(Math.max(valor, minimo), maximo);
+}
+
+function iniciarReposicionamiento() {
+  posicionFondoGuardada.value = {
+    ...posicionFondo.value,
+  };
+
+  mostrarAcciones.value = false;
+  reposicionando.value = true;
+}
+
+function iniciarArrastreFondo(event) {
+  if (!reposicionando.value) return;
+
+  const elementoInteractivo = event.target.closest('button, a');
+
+  if (elementoInteractivo) return;
+
+  event.preventDefault();
+
+  arrastrandoFondo.value = true;
+
+  inicioArrastre.value = {
+    punteroX: event.clientX,
+    punteroY: event.clientY,
+    posicionX: posicionFondo.value.x,
+    posicionY: posicionFondo.value.y,
+  };
+
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+}
+
+function moverFondo(event) {
+  if (!reposicionando.value || !arrastrandoFondo.value) return;
+
+  event.preventDefault();
+
+  const contenedor = portadaEditor.value?.getBoundingClientRect();
+
+  if (!contenedor?.width || !contenedor?.height) return;
+
+  const desplazamientoX = event.clientX - inicioArrastre.value.punteroX;
+  const desplazamientoY = event.clientY - inicioArrastre.value.punteroY;
+
+  posicionFondo.value = {
+    x: limitarValor(
+      inicioArrastre.value.posicionX - (desplazamientoX / contenedor.width) * 100,
+      0,
+      100
+    ),
+    y: limitarValor(
+      inicioArrastre.value.posicionY - (desplazamientoY / contenedor.height) * 100,
+      0,
+      100
+    ),
+  };
+}
+
+function terminarArrastreFondo(event) {
+  if (!arrastrandoFondo.value) return;
+
+  arrastrandoFondo.value = false;
+
+  if (event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+}
+
+function guardarPosicionFondo() {
+  posicionFondoGuardada.value = {
+    ...posicionFondo.value,
+  };
+
+  arrastrandoFondo.value = false;
+  reposicionando.value = false;
+  mostrarAcciones.value = false;
+}
+
+function cancelarReposicionamiento() {
+  posicionFondo.value = {
+    ...posicionFondoGuardada.value,
+  };
+
+  arrastrandoFondo.value = false;
+  reposicionando.value = false;
+  mostrarAcciones.value = false;
+}
+
+function restablecerPosicionFondo() {
+  posicionFondo.value = {
+    x: 50,
+    y: 50,
+  };
+
+  posicionFondoGuardada.value = {
+    x: 50,
+    y: 50,
+  };
 }
 
 function seleccionarArchivo(archivo) {
@@ -101,6 +235,8 @@ function seleccionarArchivo(archivo) {
     tipo: 'imagen',
     url: urlTemporal,
   };
+
+  restablecerPosicionFondo();
 }
 
 function seleccionarEnlace(enlace) {
@@ -113,6 +249,8 @@ function seleccionarEnlace(enlace) {
     tipo: 'imagen',
     url: enlace,
   };
+
+  restablecerPosicionFondo();
 }
 
 onBeforeUnmount(() => {
@@ -126,10 +264,18 @@ onBeforeUnmount(() => {
   <section
     ref="portadaEditor"
     class="portada-editor"
-    :class="{ 'portada-editor--acciones-visibles': mostrarAcciones }"
+    :class="{
+      'portada-editor--acciones-visibles': mostrarAcciones,
+      'portada-editor--reposicionando': reposicionando,
+      'portada-editor--arrastrando': arrastrandoFondo,
+    }"
     aria-labelledby="landing-builder-titulo"
     @pointerenter="mostrarAccionesConPuntero"
     @pointerleave="ocultarAccionesConPuntero"
+    @pointerdown="iniciarArrastreFondo"
+    @pointermove="moverFondo"
+    @pointerup="terminarArrastreFondo"
+    @pointercancel="terminarArrastreFondo"
     @click="alternarAccionesPortada"
     @focusin="mostrarAccionesConTeclado"
     @focusout="ocultarAccionesConTeclado"
@@ -139,6 +285,7 @@ onBeforeUnmount(() => {
       aria-hidden="true"
       role="presentation"
       class="portada-editor__media"
+      :style="estiloFondo"
       autoplay
       loop
       muted
@@ -147,16 +294,31 @@ onBeforeUnmount(() => {
       <source :src="fondoActual.url" type="video/mp4" />
     </video>
 
-    <img v-else class="portada-editor__media" :src="fondoActual.url" alt="" />
+    <img
+      v-else
+      class="portada-editor__media"
+      :src="fondoActual.url"
+      :style="estiloFondo"
+      alt=""
+      draggable="false"
+    />
 
     <div class="portada-editor__degradado">
-      <div class="portada-editor__acciones">
+      <div v-if="!reposicionando" class="portada-editor__acciones">
         <button
           type="button"
           class="portada-editor__accion portada-editor__accion--texto"
           @click.stop="abrirModalCambiarPortada"
         >
           Cambiar
+        </button>
+
+        <button
+          type="button"
+          class="portada-editor__accion portada-editor__accion--texto"
+          @click.stop="iniciarReposicionamiento"
+        >
+          Reposicionar
         </button>
 
         <a
@@ -180,12 +342,30 @@ onBeforeUnmount(() => {
         </a>
       </div>
 
-      <div class="portada-editor__contenido">
-        <h1 id="landing-builder-titulo">
+      <div v-else class="portada-editor__acciones-reposicion">
+        <button
+          type="button"
+          class="portada-editor__accion portada-editor__accion--texto"
+          @click.stop="guardarPosicionFondo"
+        >
+          Guardar posición
+        </button>
+
+        <button
+          type="button"
+          class="portada-editor__accion portada-editor__accion--texto"
+          @click.stop="cancelarReposicionamiento"
+        >
+          Cancelar
+        </button>
+      </div>
+
+      <div v-if="!reposicionando" class="portada-editor__contenido">
+        <h1 id="landing-builder-titulo" :style="{ color: colorTituloPortada }">
           {{ tituloPortada }}
         </h1>
 
-        <p>
+        <p :style="{ color: colorSubtituloPortada }">
           {{ subtituloPortada }}
         </p>
 
@@ -208,6 +388,9 @@ onBeforeUnmount(() => {
           </svg>
         </button>
       </div>
+      <div v-else class="portada-editor__ayuda-reposicion" aria-live="polite">
+        Arrastra la imagen para reposicionarla
+      </div>
     </div>
 
     <LandingBuilderModalCambiarPortada
@@ -228,6 +411,16 @@ onBeforeUnmount(() => {
   position: relative;
   min-height: clamp(320px, 52vh, 580px);
   overflow: hidden;
+
+  &--reposicionando {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  &--arrastrando {
+    cursor: grabbing;
+  }
 
   &__media {
     position: absolute;
@@ -272,6 +465,40 @@ onBeforeUnmount(() => {
     transition:
       opacity 0.2s ease,
       transform 0.2s ease;
+  }
+
+  &__acciones-reposicion {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    z-index: 3;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 24%);
+    border-radius: 6px;
+    background: rgb(105 28 50 / 68%);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+  }
+
+  &__ayuda-reposicion {
+    position: relative;
+    z-index: 2;
+    max-width: 260px;
+    padding: 10px 16px;
+    border: 1px solid rgb(255 255 255 / 18%);
+    border-radius: 6px;
+    background: rgb(0 0 0 / 48%);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 20%);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: center;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
   &--acciones-visibles &__acciones,
@@ -373,12 +600,6 @@ onBeforeUnmount(() => {
     flex-shrink: 0;
   }
 
-  &__icono-editar {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-
   &__contenido {
     width: min(820px, 100%);
     color: white;
@@ -432,6 +653,17 @@ onBeforeUnmount(() => {
 
     &__contenido p {
       font-size: 1rem;
+    }
+
+    &__acciones-reposicion {
+      top: 12px;
+      right: 12px;
+    }
+
+    &__ayuda-reposicion {
+      max-width: 220px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
     }
   }
 }
