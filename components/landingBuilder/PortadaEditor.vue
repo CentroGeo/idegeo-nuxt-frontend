@@ -1,7 +1,14 @@
 <script setup>
 const modalCambiarPortada = ref(null);
+const modalEditarTextoPortada = ref(null);
 const portadaEditor = ref(null);
 const mostrarAcciones = ref(false);
+
+const tituloPortada = ref('Constructor de landing page');
+
+const subtituloPortada = ref(
+  'Personaliza los textos, el logotipo y la información principal que se mostrará en la página de inicio.'
+);
 
 const fondoActual = ref({
   tipo: 'video',
@@ -63,6 +70,24 @@ function abrirModalCambiarPortada() {
   }
 
   modalCambiarPortada.value?.abrirModal();
+}
+
+function abrirModalEditarTextoPortada() {
+  mostrarAcciones.value = false;
+
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+
+  modalEditarTextoPortada.value?.abrirModal({
+    titulo: tituloPortada.value,
+    subtitulo: subtituloPortada.value,
+  });
+}
+
+function guardarTextosPortada(valores) {
+  tituloPortada.value = valores.titulo;
+  subtituloPortada.value = valores.subtitulo;
 }
 
 function seleccionarArchivo(archivo) {
@@ -156,12 +181,32 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="portada-editor__contenido">
-        <h1 id="landing-builder-titulo">Constructor de landing page</h1>
+        <h1 id="landing-builder-titulo">
+          {{ tituloPortada }}
+        </h1>
 
         <p>
-          Personaliza los textos, el logotipo y la información principal que se mostrará en la
-          página de inicio.
+          {{ subtituloPortada }}
         </p>
+
+        <button
+          type="button"
+          class="portada-editor__editar"
+          @click.stop="abrirModalEditarTextoPortada"
+        >
+          <span>Editar</span>
+
+          <svg class="portada-editor__icono-editar" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -169,6 +214,11 @@ onBeforeUnmount(() => {
       ref="modalCambiarPortada"
       @seleccionar-archivo="seleccionarArchivo"
       @seleccionar-enlace="seleccionarEnlace"
+    />
+
+    <LandingBuilderModalEditarTextoPortada
+      ref="modalEditarTextoPortada"
+      @guardar-textos="guardarTextosPortada"
     />
   </section>
 </template>
@@ -209,41 +259,45 @@ onBeforeUnmount(() => {
     z-index: 2;
     display: flex;
     align-items: stretch;
+    border: 1px solid rgb(255 255 255 / 24%);
+    background: rgb(105 28 50 / 52%);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
     overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 18%);
     border-radius: 6px;
     opacity: 0;
-    background: var(--color-primario-3, #9f2241);
-    box-shadow: 0 4px 12px rgb(0 0 0 / 24%);
     pointer-events: none;
     transform: translateY(-6px);
-    backdrop-filter: blur(6px);
     transition:
       opacity 0.2s ease,
       transform 0.2s ease;
   }
 
-  &--acciones-visibles &__acciones {
+  &--acciones-visibles &__acciones,
+  &--acciones-visibles &__editar {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
   }
 
   &__icono-descarga {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
   }
 
   &__accion {
     display: inline-flex;
-    min-height: 40px;
+    min-height: 34px;
     align-items: center;
     justify-content: center;
     border: 0;
     background: transparent;
     color: white;
     font: inherit;
+    font-size: 0.75rem;
+    line-height: 1;
     text-decoration: none;
     cursor: pointer;
     transition:
@@ -252,7 +306,7 @@ onBeforeUnmount(() => {
 
     &:hover,
     &:focus-visible {
-      background: rgb(0 0 0 / 14%);
+      background: rgb(105 28 50 / 82%);
       color: white;
     }
 
@@ -267,12 +321,62 @@ onBeforeUnmount(() => {
   }
 
   &__accion--texto {
-    padding: 8px 14px;
+    padding: 6px 10px;
   }
 
   &__accion--icono {
-    width: 42px;
-    padding: 8px;
+    width: 34px;
+    padding: 6px;
+  }
+
+  &__editar {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 18px;
+    padding: 6px 10px;
+    border: 1px solid rgb(255 255 255 / 24%);
+    border-radius: 5px;
+    opacity: 0;
+    background: rgb(105 28 50 / 52%);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+    color: white;
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: none;
+    transform: translateY(6px);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    transition:
+      opacity 0.2s ease,
+      background-color 0.2s ease,
+      transform 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      background: rgb(105 28 50 / 82%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 3px;
+    }
+  }
+
+  &__icono-editar {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+
+  &__icono-editar {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
   }
 
   &__contenido {
@@ -306,17 +410,24 @@ onBeforeUnmount(() => {
     }
 
     &__accion {
-      min-height: 36px;
+      min-height: 34px;
+      font-size: 0.75rem;
     }
 
     &__accion--texto {
-      padding: 6px 12px;
-      font-size: 0.875rem;
+      padding: 6px 10px;
     }
 
     &__accion--icono {
-      width: 38px;
+      width: 34px;
       padding: 6px;
+    }
+
+    &__editar {
+      min-height: 34px;
+      margin-top: 16px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
     }
 
     &__contenido p {
