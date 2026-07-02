@@ -159,7 +159,7 @@ onUnmounted(() => {
         </NuxtLink>
 
         <NuxtLink
-          v-if="mostrarGeocontenidos"
+          v-if="mostrarGeocontenidos && status === 'authenticated'"
           to="/geocontenidos"
           class="idegeo-menu__link"
           @click="cerrarMenu"
