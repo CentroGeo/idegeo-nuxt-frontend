@@ -141,10 +141,7 @@ defineExpose({
           aria-labelledby="pestana-logo-subir"
         >
           <ClientOnly>
-            <CatalogoElementoDragNdDrop
-              ref="dragNdrop"
-              @pasar-archivo="seleccionarArchivoDrag"
-            />
+            <CatalogoElementoDragNdDrop ref="dragNdrop" @pasar-archivo="seleccionarArchivoDrag" />
           </ClientOnly>
         </section>
 

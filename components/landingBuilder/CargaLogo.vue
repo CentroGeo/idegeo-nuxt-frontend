@@ -42,11 +42,7 @@ function manejarArchivos(archivos) {
   <div>
     <label class="m-0">{{ label }}</label>
     <div v-if="logoUrl" class="m-y-2">
-      <img
-        :src="logoUrl"
-        :alt="`Previsualización de ${label}`"
-        style="max-height: 96px"
-      />
+      <img :src="logoUrl" :alt="`Previsualización de ${label}`" style="max-height: 96px" />
     </div>
     <ClientOnly>
       <CatalogoElementoDragNdDrop ref="dragNdrop" @pasar-archivo="manejarArchivos" />

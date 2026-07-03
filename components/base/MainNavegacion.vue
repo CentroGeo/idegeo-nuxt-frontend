@@ -69,7 +69,10 @@ function seleccionarEnlaceLogoSecundario(enlace) {
         <div class="contenedor-logo-secundario" :class="{ 'editando-logo': esConstructor }">
           <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
             <img
-              :src="(esConstructor && store.logoSecundarioUrl) || `${config.app.baseURL}img/logo_sigic.svg`"
+              :src="
+                (esConstructor && store.logoSecundarioUrl) ||
+                `${config.app.baseURL}img/logo_sigic.svg`
+              "
               class="nav-logo color-invertir"
               :alt="store.nombrePlataforma || 'SIGIC'"
               height="36"
@@ -173,7 +176,9 @@ body[data-tema='oscuro'] {
   z-index: 10;
   opacity: 0;
   transform: translateY(-50%) scale(0.9);
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .contenedor-logo-secundario:hover .boton-editar-logo,

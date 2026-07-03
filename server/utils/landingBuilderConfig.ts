@@ -2,6 +2,7 @@ export interface LandingBuilderConfig {
   nombrePlataforma: string;
   titulo: string;
   subtitulo: string;
+  tituloSeccion: string;
   descripcion: string;
   seccionTexto: string;
   logoUrl: string | null;
@@ -24,6 +25,7 @@ const configPorDefecto: LandingBuilderConfig = {
   nombrePlataforma: 'SIGIC',
   titulo: 'Sistema Integral de Gestión de Información Científica (SIGIC)',
   subtitulo: 'Integra, visualiza y aprovecha el conocimiento científico de México',
+  tituloSeccion: '¿Qué es SIGIC?',
   descripcion:
     'SIGIC es la plataforma digital de la Secretaría de Ciencia y Tecnología, desarrollada en colaboración con CentroGeo para consultar, visualizar y analizar información científica y territorial de México.',
   seccionTexto:
@@ -40,7 +42,9 @@ export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
 }
 
 export async function saveLandingBuilderConfig(
-  campos: Omit<LandingBuilderConfig, 'logoUrl' | 'logoSecundarioUrl' | 'actualizadoEn'> & { logoSecundarioUrl?: string },
+  campos: Omit<LandingBuilderConfig, 'logoUrl' | 'logoSecundarioUrl' | 'actualizadoEn'> & {
+    logoSecundarioUrl?: string;
+  },
   logo?: LandingBuilderLogo,
   logoSecundario?: LandingBuilderLogo
 ): Promise<LandingBuilderConfig> {

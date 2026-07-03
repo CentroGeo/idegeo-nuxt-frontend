@@ -5,6 +5,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     nombrePlataforma: ref(''),
     titulo: ref(''),
     subtitulo: ref(''),
+    tituloSeccion: ref(''),
     descripcion: ref(''),
     seccionTexto: ref(''),
     logoUrl: ref(null),
@@ -24,6 +25,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.nombrePlataforma = config.nombrePlataforma;
         this.titulo = config.titulo;
         this.subtitulo = config.subtitulo;
+        this.tituloSeccion = config.tituloSeccion;
         this.descripcion = config.descripcion;
         this.seccionTexto = config.seccionTexto;
         this.logoUrl = config.logoUrl;
@@ -69,6 +71,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         formData.append('nombrePlataforma', this.nombrePlataforma);
         formData.append('titulo', this.titulo);
         formData.append('subtitulo', this.subtitulo);
+        formData.append('tituloSeccion', this.tituloSeccion);
         formData.append('descripcion', this.descripcion);
         formData.append('seccionTexto', this.seccionTexto);
 
@@ -78,7 +81,11 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
 
         if (this.logoSecundarioFile) {
           formData.append('logoSecundario', this.logoSecundarioFile);
-        } else if (this.logoSecundarioUrl && !this.logoSecundarioUrl.startsWith('blob:') && !this.logoSecundarioUrl.startsWith('/api/')) {
+        } else if (
+          this.logoSecundarioUrl &&
+          !this.logoSecundarioUrl.startsWith('blob:') &&
+          !this.logoSecundarioUrl.startsWith('/api/')
+        ) {
           formData.append('logoSecundarioUrl', this.logoSecundarioUrl);
         } else if (!this.logoSecundarioUrl) {
           formData.append('logoSecundarioUrl', '');

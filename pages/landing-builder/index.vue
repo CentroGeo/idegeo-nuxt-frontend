@@ -17,7 +17,7 @@ onMounted(() => {
 
     <!-- Formulario existente -->
     <section
-      class="contenedor ancho-fijo m-y-4 landing-builder-configuracion"
+      class="contenedor m-y-4 landing-builder-configuracion"
       aria-labelledby="landing-builder-configuracion-titulo"
     >
       <div class="landing-builder-configuracion__encabezado">
@@ -33,9 +33,11 @@ onMounted(() => {
         <p>Cargando configuración...</p>
       </div>
 
-      <div v-else class="flex landing-builder-contenido">
+      <div v-else class="landing-builder-contenido">
         <!-- Panel de edición -->
-        <div class="columna-8 landing-builder-panel">
+        <div class="landing-builder-panel">
+          <h3 class="landing-builder-panel__titulo">Editor</h3>
+
           <LandingBuilderPanelEdicion />
 
           <div class="flex flex-vertical-centrado m-t-3 landing-builder-acciones">
@@ -59,13 +61,14 @@ onMounted(() => {
         </div>
 
         <!-- Vista previa -->
-        <div class="columna-8 landing-builder-panel">
-          <h2>Vista previa</h2>
+        <div class="landing-builder-panel landing-builder-panel--vista-previa">
+          <h3 class="landing-builder-panel__titulo">Vista previa</h3>
 
           <LandingBuilderVistaPrevia
             :nombre-plataforma="store.nombrePlataforma"
             :titulo="store.titulo"
             :subtitulo="store.subtitulo"
+            :titulo-seccion="store.tituloSeccion"
             :descripcion="store.descripcion"
             :seccion-texto="store.seccionTexto"
             :logo-url="store.logoUrl"
@@ -95,13 +98,28 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
-.landing-builder-contenido {
-  align-items: flex-start;
-  gap: 32px;
-}
-
 .landing-builder-panel {
   min-width: 0;
+
+  &__titulo {
+    margin: 0 0 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .landing-builder-contenido {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 32px;
+  }
+
+  .landing-builder-panel--vista-previa {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
 }
 
 .landing-builder-acciones {
@@ -118,10 +136,6 @@ onMounted(() => {
   .landing-builder-configuracion {
     padding-top: 24px;
     padding-bottom: 32px;
-  }
-
-  .landing-builder-contenido {
-    display: block;
   }
 
   .landing-builder-panel + .landing-builder-panel {

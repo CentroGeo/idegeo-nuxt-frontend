@@ -3,6 +3,7 @@ defineProps({
   nombrePlataforma: { type: String, default: '' },
   titulo: { type: String, default: '' },
   subtitulo: { type: String, default: '' },
+  tituloSeccion: { type: String, default: '' },
   descripcion: { type: String, default: '' },
   seccionTexto: { type: String, default: '' },
   logoUrl: { type: String, default: null },
@@ -28,7 +29,7 @@ defineProps({
 
     <section class="m-y-6">
       <div class="contenedor ancho-lectura texto-centrado m-b-4">
-        <h2>¿Qué es {{ nombrePlataforma || 'la plataforma' }}?</h2>
+        <h2>{{ tituloSeccion || `¿Qué es ${nombrePlataforma || 'la plataforma'}?` }}</h2>
         <p>{{ descripcion || 'La descripción de la plataforma aparecerá aquí.' }}</p>
         <p>{{ seccionTexto || 'El texto de la sección descriptiva aparecerá aquí.' }}</p>
       </div>

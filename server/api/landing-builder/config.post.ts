@@ -8,6 +8,7 @@ const CAMPOS_REQUERIDOS = [
   'nombrePlataforma',
   'titulo',
   'subtitulo',
+  'tituloSeccion',
   'descripcion',
   'seccionTexto',
 ] as const;
@@ -59,14 +60,20 @@ export default defineEventHandler(async (event) => {
   let logoSecundario: { data: Buffer; mimetype: string } | undefined;
   const archivoLogoSecundario = files.logoSecundario?.[0];
   if (archivoLogoSecundario) {
-    if (!archivoLogoSecundario.mimetype || !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoSecundario.mimetype)) {
+    if (
+      !archivoLogoSecundario.mimetype ||
+      !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoSecundario.mimetype)
+    ) {
       throw createError({
         statusCode: 400,
         statusMessage: 'El logo secundario debe ser una imagen PNG, JPEG, WEBP o SVG',
       });
     }
     if (archivoLogoSecundario.size > TAMANO_MAXIMO_LOGO) {
-      throw createError({ statusCode: 400, statusMessage: 'El logo secundario no debe superar 2MB' });
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El logo secundario no debe superar 2MB',
+      });
     }
     logoSecundario = {
       data: await fsp.readFile(archivoLogoSecundario.filepath),
@@ -75,7 +82,10 @@ export default defineEventHandler(async (event) => {
   }
 
   return saveLandingBuilderConfig(
-    campos as unknown as Omit<LandingBuilderConfig, 'logoUrl' | 'logoSecundarioUrl' | 'actualizadoEn'> & { logoSecundarioUrl?: string },
+    campos as unknown as Omit<
+      LandingBuilderConfig,
+      'logoUrl' | 'logoSecundarioUrl' | 'actualizadoEn'
+    > & { logoSecundarioUrl?: string },
     logo,
     logoSecundario
   );
