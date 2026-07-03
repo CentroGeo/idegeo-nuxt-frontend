@@ -7,11 +7,14 @@ defineProps({
     type: String,
     default: null,
   },
+  label: {
+    type: String,
+    default: 'Logo de la plataforma',
+  },
 });
 const emit = defineEmits(['seleccionar-logo']);
 
 const dragNdrop = ref(null);
-const previsualizacion = ref(null);
 const mensajeError = ref('');
 
 function manejarArchivos(archivos) {
@@ -31,27 +34,17 @@ function manejarArchivos(archivos) {
     return;
   }
 
-  if (previsualizacion.value) {
-    URL.revokeObjectURL(previsualizacion.value);
-  }
-  previsualizacion.value = URL.createObjectURL(archivo);
   emit('seleccionar-logo', archivo);
 }
-
-onBeforeUnmount(() => {
-  if (previsualizacion.value) {
-    URL.revokeObjectURL(previsualizacion.value);
-  }
-});
 </script>
 
 <template>
   <div>
-    <label class="m-0">Logo de la plataforma</label>
-    <div v-if="previsualizacion || logoUrl" class="m-y-2">
+    <label class="m-0">{{ label }}</label>
+    <div v-if="logoUrl" class="m-y-2">
       <img
-        :src="previsualizacion || logoUrl"
-        alt="Previsualización del logo de la plataforma"
+        :src="logoUrl"
+        :alt="`Previsualización de ${label}`"
         style="max-height: 96px"
       />
     </div>

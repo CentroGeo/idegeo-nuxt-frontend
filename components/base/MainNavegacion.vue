@@ -4,6 +4,17 @@ import SisdaiNavegacionPrincipal from '@centrogeomx/sisdai-componentes/src/compo
 const { status, signIn } = useAuth();
 const route = useRoute();
 const config = useRuntimeConfig();
+const store = useLandingBuilderStore();
+
+const esConstructor = computed(() => {
+  return route.path.startsWith('/landing-builder');
+});
+
+onMounted(() => {
+  if (esConstructor.value && !store.logoSecundarioUrl) {
+    store.cargarConfiguracion();
+  }
+});
 
 async function iniciarSesion() {
   await signIn('keycloak', {
@@ -20,6 +31,20 @@ const mostrarAuth = computed(() => config.public.enableAuth);
 const mostrarAcercaDe = computed(() => config.public.enableAcercaDe);
 const mostrarGeocontenidos = computed(() => config.public.enableGeocontenidos);
 const mostrarLandingBuilder = computed(() => config.public.enableLandingBuilder);
+
+const modalCambiarLogoSecundario = ref(null);
+
+function abrirModalLogoSecundario() {
+  modalCambiarLogoSecundario.value?.abrirModal();
+}
+
+function seleccionarArchivoLogoSecundario(archivo) {
+  store.setLogoSecundarioFile(archivo);
+}
+
+function seleccionarEnlaceLogoSecundario(enlace) {
+  store.setLogoSecundarioUrl(enlace);
+}
 </script>
 
 <template>
@@ -41,14 +66,25 @@ const mostrarLandingBuilder = computed(() => config.public.enableLandingBuilder)
           />
         </a>
 
-        <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
-          <img
-            :src="`${config.app.baseURL}img/logo_sigic.svg`"
-            class="nav-logo color-invertir"
-            alt="SIGIC"
-            height="36"
-          />
-        </NuxtLink>
+        <div class="contenedor-logo-secundario" :class="{ 'editando-logo': esConstructor }">
+          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+            <img
+              :src="(esConstructor && store.logoSecundarioUrl) || `${config.app.baseURL}img/logo_sigic.svg`"
+              class="nav-logo color-invertir"
+              :alt="store.nombrePlataforma || 'SIGIC'"
+              height="36"
+            />
+          </NuxtLink>
+          <button
+            v-if="esConstructor"
+            type="button"
+            class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-editar-logo"
+            aria-label="Cambiar logo secundario"
+            @click="abrirModalLogoSecundario"
+          >
+            <span class="pictograma-editar" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     </template>
 
@@ -93,6 +129,13 @@ const mostrarLandingBuilder = computed(() => config.public.enableLandingBuilder)
         </button>
       </li>
     </ul>
+
+    <LandingBuilderModalCambiarLogo
+      v-if="esConstructor"
+      ref="modalCambiarLogoSecundario"
+      @seleccionar-archivo="seleccionarArchivoLogoSecundario"
+      @seleccionar-enlace="seleccionarEnlaceLogoSecundario"
+    />
   </SisdaiNavegacionPrincipal>
 </template>
 
@@ -104,5 +147,38 @@ body[data-tema='oscuro'] {
 }
 .contenedor-identidades-nav {
   display: inline-flex;
+}
+
+.contenedor-logo-secundario {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.editando-logo {
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  padding: 2px;
+  transition: border-color 0.2s;
+}
+
+.editando-logo:hover {
+  border-color: rgb(105 28 50 / 60%);
+}
+
+.boton-editar-logo {
+  position: absolute;
+  top: 50%;
+  right: -28px;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(-50%) scale(0.9);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.contenedor-logo-secundario:hover .boton-editar-logo,
+.boton-editar-logo:focus-visible {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
 }
 </style>

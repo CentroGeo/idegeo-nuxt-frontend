@@ -65,6 +65,10 @@ function manejarSeleccionLogo(archivo) {
       />
     </div>
 
-    <LandingBuilderCargaLogo :logo-url="store.logoUrl" @seleccionar-logo="manejarSeleccionLogo" />
+    <LandingBuilderCargaLogo
+      :logo-url="store.logoUrl"
+      label="Logo de la plataforma"
+      @seleccionar-logo="manejarSeleccionLogo"
+    />
   </div>
 </template>

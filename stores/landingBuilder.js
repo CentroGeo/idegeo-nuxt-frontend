@@ -9,6 +9,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     seccionTexto: ref(''),
     logoUrl: ref(null),
     logoFile: ref(null),
+    logoSecundarioUrl: ref(null),
+    logoSecundarioFile: ref(null),
     isLoading: ref(false),
     isSaving: ref(false),
     error: ref(null),
@@ -25,6 +27,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.descripcion = config.descripcion;
         this.seccionTexto = config.seccionTexto;
         this.logoUrl = config.logoUrl;
+        this.logoSecundarioUrl = config.logoSecundarioUrl;
       } catch (err) {
         console.error('Error al cargar la configuración de la landing page:', err);
         this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
@@ -35,6 +38,26 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
 
     setLogoFile(archivo) {
       this.logoFile = archivo;
+      if (this.logoUrl && this.logoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoUrl);
+      }
+      this.logoUrl = URL.createObjectURL(archivo);
+    },
+
+    setLogoSecundarioFile(archivo) {
+      this.logoSecundarioFile = archivo;
+      if (this.logoSecundarioUrl && this.logoSecundarioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoSecundarioUrl);
+      }
+      this.logoSecundarioUrl = URL.createObjectURL(archivo);
+    },
+
+    setLogoSecundarioUrl(url) {
+      if (this.logoSecundarioUrl && this.logoSecundarioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoSecundarioUrl);
+      }
+      this.logoSecundarioUrl = url;
+      this.logoSecundarioFile = null;
     },
 
     async guardarConfiguracion() {
@@ -48,8 +71,17 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         formData.append('subtitulo', this.subtitulo);
         formData.append('descripcion', this.descripcion);
         formData.append('seccionTexto', this.seccionTexto);
+
         if (this.logoFile) {
           formData.append('logo', this.logoFile);
+        }
+
+        if (this.logoSecundarioFile) {
+          formData.append('logoSecundario', this.logoSecundarioFile);
+        } else if (this.logoSecundarioUrl && !this.logoSecundarioUrl.startsWith('blob:') && !this.logoSecundarioUrl.startsWith('/api/')) {
+          formData.append('logoSecundarioUrl', this.logoSecundarioUrl);
+        } else if (!this.logoSecundarioUrl) {
+          formData.append('logoSecundarioUrl', '');
         }
 
         const config = await $fetch('/api/landing-builder/config', {
@@ -57,7 +89,9 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           body: formData,
         });
         this.logoUrl = config.logoUrl;
+        this.logoSecundarioUrl = config.logoSecundarioUrl;
         this.logoFile = null;
+        this.logoSecundarioFile = null;
         this.saveSuccess = true;
       } catch (err) {
         console.error('Error al guardar la configuración de la landing page:', err);
