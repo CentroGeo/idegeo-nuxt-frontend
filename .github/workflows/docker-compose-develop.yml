@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build SIGIC Nuxt Frontend image (develop)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.IMAGE_NAME == 'sigic-nuxt-frontend' && fromJSON('["self-hosted", "build-develop", "sigic-nuxt-frontend"]') || fromJSON('["self-hosted", "deploy-develop", "geosuite-nuxt-frontend"]') }}
     environment: develop
     if: github.event_name == 'push'
 
