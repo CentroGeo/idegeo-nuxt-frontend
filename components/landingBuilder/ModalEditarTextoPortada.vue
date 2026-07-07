@@ -35,6 +35,28 @@ function cerrarModal() {
   modalEditarTexto.value?.cerrarModal?.();
 }
 
+function cerrarModalAlClickAfuera(event) {
+  const contenedor = document.querySelector('.modal-editar-texto .modal-contenedor');
+
+  if (!contenedor) return;
+
+  const dialogo = contenedor.closest('dialog');
+
+  if (dialogo && !dialogo.open) return;
+
+  if (!contenedor.contains(event.target)) {
+    cerrarModal();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', cerrarModalAlClickAfuera);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', cerrarModalAlClickAfuera);
+});
+
 function guardarTextos() {
   const tituloLimpio = titulo.value.trim();
   const subtituloLimpio = subtitulo.value.trim();
