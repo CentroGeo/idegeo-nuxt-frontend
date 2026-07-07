@@ -66,6 +66,7 @@ jobs:
       - name: Escribir archivo .env
         run: |
           echo "NODE_ENV=production" >> .env
+          NGINX_BASE_URL: ${{ vars.NGINX_BASE_URL }}
           echo "NUXT_PUBLIC_BASE_URL=${{ vars.NUXT_PUBLIC_BASE_URL }}" >> .env
           echo "NUXT_PUBLIC_GEONODE_URL=${{ vars.NUXT_PUBLIC_GEONODE_URL }}" >> .env
           echo "NUXT_PUBLIC_GEONODE_API=${{ vars.NUXT_PUBLIC_GEONODE_API }}" >> .env          
@@ -94,6 +95,7 @@ jobs:
           echo "NUXT_AUTH_SECRET=${{ secrets.NUXT_AUTH_SECRET }}" >> .env
           echo "NUXT_APP_BASE_URL=${{ vars.NUXT_APP_BASE_URL }}" >> .env
           echo "NUXT_PUBLIC_OLLAMA_MODEL=${{ vars.NUXT_PUBLIC_OLLAMA_MODEL }}" >> .env
+          echo "SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER=${{ vars.SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER }}" >> .env
           echo "VIRTUAL_PORT=3000" >> .env
 
       - name: Docker Compose up
@@ -102,6 +104,7 @@ jobs:
           docker compose -f docker-compose-idce.yml up -d --force-recreate
         env:
           NODE_ENV: ${{ vars.NODE_ENV }}
+          NGINX_BASE_URL: ${{ vars.NGINX_BASE_URL }}
           NUXT_PUBLIC_BASE_URL: ${{ vars.NUXT_PUBLIC_BASE_URL }}
           NUXT_PUBLIC_GEONODE_URL: ${{ vars.NUXT_PUBLIC_GEONODE_URL }}
           NUXT_PUBLIC_GEONODE_API: ${{ vars.NUXT_PUBLIC_GEONODE_API }}
@@ -130,6 +133,7 @@ jobs:
           NUXT_AUTH_SECRET: ${{ secrets.NUXT_AUTH_SECRET }}
           NUXT_APP_BASE_URL: ${{ vars.NUXT_APP_BASE_URL }}
           NUXT_PUBLIC_OLLAMA_MODEL: ${{ vars.NUXT_PUBLIC_OLLAMA_MODEL }}
+          SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER: ${{ vars.SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER }}
           VIRTUAL_PORT: ${{ vars.VIRTUAL_PORT }}
 
       - name: Docker Cleanup
