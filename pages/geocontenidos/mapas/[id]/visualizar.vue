@@ -20,7 +20,7 @@ onUnmounted(() => {
 
 <template>
   <div class="visualizar-pagina">
-    <div v-if="mapasStore.isLoadingMap" class="estado-carga">
+    <div v-if="mapasStore.isLoadingMap || !mapasStore.mapaCargado" class="estado-carga">
       <div class="spinner" aria-hidden="true"></div>
       <p>Cargando mapa…</p>
     </div>

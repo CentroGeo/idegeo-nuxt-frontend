@@ -27,6 +27,9 @@ export const useMapasStore = defineStore('mapas', () => {
   const activeLayers = ref([]);
   const isLoading = ref(false);
   const isLoadingMap = ref(false);
+  // false hasta que un cargarMapa termina (éxito o fallo). Distingue el estado
+  // inicial "aún no se intenta" del estado real "cargó y vacío / no existe".
+  const mapaCargado = ref(false);
   const modalAgregarCapasAbierto = ref(false);
 
   function abrirModalAgregarCapas() {
@@ -82,6 +85,7 @@ export const useMapasStore = defineStore('mapas', () => {
     isLoadingMap.value = true;
     const mapData = await fetchMap(id);
     isLoadingMap.value = false;
+    mapaCargado.value = true;
     if (!mapData) return false;
     activeMap.value = mapData;
     // El detalle ya trae las capas completas → una sola petición (1 RTT).
@@ -204,6 +208,7 @@ export const useMapasStore = defineStore('mapas', () => {
   function limpiarMapa() {
     activeMap.value = null;
     activeLayers.value = [];
+    mapaCargado.value = false;
   }
 
   return {
@@ -213,6 +218,7 @@ export const useMapasStore = defineStore('mapas', () => {
     activeLayers,
     isLoading,
     isLoadingMap,
+    mapaCargado,
     modalAgregarCapasAbierto,
     abrirModalAgregarCapas,
     cerrarModalAgregarCapas,

@@ -80,7 +80,7 @@ onUnmounted(() => {
 
 <template>
   <div class="visor-pagina">
-    <p v-if="mapasStore.isLoadingMap" class="m-3">Cargando mapa…</p>
+    <p v-if="mapasStore.isLoadingMap || !mapasStore.mapaCargado" class="m-3">Cargando mapa…</p>
 
     <div v-else-if="!mapasStore.activeMap" class="m-3">
       <p>No se encontró el mapa solicitado.</p>
@@ -122,7 +122,7 @@ onUnmounted(() => {
             &nbsp;{{ editandoCapas ? 'Cerrar Edición' : 'Editar Capas' }}
           </button>
           <NuxtLink to="/geocontenidos/mapas" class="boton-secundario">Lista de Mapas</NuxtLink>
-          <button class="boton-secundario boton-eliminar" type="button" @click="eliminarMapa">
+          <button class="boton-primario boton-eliminar" type="button" @click="eliminarMapa">
             <span class="pictograma-tache" aria-hidden="true" /> Eliminar mapa
           </button>
         </div>
@@ -202,15 +202,36 @@ a {
 }
 
 .boton-eliminar {
-  background-color: rgb(136, 0, 0);
+  background-color: var(--mapa-peligro-fondo);
+  border-color: var(--mapa-peligro-fondo);
+  color: var(--mapa-peligro-color);
 }
 
 .boton-eliminar:hover {
-  background-color: rgb(191, 46, 46);
+  background-color: var(--mapa-peligro-fondo-cursor);
+  border-color: var(--mapa-peligro-fondo-cursor);
 }
 
 .flex {
   gap: 8px;
   flex-wrap: wrap;
+}
+</style>
+
+<!-- Sin `scoped`: las definiciones body[data-tema=...] deben poder apuntar al
+     <body>. Con scoped se les añade [data-v-hash] y dejan de coincidir. Los
+     tokens quedan globales; el prefijo --mapa- evita colisiones. -->
+<style lang="scss">
+:root,
+body[data-tema='claro'] {
+  --mapa-peligro-fondo: var(--color-error-3);
+  --mapa-peligro-fondo-cursor: var(--color-error-4);
+  --mapa-peligro-color: var(--color-neutro-0);
+}
+
+body[data-tema='oscuro'] {
+  --mapa-peligro-fondo: var(--color-error-4);
+  --mapa-peligro-fondo-cursor: var(--color-error-3);
+  --mapa-peligro-color: var(--color-neutro-0);
 }
 </style>

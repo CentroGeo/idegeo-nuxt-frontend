@@ -34,7 +34,7 @@ onUnmounted(() => {
 
 <template>
   <div class="embed-pagina" :class="{ 'ocultar-controles': !mostrarControles }">
-    <div v-if="mapasStore.isLoadingMap" class="estado-carga">
+    <div v-if="mapasStore.isLoadingMap || !mapasStore.mapaCargado" class="estado-carga">
       <div class="spinner" aria-hidden="true"></div>
       <p>Cargando mapa…</p>
     </div>
