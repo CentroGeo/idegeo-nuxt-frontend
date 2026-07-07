@@ -15,6 +15,8 @@ onMounted(() => {
     <!-- Portada del constructor -->
     <LandingBuilderPortadaEditor />
 
+    <LandingBuilderEditorBloquesTexto />
+
     <!-- Formulario existente -->
     <section
       class="contenedor m-y-4 landing-builder-configuracion"
