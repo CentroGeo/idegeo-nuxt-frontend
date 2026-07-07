@@ -7,6 +7,7 @@ defineProps({
   descripcion: { type: String, default: '' },
   seccionTexto: { type: String, default: '' },
   logoUrl: { type: String, default: null },
+  tarjetas: { type: Array, default: () => [] },
 });
 </script>
 
@@ -32,6 +33,34 @@ defineProps({
         <h2>{{ tituloSeccion || `¿Qué es ${nombrePlataforma || 'la plataforma'}?` }}</h2>
         <p>{{ descripcion || 'La descripción de la plataforma aparecerá aquí.' }}</p>
         <p>{{ seccionTexto || 'El texto de la sección descriptiva aparecerá aquí.' }}</p>
+      </div>
+
+      <div v-if="tarjetas.length" class="contenedor ancho-fijo">
+        <div class="flex">
+          <div v-for="tarjeta in tarjetas" :key="tarjeta.id" class="columna-8">
+            <div class="tarjeta tarjeta-horizontal">
+              <img
+                v-if="tarjeta.imagenUrl"
+                alt=""
+                class="tarjeta-imagen"
+                :src="tarjeta.imagenUrl"
+              />
+              <div class="tarjeta-cuerpo">
+                <p class="tarjeta-titulo">{{ tarjeta.titulo || 'Título de la tarjeta' }}</p>
+                <p>{{ tarjeta.descripcion || 'La descripción de la tarjeta aparecerá aquí.' }}</p>
+              </div>
+              <div v-if="tarjeta.textoBoton" class="tarjeta-pie">
+                <a
+                  class="boton-primario boton-chico"
+                  :href="tarjeta.enlaceBoton || '#'"
+                  @click.prevent
+                >
+                  {{ tarjeta.textoBoton }}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </div>

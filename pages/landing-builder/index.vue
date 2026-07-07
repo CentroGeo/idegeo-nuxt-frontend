@@ -40,6 +40,8 @@ onMounted(() => {
 
           <LandingBuilderPanelEdicion />
 
+          <LandingBuilderTarjetasEditor class="m-t-3" />
+
           <div class="flex flex-vertical-centrado m-t-3 landing-builder-acciones">
             <button
               class="boton-primario boton-chico"
@@ -72,6 +74,7 @@ onMounted(() => {
             :descripcion="store.descripcion"
             :seccion-texto="store.seccionTexto"
             :logo-url="store.logoUrl"
+            :tarjetas="store.tarjetas"
           />
         </div>
       </div>

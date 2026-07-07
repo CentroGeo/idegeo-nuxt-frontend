@@ -1,5 +1,18 @@
 import { defineStore } from 'pinia';
 
+export const LIMITE_TARJETAS = 10;
+
+function crearTarjetaVacia() {
+  return {
+    id: crypto.randomUUID(),
+    titulo: '',
+    descripcion: '',
+    textoBoton: '',
+    enlaceBoton: '',
+    imagenUrl: null,
+  };
+}
+
 export const useLandingBuilderStore = defineStore('landingBuilder', () => {
   return {
     nombrePlataforma: ref(''),
@@ -12,6 +25,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     logoFile: ref(null),
     logoSecundarioUrl: ref(null),
     logoSecundarioFile: ref(null),
+    tarjetas: ref([]),
+    tarjetaImagenFiles: ref({}),
     isLoading: ref(false),
     isSaving: ref(false),
     error: ref(null),
@@ -30,12 +45,67 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.seccionTexto = config.seccionTexto;
         this.logoUrl = config.logoUrl;
         this.logoSecundarioUrl = config.logoSecundarioUrl;
+        this.tarjetas = config.tarjetas ?? [];
+        this.tarjetaImagenFiles = {};
       } catch (err) {
         console.error('Error al cargar la configuración de la landing page:', err);
         this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
       } finally {
         this.isLoading = false;
       }
+    },
+
+    puedeAgregarTarjeta() {
+      return this.tarjetas.length < LIMITE_TARJETAS;
+    },
+
+    agregarTarjeta() {
+      if (!this.puedeAgregarTarjeta()) return null;
+      const tarjeta = crearTarjetaVacia();
+      this.tarjetas.push(tarjeta);
+      return tarjeta;
+    },
+
+    eliminarTarjeta(id) {
+      const tarjeta = this.tarjetas.find((t) => t.id === id);
+      if (tarjeta?.imagenUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(tarjeta.imagenUrl);
+      }
+      this.tarjetas = this.tarjetas.filter((t) => t.id !== id);
+      const archivos = { ...this.tarjetaImagenFiles };
+      delete archivos[id];
+      this.tarjetaImagenFiles = archivos;
+    },
+
+    actualizarTarjeta(id, campos) {
+      const tarjeta = this.tarjetas.find((t) => t.id === id);
+      if (!tarjeta) return;
+      Object.assign(tarjeta, campos);
+    },
+
+    setImagenTarjeta(id, archivo) {
+      const tarjeta = this.tarjetas.find((t) => t.id === id);
+      if (!tarjeta) return;
+
+      if (tarjeta.imagenUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(tarjeta.imagenUrl);
+      }
+
+      this.tarjetaImagenFiles = { ...this.tarjetaImagenFiles, [id]: archivo };
+      tarjeta.imagenUrl = URL.createObjectURL(archivo);
+    },
+
+    reordenarTarjetas(idOrigen, idDestino) {
+      if (idOrigen === idDestino) return;
+
+      const indiceOrigen = this.tarjetas.findIndex((t) => t.id === idOrigen);
+      const indiceDestino = this.tarjetas.findIndex((t) => t.id === idDestino);
+      if (indiceOrigen === -1 || indiceDestino === -1) return;
+
+      const tarjetas = [...this.tarjetas];
+      const [tarjetaMovida] = tarjetas.splice(indiceOrigen, 1);
+      tarjetas.splice(indiceDestino, 0, tarjetaMovida);
+      this.tarjetas = tarjetas;
     },
 
     setLogoFile(archivo) {
@@ -91,6 +161,26 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           formData.append('logoSecundarioUrl', '');
         }
 
+        formData.append(
+          'tarjetas',
+          JSON.stringify(
+            this.tarjetas.map(
+              ({ id, titulo, descripcion, textoBoton, enlaceBoton, imagenUrl }) => ({
+                id,
+                titulo,
+                descripcion,
+                textoBoton,
+                enlaceBoton,
+                imagenUrl,
+              })
+            )
+          )
+        );
+
+        for (const [id, archivo] of Object.entries(this.tarjetaImagenFiles)) {
+          formData.append(`tarjetaImagen_${id}`, archivo);
+        }
+
         const config = await $fetch('/api/landing-builder/config', {
           method: 'POST',
           body: formData,
@@ -99,6 +189,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.logoSecundarioUrl = config.logoSecundarioUrl;
         this.logoFile = null;
         this.logoSecundarioFile = null;
+        this.tarjetas = config.tarjetas ?? [];
+        this.tarjetaImagenFiles = {};
         this.saveSuccess = true;
       } catch (err) {
         console.error('Error al guardar la configuración de la landing page:', err);

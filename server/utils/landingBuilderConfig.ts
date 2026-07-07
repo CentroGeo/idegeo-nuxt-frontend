@@ -1,3 +1,12 @@
+export interface LandingBuilderTarjeta {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  textoBoton: string;
+  enlaceBoton: string;
+  imagenUrl: string | null;
+}
+
 export interface LandingBuilderConfig {
   nombrePlataforma: string;
   titulo: string;
@@ -7,6 +16,7 @@ export interface LandingBuilderConfig {
   seccionTexto: string;
   logoUrl: string | null;
   logoSecundarioUrl: string | null;
+  tarjetas: LandingBuilderTarjeta[];
   actualizadoEn: string;
 }
 
@@ -15,11 +25,54 @@ export interface LandingBuilderLogo {
   mimetype: string;
 }
 
+export const LIMITE_TARJETAS = 10;
+
 const CONFIG_KEY = 'config.json';
 const LOGO_KEY = 'logo:archivo';
 const LOGO_META_KEY = 'logo:meta.json';
 const LOGO_SECUNDARIO_KEY = 'logo_secundario:archivo';
 const LOGO_SECUNDARIO_META_KEY = 'logo_secundario:meta.json';
+const tarjetaImagenKey = (id: string) => `tarjeta:${id}:archivo`;
+const tarjetaImagenMetaKey = (id: string) => `tarjeta:${id}:meta.json`;
+
+const tarjetasPorDefecto: LandingBuilderTarjeta[] = [
+  {
+    id: 'visualiza',
+    titulo: 'Visualiza información territorial',
+    descripcion:
+      'Explora mapas interactivos con capas de información geográfica: datos económicos, límites administrativos, de infraestructura, población y más. Filtra por región, tema o periodo, combina fuentes y descarga tus mapas en formatos estándar.',
+    textoBoton: 'Ir al visualizador',
+    enlaceBoton: '/consulta',
+    imagenUrl: '/inicio/tarjeta_visualiza.png',
+  },
+  {
+    id: 'analiza',
+    titulo: 'Analiza con Inteligencia Artificial',
+    descripcion:
+      'Crea un proyecto de análisis, sube tus documentos o selecciona fuentes del catálogo SIGIC, y haz preguntas en lenguaje natural. La IA lee, compara y resume la información para darte respuestas con referencias a las fuentes originales.',
+    textoBoton: 'Iniciar análisis con IA',
+    enlaceBoton: '/ia',
+    imagenUrl: '/inicio/tarjeta_analiza.png',
+  },
+  {
+    id: 'explora',
+    titulo: 'Explora los recursos disponibles',
+    descripcion:
+      'Consulta el catálogo completo de recursos del SIGIC: capas geográficas, tablas de datos, documentos de investigación y otros servicios remotos. Busca por tema, institución, fecha o tipo de recurso, y descarga lo que necesites.',
+    textoBoton: 'Ir al catálogo de información',
+    enlaceBoton: '/catalogo',
+    imagenUrl: '/inicio/tarjeta_explora.png',
+  },
+  {
+    id: 'usa',
+    titulo: 'Usa tu propia información',
+    descripcion:
+      'Sube tus archivos con información geográfica o científica, y úsalos directamente en el visualizador o en tus proyectos de análisis con IA. Sin necesidad de herramientas externas, puedes integrar tus datos al ecosistema SIGIC.',
+    textoBoton: 'Ir a subir archivo',
+    enlaceBoton: '/catalogo/cargar-archivos',
+    imagenUrl: '/inicio/tarjeta_usa.png',
+  },
+];
 
 const configPorDefecto: LandingBuilderConfig = {
   nombrePlataforma: 'SIGIC',
@@ -32,24 +85,39 @@ const configPorDefecto: LandingBuilderConfig = {
     'Reúne datos abiertos, capas geográficas, documentos y herramientas de inteligencia artificial en un solo lugar, para que investigadores, tomadores de decisiones y público en general puedan explorar el conocimiento generado por el sistema nacional de ciencia y tecnología.',
   logoUrl: null,
   logoSecundarioUrl: null,
+  tarjetas: tarjetasPorDefecto,
   actualizadoEn: new Date(0).toISOString(),
 };
 
 export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
   const storage = useStorage('landingBuilder');
   const config = await storage.getItem<LandingBuilderConfig>(CONFIG_KEY);
-  return config ?? configPorDefecto;
+  // Se combina con los valores por defecto para migrar configuraciones guardadas
+  // antes de que existiera el campo `tarjetas`.
+  return config ? { ...configPorDefecto, ...config } : configPorDefecto;
 }
 
 export async function saveLandingBuilderConfig(
-  campos: Omit<LandingBuilderConfig, 'logoUrl' | 'logoSecundarioUrl' | 'actualizadoEn'> & {
+  campos: Omit<
+    LandingBuilderConfig,
+    'logoUrl' | 'logoSecundarioUrl' | 'tarjetas' | 'actualizadoEn'
+  > & {
     logoSecundarioUrl?: string;
+    tarjetas: Array<Omit<LandingBuilderTarjeta, 'imagenUrl'> & { imagenUrl?: string | null }>;
   },
   logo?: LandingBuilderLogo,
-  logoSecundario?: LandingBuilderLogo
+  logoSecundario?: LandingBuilderLogo,
+  imagenesTarjetas?: Record<string, LandingBuilderLogo>
 ): Promise<LandingBuilderConfig> {
   const storage = useStorage('landingBuilder');
   const actual = await getLandingBuilderConfig();
+
+  if (campos.tarjetas.length > LIMITE_TARJETAS) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `No se permiten más de ${LIMITE_TARJETAS} tarjetas`,
+    });
+  }
 
   let logoUrl = actual.logoUrl;
   if (logo) {
@@ -67,10 +135,40 @@ export async function saveLandingBuilderConfig(
     logoSecundarioUrl = campos.logoSecundarioUrl || null;
   }
 
+  const idsActuales = new Set(actual.tarjetas.map((tarjeta) => tarjeta.id));
+  const idsNuevos = new Set(campos.tarjetas.map((tarjeta) => tarjeta.id));
+  await Promise.all(
+    [...idsActuales]
+      .filter((id) => !idsNuevos.has(id))
+      .map((id) =>
+        Promise.all([
+          storage.removeItem(tarjetaImagenKey(id)),
+          storage.removeItem(tarjetaImagenMetaKey(id)),
+        ])
+      )
+  );
+
+  const tarjetas: LandingBuilderTarjeta[] = await Promise.all(
+    campos.tarjetas.map(async (tarjeta) => {
+      const imagen = imagenesTarjetas?.[tarjeta.id];
+      if (imagen) {
+        await storage.setItemRaw(tarjetaImagenKey(tarjeta.id), imagen.data);
+        await storage.setItem(tarjetaImagenMetaKey(tarjeta.id), { mimetype: imagen.mimetype });
+        return {
+          ...tarjeta,
+          imagenUrl: `/api/landing-builder/tarjeta-imagen/${tarjeta.id}?v=${Date.now()}`,
+        };
+      }
+
+      return { ...tarjeta, imagenUrl: tarjeta.imagenUrl ?? null };
+    })
+  );
+
   const nuevaConfig: LandingBuilderConfig = {
     ...campos,
     logoUrl,
     logoSecundarioUrl,
+    tarjetas,
     actualizadoEn: new Date().toISOString(),
   };
   await storage.setItem(CONFIG_KEY, nuevaConfig);
@@ -92,6 +190,18 @@ export async function getLandingBuilderLogoSecundario(): Promise<LandingBuilderL
   const [data, meta] = await Promise.all([
     storage.getItemRaw<Buffer>(LOGO_SECUNDARIO_KEY),
     storage.getItem<{ mimetype: string }>(LOGO_SECUNDARIO_META_KEY),
+  ]);
+  if (!data || !meta) return null;
+  return { data, mimetype: meta.mimetype };
+}
+
+export async function getLandingBuilderTarjetaImagen(
+  id: string
+): Promise<LandingBuilderLogo | null> {
+  const storage = useStorage('landingBuilder');
+  const [data, meta] = await Promise.all([
+    storage.getItemRaw<Buffer>(tarjetaImagenKey(id)),
+    storage.getItem<{ mimetype: string }>(tarjetaImagenMetaKey(id)),
   ]);
   if (!data || !meta) return null;
   return { data, mimetype: meta.mimetype };
