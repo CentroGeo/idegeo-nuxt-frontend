@@ -192,11 +192,11 @@ defineExpose({ abrir, cerrar });
 
 .tabs {
   gap: 0;
-  border-bottom: 1px solid var(--color-neutro-1);
+  border-bottom: 1px solid var(--borde);
 }
 
 .tab-boton {
-  color: var(--color-neutro-1);
+  color: var(--texto-secundario);
   background: none;
   border: none;
   padding: 10px 16px;
@@ -207,7 +207,8 @@ defineExpose({ abrir, cerrar });
   gap: 6px;
 
   &.activa {
-    border-bottom-color: var(--color-primario, #ff51ba);
+    color: var(--texto-primario);
+    border-bottom-color: var(--texto-acento);
     font-weight: 600;
   }
 }
