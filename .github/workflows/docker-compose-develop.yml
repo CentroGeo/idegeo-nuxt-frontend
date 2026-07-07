@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GHCR_GEOINTSIGIC_PAT }}" | docker login ghcr.io -u geointsigic --password-stdin
@@ -51,13 +53,15 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Docker login to GHCR
         run: echo ${{ secrets.GHCR_GEOINTSIGIC_PAT }} | docker login ghcr.io -u geointsigic --password-stdin
 
-      - name: Reemplazar imagen en docker-compose-ghcr.yml
+      - name: Reemplazar imagen en docker-compose-idce.yml
         run: |
-          sed -i "s|ghcr.io/${{ vars.OWNER }}/sigic-nuxt-frontend:.*|ghcr.io/${{ vars.OWNER }}/${{ vars.IMAGE_NAME }}:${GITHUB_SHA::7}|g" docker-compose-ghcr.yml
+          sed -i "s|ghcr.io/${{ vars.OWNER }}/sigic-nuxt-frontend:.*|ghcr.io/${{ vars.OWNER }}/${{ vars.IMAGE_NAME }}:${GITHUB_SHA::7}|g" docker-compose-idce.yml
 
       - name: Escribir archivo .env
         run: |
@@ -94,8 +98,8 @@ jobs:
 
       - name: Docker Compose up
         run: |
-          docker compose -f docker-compose-ghcr.yml down -v || true
-          docker compose -f docker-compose-ghcr.yml up -d --force-recreate
+          docker compose -f docker-compose-idce.yml down -v || true
+          docker compose -f docker-compose-idce.yml up -d --force-recreate
         env:
           NODE_ENV: ${{ vars.NODE_ENV }}
           NUXT_PUBLIC_BASE_URL: ${{ vars.NUXT_PUBLIC_BASE_URL }}
