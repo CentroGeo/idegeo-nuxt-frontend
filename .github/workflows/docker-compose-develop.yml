@@ -66,7 +66,7 @@ jobs:
       - name: Escribir archivo .env
         run: |
           echo "NODE_ENV=production" >> .env
-          NGINX_BASE_URL: ${{ vars.NGINX_BASE_URL }}
+          echo "NGINX_BASE_URL=${{ vars.NGINX_BASE_URL }}" >> .env
           echo "NUXT_PUBLIC_BASE_URL=${{ vars.NUXT_PUBLIC_BASE_URL }}" >> .env
           echo "NUXT_PUBLIC_GEONODE_URL=${{ vars.NUXT_PUBLIC_GEONODE_URL }}" >> .env
           echo "NUXT_PUBLIC_GEONODE_API=${{ vars.NUXT_PUBLIC_GEONODE_API }}" >> .env          
