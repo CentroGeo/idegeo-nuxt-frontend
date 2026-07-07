@@ -9,6 +9,7 @@ const inputArchivo = ref(null);
 const pestanaActiva = ref('subir');
 const urlImagen = ref('');
 const error = ref('');
+const arrastrandoArchivo = ref(false);
 
 const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
@@ -30,6 +31,28 @@ function cerrarModal() {
   modalCambiarPortada.value?.cerrarModal?.();
 }
 
+function cerrarModalAlClickAfuera(event) {
+  const contenedor = document.querySelector('.modal-portada .modal-contenedor');
+
+  if (!contenedor) return;
+
+  const dialogo = contenedor.closest('dialog');
+
+  if (dialogo && !dialogo.open) return;
+
+  if (!contenedor.contains(event.target)) {
+    cerrarModal();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', cerrarModalAlClickAfuera);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', cerrarModalAlClickAfuera);
+});
+
 function cambiarPestana(pestana) {
   pestanaActiva.value = pestana;
   error.value = '';
@@ -39,26 +62,48 @@ function abrirSelectorArchivos() {
   inputArchivo.value?.click();
 }
 
-function seleccionarArchivo(event) {
-  const archivo = event.target.files?.[0];
+function activarArrastre() {
+  arrastrandoArchivo.value = true;
+}
 
+function desactivarArrastre() {
+  arrastrandoArchivo.value = false;
+}
+
+function procesarArchivo(archivo) {
   if (!archivo) return;
 
   if (!tiposPermitidos.includes(archivo.type)) {
     error.value = 'Selecciona una imagen JPG, PNG, WEBP o SVG.';
-    event.target.value = '';
     return;
   }
 
   if (archivo.size > TAMANO_MAXIMO_BYTES) {
     error.value = 'La imagen no puede pesar más de 5 MB.';
-    event.target.value = '';
     return;
   }
 
   error.value = '';
   emit('seleccionar-archivo', archivo);
   cerrarModal();
+}
+
+function seleccionarArchivo(event) {
+  const archivo = event.target.files?.[0];
+
+  procesarArchivo(archivo);
+
+  if (event.target) {
+    event.target.value = '';
+  }
+}
+
+function soltarArchivo(event) {
+  arrastrandoArchivo.value = false;
+
+  const archivo = event.dataTransfer?.files?.[0];
+
+  procesarArchivo(archivo);
 }
 
 function aplicarEnlace() {
@@ -162,12 +207,42 @@ defineExpose({
             @change="seleccionarArchivo"
           />
 
-          <div class="modal-portada__zona-subida">
-            <button type="button" class="modal-portada__boton-subir" @click="abrirSelectorArchivos">
-              Subir archivo
-            </button>
+          <div
+            class="modal-portada__zona-subida"
+            :class="{ 'modal-portada__zona-subida--activa': arrastrandoArchivo }"
+            role="button"
+            tabindex="0"
+            aria-label="Arrastra o selecciona una imagen de portada"
+            @click="abrirSelectorArchivos"
+            @keydown.enter.prevent="abrirSelectorArchivos"
+            @keydown.space.prevent="abrirSelectorArchivos"
+            @dragenter.prevent="activarArrastre"
+            @dragover.prevent="activarArrastre"
+            @dragleave.prevent="desactivarArrastre"
+            @drop.prevent="soltarArchivo"
+          >
+            <span class="modal-portada__icono-subida" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
 
-            <p class="modal-portada__indicacion">Selecciona una imagen desde tu equipo.</p>
+            <p class="modal-portada__indicacion">Arrastra o suelta tu archivo</p>
+
+            <button
+              type="button"
+              class="modal-portada__boton-subir"
+              @click.stop="abrirSelectorArchivos"
+            >
+              Elige Archivo
+            </button>
 
             <p class="modal-portada__ayuda">
               Las imágenes con un ancho mayor a 1500 píxeles funcionan mejor.
@@ -360,17 +435,47 @@ defineExpose({
     white-space: nowrap;
   }
 
+  &__indicacion,
+  &__ayuda,
+  &__formatos {
+    width: 100%;
+    max-width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   &__zona-subida {
     display: flex;
     min-height: 190px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 20px 16px;
     overflow: hidden;
-    border: 1px solid var(--color-neutro-2, #bdbdbd);
-    border-radius: 6px;
+    border: 1px dashed rgb(255 255 255 / 55%);
+    border-radius: 10px;
+    background: rgb(255 255 255 / 4%);
     text-align: center;
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover,
+    &:focus-visible,
+    &--activa {
+      border-color: rgb(255 255 255 / 85%);
+      background: rgb(255 255 255 / 8%);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 3px;
+    }
   }
 
   &__zona-subida > * {
@@ -380,23 +485,40 @@ defineExpose({
     box-sizing: border-box;
   }
 
+  &__icono-subida {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    color: rgb(255 255 255 / 78%);
+
+    svg {
+      width: 26px;
+      height: 26px;
+    }
+  }
+
   &__boton-subir {
-    width: 100%;
-    min-height: 44px;
-    margin: 0 0 16px;
-    padding: 10px 16px;
+    width: auto;
+    min-height: 34px;
+    margin: 8px 0 14px;
+    padding: 7px 14px;
     box-sizing: border-box;
-    border: 1px solid currentcolor;
+    border: 1px solid rgb(255 255 255 / 45%);
     border-radius: 6px;
-    background: transparent;
+    background: rgb(255 255 255 / 9%);
     color: inherit;
     font: inherit;
+    font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
 
     &:hover,
     &:focus-visible {
-      background: rgb(255 255 255 / 7%);
+      background: rgb(255 255 255 / 14%);
     }
 
     &:focus-visible {
@@ -418,21 +540,22 @@ defineExpose({
 
   &__indicacion {
     margin-top: 0;
-    margin-bottom: 10px;
+    margin-bottom: 0;
     color: var(--texto-secundario);
+    font-size: 0.875rem;
   }
 
   &__ayuda {
     margin-top: 0;
     margin-bottom: 0;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
   }
 
   &__formatos {
-    margin-top: 8px;
+    margin-top: 6px;
     margin-bottom: 0;
     color: var(--texto-secundario);
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
   }
 
   &__campo {
@@ -499,7 +622,23 @@ defineExpose({
 
     &__zona-subida {
       min-height: 180px;
-      padding: 12px;
+      padding: 16px 12px;
+    }
+
+    &__icono-subida {
+      width: 32px;
+      height: 32px;
+
+      svg {
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    &__boton-subir {
+      min-height: 32px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
     }
 
     &__boton-subir {
