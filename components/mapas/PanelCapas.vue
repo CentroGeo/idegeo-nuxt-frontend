@@ -83,7 +83,7 @@ function emitirVista() {
 async function guardarVista() {
   guardandoVista.value = true;
   const payload = {
-    zoom: Math.round(Number(vista.zoom)),
+    zoom: Number(vista.zoom),
     center_lat: Number(vista.center_lat),
     center_long: Number(vista.center_long),
   };
@@ -162,7 +162,7 @@ function eliminar(capa) {
       </div>
       <div class="campo-vista">
         <label :for="`vista-zoom-${mapa.id}`" class="texto-secundario">
-          Zoom: {{ Math.round(Number(vista.zoom)) }}
+          Zoom: {{ Number(vista.zoom).toFixed(1) }}
         </label>
         <input
           :id="`vista-zoom-${mapa.id}`"
@@ -170,7 +170,7 @@ function eliminar(capa) {
           type="range"
           min="0"
           max="20"
-          step="1"
+          step="0.1"
           @input="emitirVista"
         />
       </div>
