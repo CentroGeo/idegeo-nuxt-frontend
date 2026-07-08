@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: production
-        NUXT_APP_BASE_URL: /admin
+        NUXT_APP_BASE_URL: /admin/
         NUXT_PUBLIC_AUTH_BASE_URL: ${NGINX_BASE_URL}/admin/api/auth
         NUXT_PUBLIC_BASE_URL: ${NGINX_BASE_URL}
         NUXT_PUBLIC_LEVANTAMIENTO_BACKEND_URL: ${NUXT_PUBLIC_LEVANTAMIENTO_BACKEND_URL}
@@ -45,7 +45,7 @@ services:
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       NUXT_AUTH_SECRET: ${NUXT_AUTH_SECRET}
-      NUXT_APP_BASE_URL: /admin
+      NUXT_APP_BASE_URL: /admin/
       NUXT_PUBLIC_OLLAMA_MODEL: ${NUXT_PUBLIC_OLLAMA_MODEL}
     networks:
       - sigic
@@ -56,7 +56,7 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: production
-        NUXT_APP_BASE_URL: /app
+        NUXT_APP_BASE_URL: /app/
         NUXT_PUBLIC_AUTH_BASE_URL: ${NGINX_BASE_URL}/app/api/auth
         NUXT_PUBLIC_LEVANTAMIENTO_BACKEND_URL: ${NUXT_PUBLIC_LEVANTAMIENTO_BACKEND_URL}
         NUXT_PUBLIC_KEYCLOAK_ISSUER: ${SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER}
@@ -94,7 +94,7 @@ services:
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       NUXT_AUTH_SECRET: ${NUXT_AUTH_SECRET}
-      NUXT_APP_BASE_URL: /app
+      NUXT_APP_BASE_URL: /app/
       NUXT_PUBLIC_OLLAMA_MODEL: "${OLLAMA_MODEL:-deepseek-r1}"
     networks:
       - sigic
