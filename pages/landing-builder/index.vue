@@ -1,7 +1,7 @@
 <script setup>
 // Bypass temporal para trabajar localmente sin Keycloak.
 // Antes del commit final, vuelve a habilitar el middleware:
-definePageMeta({ middleware: 'auth' });
+// definePageMeta({ middleware: 'auth' });
 
 const store = useLandingBuilderStore();
 
@@ -13,10 +13,7 @@ onMounted(() => {
 <template>
   <div class="landing-builder-pagina">
     <!-- Portada del constructor -->
-    <LandingBuilderPortadaEditor />
-
-    <LandingBuilderEditorBloquesTexto />
-
+    <LandingBuilderLienzoBloques />
     <!-- Formulario existente -->
     <section
       class="contenedor m-y-4 landing-builder-configuracion"
