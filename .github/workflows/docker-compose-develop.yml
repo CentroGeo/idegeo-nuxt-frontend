@@ -33,7 +33,7 @@ jobs:
 
       - name: Build & tag Docker image
         run: |
-          docker build --no-cache \
+          docker build \
             -t ghcr.io/${{ vars.OWNER }}/${{ vars.IMAGE_NAME }}:develop \
             -t ghcr.io/${{ vars.OWNER }}/${{ vars.IMAGE_NAME }}:${GITHUB_SHA::7} \
             -f Dockerfile .
@@ -135,6 +135,3 @@ jobs:
           NUXT_PUBLIC_OLLAMA_MODEL: ${{ vars.NUXT_PUBLIC_OLLAMA_MODEL }}
           SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER: ${{ vars.SOCIALACCOUNT_OIDC_ID_TOKEN_ISSUER }}
           VIRTUAL_PORT: ${{ vars.VIRTUAL_PORT }}
-
-      - name: Docker Cleanup
-        run: docker system prune -af
