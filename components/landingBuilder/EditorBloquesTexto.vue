@@ -177,6 +177,7 @@ function crearBloqueDesdeTipo(tipo) {
     texto: '',
     placeholder: tipo.placeholder,
     alineacion: 'left',
+    color: '#FFFFFF',
   };
 }
 
@@ -246,15 +247,20 @@ function abrirModalAlineacion(bloque) {
   bloqueActivoId.value = bloque.id;
   bloqueAlineacionId.value = bloque.id;
 
-  modalAlineacionTexto.value?.abrirModal();
+  modalAlineacionTexto.value?.abrirModal({
+    alineacion: bloque.alineacion || 'left',
+    color: bloque.color || '#FFFFFF',
+  });
 }
 
-function seleccionarAlineacion(alineacion) {
+function guardarEstilosBloque(estilos) {
   const bloque = bloques.value.find((item) => item.id === bloqueAlineacionId.value);
 
   if (!bloque) return;
 
-  bloque.alineacion = alineacion;
+  bloque.alineacion = estilos.alineacion || 'left';
+  bloque.color = estilos.color || '#FFFFFF';
+
   bloqueAlineacionId.value = null;
   bloqueActivoId.value = null;
 }
@@ -440,7 +446,10 @@ onBeforeUnmount(() => {
           :ref="(elemento) => registrarEditable(elemento, bloque.id)"
           class="bloque-texto__contenido"
           :class="bloque.clase"
-          :style="{ textAlign: bloque.alineacion }"
+          :style="{
+            textAlign: bloque.alineacion,
+            color: bloque.color || '#FFFFFF',
+          }"
           :data-placeholder="bloque.placeholder"
           contenteditable="true"
           spellcheck="true"
@@ -601,7 +610,7 @@ onBeforeUnmount(() => {
 
     <LandingBuilderModalAlineacionTexto
       ref="modalAlineacionTexto"
-      @seleccionar-alineacion="seleccionarAlineacion"
+      @guardar-estilos="guardarEstilosBloque"
     />
   </section>
 </template>

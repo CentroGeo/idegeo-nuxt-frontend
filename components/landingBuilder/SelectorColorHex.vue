@@ -16,6 +16,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
+const inputColor = ref(null);
+
 const coloresRapidos = [
   {
     nombre: 'Negro',
@@ -31,56 +33,77 @@ const coloresRapidos = [
   },
 ];
 
-const valorLocal = computed({
-  get: () => props.modelValue,
-  set: (valor) => emit('update:modelValue', valor),
-});
-
 const colorValido = computed(() => /^#[0-9A-F]{6}$/i.test(props.modelValue));
 
-function normalizarColor() {
-  let valor = props.modelValue.trim().toUpperCase();
-
-  if (valor && !valor.startsWith('#')) {
-    valor = `#${valor}`;
+const colorSeguro = computed(() => {
+  if (colorValido.value) {
+    return props.modelValue.toUpperCase();
   }
 
-  emit('update:modelValue', valor);
+  return '#FFFFFF';
+});
+
+function abrirPaletaColor() {
+  inputColor.value?.click();
 }
 
 function seleccionarColor(color) {
-  emit('update:modelValue', color);
+  emit('update:modelValue', color.toUpperCase());
+}
+
+function seleccionarColorNativo(event) {
+  const color = event.target.value;
+
+  seleccionarColor(color);
 }
 
 function estaSeleccionado(color) {
-  return props.modelValue.toUpperCase() === color;
+  return colorSeguro.value === color;
 }
 </script>
 
 <template>
   <div class="selector-color">
+    <label class="selector-color__etiqueta" :for="id">
+      {{ etiqueta }}
+    </label>
+
     <div class="selector-color__controles">
-      <div class="selector-color__entrada">
+      <button
+        type="button"
+        class="selector-color__boton-paleta"
+        :aria-label="`Abrir paleta para ${etiqueta.toLowerCase()}`"
+        :title="`Abrir paleta para ${etiqueta.toLowerCase()}`"
+        @click="abrirPaletaColor"
+      >
         <span
           class="selector-color__muestra"
-          :style="{
-            backgroundColor: colorValido ? modelValue : 'transparent',
-          }"
+          :style="{ backgroundColor: colorSeguro }"
           aria-hidden="true"
         />
 
-        <input
-          :id="id"
-          v-model="valorLocal"
-          type="text"
-          inputmode="text"
-          maxlength="7"
-          placeholder="#FFFFFF"
-          :aria-label="etiqueta"
-          :aria-describedby="`${id}-ayuda`"
-          @blur="normalizarColor"
-        />
-      </div>
+        <span class="selector-color__valor">
+          {{ colorSeguro }}
+        </span>
+
+        <span class="selector-color__icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 3a9 9 0 0 0 0 18h1.2a1.8 1.8 0 0 0 1.2-3.15 1.25 1.25 0 0 1 .82-2.2H17a4 4 0 0 0 4-4C21 6.9 17 3 12 3ZM7.4 11.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm3-3.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm3.8 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm3 3.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+      </button>
+
+      <input
+        :id="id"
+        ref="inputColor"
+        class="selector-color__input-nativo"
+        type="color"
+        :value="colorSeguro"
+        @input="seleccionarColorNativo"
+      />
 
       <div
         class="selector-color__opciones"
@@ -104,9 +127,7 @@ function estaSeleccionado(color) {
       </div>
     </div>
 
-    <p :id="`${id}-ayuda`" class="selector-color__ayuda">
-      Usa un color hexadecimal con formato #RRGGBB.
-    </p>
+    <p class="selector-color__ayuda">Selecciona un color desde la paleta o usa un color rápido.</p>
   </div>
 </template>
 
@@ -116,7 +137,12 @@ function estaSeleccionado(color) {
   width: 100%;
   min-width: 0;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+
+  &__etiqueta {
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
 
   &__controles {
     display: flex;
@@ -126,33 +152,73 @@ function estaSeleccionado(color) {
     gap: 10px;
   }
 
-  &__entrada {
-    position: relative;
-    width: 220px;
-    max-width: 220px;
-    min-width: 160px;
-    flex: 0 1 220px;
+  &__boton-paleta {
+    display: inline-grid;
+    width: min(260px, 100%);
+    min-height: 42px;
+    grid-template-columns: 24px 1fr 32px;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 6px 6px 10px;
+    border: 1px solid rgb(255 255 255 / 52%);
+    border-radius: 8px;
+    background: rgb(255 255 255 / 4%);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
 
-    input {
-      width: 100%;
-      min-width: 0;
-      padding-left: 38px;
-      box-sizing: border-box;
-      text-transform: uppercase;
+    &:hover,
+    &:focus-visible {
+      border-color: rgb(255 255 255 / 78%);
+      background: rgb(255 255 255 / 8%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid currentcolor;
+      outline-offset: 3px;
     }
   }
 
   &__muestra {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgb(255 255 255 / 68%);
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 22%);
+  }
+
+  &__valor {
+    min-width: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  &__icono {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: rgb(255 255 255 / 8%);
+    color: currentcolor;
+
+    svg {
+      width: 17px;
+      height: 17px;
+    }
+  }
+
+  &__input-nativo {
     position: absolute;
-    top: 50%;
-    left: 11px;
-    width: 17px;
-    height: 17px;
-    border: 1px solid rgb(128 128 128 / 60%);
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
     pointer-events: none;
-    transform: translateY(-50%);
   }
 
   &__opciones {
@@ -163,8 +229,8 @@ function estaSeleccionado(color) {
   }
 
   &__circulo {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: 2px solid rgb(128 128 128 / 45%);
     border-radius: 50%;
@@ -202,13 +268,16 @@ function estaSeleccionado(color) {
 @media (max-width: 520px) {
   .selector-color {
     &__controles {
-      flex-wrap: wrap;
+      align-items: flex-start;
+      flex-direction: column;
     }
 
-    &__entrada {
+    &__boton-paleta {
       width: 100%;
-      max-width: none;
-      flex: 1 1 100%;
+    }
+
+    &__opciones {
+      width: 100%;
     }
   }
 }
