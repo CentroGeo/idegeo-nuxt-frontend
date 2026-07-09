@@ -22,6 +22,8 @@ function clonarBloquesLanding(listaBloques = []) {
 }
 
 const modalSeleccionBloque = ref(null);
+const modalCarrusel = ref(null);
+const bloqueCarruselEditandoId = ref(null);
 
 const bloques = ref(clonarBloquesLanding(props.modelValue));
 
@@ -71,6 +73,12 @@ const tiposBloquePadre = [
     etiqueta: 'Sección de texto',
     descripcion: 'Bloque editable con encabezados y párrafos.',
     icono: 'T',
+  },
+  {
+    id: 'carrusel',
+    etiqueta: 'Carrusel',
+    descripcion: 'Bloque con varias diapositivas de imagen y texto.',
+    icono: '▤',
   },
 ];
 
@@ -154,6 +162,12 @@ function crearDatosTexto() {
   };
 }
 
+function crearDatosCarrusel() {
+  return {
+    diapositivas: [],
+  };
+}
+
 function crearDatosPorTipo(tipoBloque) {
   if (tipoBloque.id === 'portada') {
     return crearDatosPortada();
@@ -161,6 +175,10 @@ function crearDatosPorTipo(tipoBloque) {
 
   if (tipoBloque.id === 'texto') {
     return crearDatosTexto();
+  }
+
+  if (tipoBloque.id === 'carrusel') {
+    return crearDatosCarrusel();
   }
 
   return {};
@@ -175,11 +193,7 @@ function crearBloque(tipoBloque) {
   };
 }
 
-function seleccionarBloque(tipoBloque) {
-  if (estaDeshabilitado(tipoBloque)) return;
-
-  const nuevoBloque = crearBloque(tipoBloque);
-
+function insertarBloque(nuevoBloque) {
   if (contextoAgregar.value.tipo === 'despues') {
     const indice = bloques.value.findIndex(
       (bloque) => bloque.id === contextoAgregar.value.bloqueId
@@ -193,8 +207,48 @@ function seleccionarBloque(tipoBloque) {
   } else {
     bloques.value.push(nuevoBloque);
   }
+}
 
+function seleccionarBloque(tipoBloque) {
+  if (estaDeshabilitado(tipoBloque)) return;
+
+  if (tipoBloque.id === 'carrusel') {
+    cerrarModalAgregarBloque();
+    bloqueCarruselEditandoId.value = null;
+    modalCarrusel.value?.abrirModal();
+    return;
+  }
+
+  const nuevoBloque = crearBloque(tipoBloque);
+
+  insertarBloque(nuevoBloque);
   cerrarModalAgregarBloque();
+}
+
+function abrirEdicionCarrusel(bloqueId) {
+  const bloque = bloques.value.find((b) => b.id === bloqueId);
+  if (!bloque) return;
+
+  bloqueCarruselEditandoId.value = bloqueId;
+  modalCarrusel.value?.abrirModal(bloque.datos.diapositivas);
+}
+
+function manejarGuardarCarrusel(diapositivas) {
+  if (bloqueCarruselEditandoId.value) {
+    const bloque = bloques.value.find((b) => b.id === bloqueCarruselEditandoId.value);
+
+    if (bloque) {
+      bloque.datos.diapositivas = diapositivas;
+    }
+
+    bloqueCarruselEditandoId.value = null;
+    return;
+  }
+
+  const nuevoBloque = crearBloque({ id: 'carrusel', etiqueta: 'Carrusel' });
+  nuevoBloque.datos.diapositivas = diapositivas;
+
+  insertarBloque(nuevoBloque);
 }
 
 function eliminarBloque(bloqueId) {
@@ -241,6 +295,7 @@ function moverBloqueAbajo(bloqueId) {
 function obtenerEtiquetaBloque(bloque) {
   if (bloque.tipo === 'portada') return 'Portada';
   if (bloque.tipo === 'texto') return 'Sección de texto';
+  if (bloque.tipo === 'carrusel') return 'Carrusel';
 
   return 'Bloque';
 }
@@ -256,10 +311,15 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="lienzo-bloques contenedor" aria-label="Constructor de landing page por bloques">
+    <!-- Si el lienzo está vacío (length === 0) -->
     <div v-if="!bloques.length" class="lienzo-bloques__vacio">
       <h3>Tu lienzo está vacío</h3>
+      <p class="m-b-3">Presiona el botón para agregar una portada o una sección de texto.</p>
 
-      <p>Presiona el botón para agregar una portada o una sección de texto.</p>
+      <!-- Agregar este botón aquí adentro -->
+      <button type="button" class="boton-primario" @click="abrirModalAgregarBloque('final')">
+        Agregar bloque
+      </button>
     </div>
 
     <div v-else class="lienzo-bloques__lista">
@@ -322,6 +382,17 @@ onBeforeUnmount(() => {
             </button>
 
             <button
+              v-if="bloque.tipo === 'carrusel'"
+              type="button"
+              class="lienzo-bloques__accion"
+              title="Editar carrusel"
+              aria-label="Editar carrusel"
+              @click="abrirEdicionCarrusel(bloque.id)"
+            >
+              Editar carrusel
+            </button>
+
+            <button
               type="button"
               class="lienzo-bloques__accion"
               title="Agregar bloque debajo"
@@ -369,6 +440,11 @@ onBeforeUnmount(() => {
           <LandingBuilderEditorBloquesTexto
             v-else-if="bloque.tipo === 'texto'"
             v-model="bloque.datos.bloquesTexto"
+          />
+
+          <LandingBuilderCarruselVistaPrevia
+            v-else-if="bloque.tipo === 'carrusel'"
+            :diapositivas="bloque.datos.diapositivas"
           />
         </div>
       </article>
@@ -458,6 +534,11 @@ onBeforeUnmount(() => {
         </template>
       </SisdaiModal>
     </ClientOnly>
+
+    <LandingBuilderModalAgregarCarrusel
+      ref="modalCarrusel"
+      @guardar-carrusel="manejarGuardarCarrusel"
+    />
   </section>
 </template>
 
