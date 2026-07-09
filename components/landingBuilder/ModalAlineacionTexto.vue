@@ -1,9 +1,11 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
-const emit = defineEmits(['seleccionar-alineacion']);
+const emit = defineEmits(['guardar-estilos']);
 
 const modalAlineacion = ref(null);
+const alineacionSeleccionada = ref('left');
+const colorTexto = ref('#FFFFFF');
 
 const opciones = [
   {
@@ -24,9 +26,18 @@ const opciones = [
     descripcion: 'Alinear texto al final',
     icono: '→',
   },
+  {
+    id: 'justify',
+    etiqueta: 'Justificar',
+    descripcion: 'Alinear texto a ambos lados',
+    icono: '☰',
+  },
 ];
 
-function abrirModal() {
+function abrirModal(valores = {}) {
+  alineacionSeleccionada.value = valores.alineacion || 'left';
+  colorTexto.value = valores.color || '#FFFFFF';
+
   modalAlineacion.value?.abrirModal();
 }
 
@@ -35,7 +46,15 @@ function cerrarModal() {
 }
 
 function seleccionarAlineacion(alineacion) {
-  emit('seleccionar-alineacion', alineacion);
+  alineacionSeleccionada.value = alineacion;
+}
+
+function guardarEstilos() {
+  emit('guardar-estilos', {
+    alineacion: alineacionSeleccionada.value,
+    color: colorTexto.value,
+  });
+
   cerrarModal();
 }
 
@@ -104,6 +123,10 @@ defineExpose({
             :key="opcion.id"
             type="button"
             class="modal-alineacion__opcion"
+            :class="{
+              'modal-alineacion__opcion--activa': alineacionSeleccionada === opcion.id,
+            }"
+            :aria-pressed="alineacionSeleccionada === opcion.id"
             @click="seleccionarAlineacion(opcion.id)"
           >
             <span class="modal-alineacion__icono">
@@ -119,6 +142,24 @@ defineExpose({
                 {{ opcion.descripcion }}
               </span>
             </span>
+          </button>
+        </div>
+
+        <div class="modal-alineacion__color">
+          <LandingBuilderSelectorColorHex
+            id="bloque-texto-color"
+            v-model="colorTexto"
+            etiqueta="Color del texto"
+          />
+        </div>
+
+        <div class="modal-alineacion__acciones">
+          <button type="button" class="boton-secundario boton-chico" @click="cerrarModal">
+            Cancelar
+          </button>
+
+          <button type="button" class="boton-primario boton-chico" @click="guardarEstilos">
+            Guardar cambios
           </button>
         </div>
       </template>
@@ -243,12 +284,39 @@ defineExpose({
     color: var(--texto-secundario);
     font-size: 0.8125rem;
   }
+  &__opcion--activa {
+    border-color: rgb(255 255 255 / 46%);
+    background: rgb(255 255 255 / 12%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 12%);
+  }
+
+  &__color {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgb(255 255 255 / 12%);
+  }
+
+  &__acciones {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
 }
 
 @media (max-width: 767px) {
   .modal-alineacion {
     :deep(.modal-contenedor) {
       width: calc(100vw - 24px);
+    }
+    &__acciones {
+      align-items: stretch;
+      flex-direction: column-reverse;
+
+      button {
+        width: 100%;
+      }
     }
   }
 }

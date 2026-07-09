@@ -257,6 +257,24 @@ onBeforeUnmount(() => {
 <template>
   <section class="lienzo-bloques contenedor" aria-label="Constructor de landing page por bloques">
     <div v-if="!bloques.length" class="lienzo-bloques__vacio">
+      <button
+        type="button"
+        class="lienzo-bloques__boton-agregar lienzo-bloques__boton-agregar--grande"
+        aria-label="Agregar primer bloque"
+        title="Agregar bloque"
+        @click="abrirModalAgregarBloque('final')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 5v14M5 12h14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
       <h3>Tu lienzo está vacío</h3>
 
       <p>Presiona el botón para agregar una portada o una sección de texto.</p>
