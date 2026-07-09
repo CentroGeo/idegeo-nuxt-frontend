@@ -1,4 +1,19 @@
 <script setup>
+const props = defineProps({
+  modelValue: {
+    type: Array,
+    default: () => [],
+  },
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+function clonarBloquesTexto(listaBloques = []) {
+  return listaBloques.map((bloque) => ({
+    ...bloque,
+  }));
+}
+
 const editorBloques = ref(null);
 const modalAlineacionTexto = ref(null);
 
@@ -43,7 +58,32 @@ const tiposBloque = [
   },
 ];
 
-const bloques = ref([]);
+const bloques = ref(clonarBloquesTexto(props.modelValue));
+
+watch(
+  () => props.modelValue,
+  (nuevosBloques) => {
+    const bloquesActualesTexto = JSON.stringify(bloques.value);
+    const bloquesNuevosTexto = JSON.stringify(nuevosBloques);
+
+    if (bloquesActualesTexto !== bloquesNuevosTexto) {
+      bloques.value = clonarBloquesTexto(nuevosBloques);
+    }
+  },
+  {
+    deep: true,
+  }
+);
+
+watch(
+  bloques,
+  (nuevosBloques) => {
+    emit('update:modelValue', clonarBloquesTexto(nuevosBloques));
+  },
+  {
+    deep: true,
+  }
+);
 
 const tieneBloquesConContenido = computed(() =>
   bloques.value.some((bloque) => bloque.texto.trim())
@@ -90,6 +130,12 @@ function registrarEditable(elemento, bloqueId) {
       [bloqueId]: elemento,
     };
 
+    const bloque = bloques.value.find((item) => item.id === bloqueId);
+
+    if (bloque && document.activeElement !== elemento && elemento.textContent !== bloque.texto) {
+      elemento.textContent = bloque.texto;
+    }
+
     return;
   }
 
@@ -97,6 +143,7 @@ function registrarEditable(elemento, bloqueId) {
     Object.entries(elementosEditables.value).filter(([id]) => id !== bloqueId)
   );
 }
+
 function enfocarBloque(bloqueId) {
   nextTick(() => {
     const elemento = elementosEditables.value[bloqueId];
@@ -561,11 +608,15 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .editor-bloques {
+  position: relative;
+  z-index: 40;
+  overflow: visible;
   padding-top: 28px;
   padding-bottom: 28px;
 
   &__lista {
     display: flex;
+    overflow: visible;
     flex-direction: column;
     gap: 2px;
   }
@@ -573,7 +624,7 @@ onBeforeUnmount(() => {
   &__inicio,
   &__linea-final {
     position: relative;
-    z-index: 1;
+    z-index: 200;
     display: flex;
     min-height: 44px;
     align-items: center;
@@ -622,6 +673,7 @@ onBeforeUnmount(() => {
 
 .bloque-texto {
   position: relative;
+  z-index: 1;
   display: block;
   min-height: 44px;
   margin-top: 4px;
@@ -646,6 +698,10 @@ onBeforeUnmount(() => {
       background-color 0.15s ease,
       border-color 0.15s ease,
       box-shadow 0.15s ease;
+  }
+
+  &--activo {
+    z-index: 250;
   }
 
   &--activo::before {
@@ -764,7 +820,7 @@ onBeforeUnmount(() => {
     position: absolute;
     top: 4px;
     left: 0;
-    z-index: 80;
+    z-index: 1000;
     width: min(320px, calc(100vw - 48px));
     overflow: hidden;
     border: 1px solid rgb(255 255 255 / 18%);
@@ -827,19 +883,21 @@ onBeforeUnmount(() => {
 
 @media (hover: none), (pointer: coarse), (max-width: 767px) {
   .editor-bloques {
-    padding-top: 22px;
-    padding-bottom: 22px;
+    padding-top: 18px;
+    padding-bottom: 20px;
 
     &__inicio,
     &__linea-final {
-      min-height: 40px;
+      min-height: 42px;
       padding-left: 0;
+      padding-right: 0;
     }
 
     &__menu-inicial,
     &__menu-final {
+      top: 44px;
       left: 0;
-      width: min(300px, calc(100vw - 32px));
+      width: min(300px, calc(100vw - 48px));
     }
   }
 

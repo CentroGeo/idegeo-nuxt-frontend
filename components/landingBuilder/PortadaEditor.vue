@@ -1,4 +1,50 @@
 <script setup>
+const props = defineProps({
+  modelValue: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+const datosInicialesPortada = {
+  titulo: 'Constructor de landing page',
+  subtitulo:
+    'Personaliza los textos, el logotipo y la información principal que se mostrará en la página de inicio.',
+  colorTitulo: '#FFFFFF',
+  colorSubtitulo: '#FFFFFF',
+  fondo: {
+    tipo: 'video',
+    url: '/inicio/Portada_SIGIC_1_1.mp4',
+  },
+  posicionFondo: {
+    x: 50,
+    y: 50,
+  },
+  posicionFondoGuardada: {
+    x: 50,
+    y: 50,
+  },
+};
+
+const datosPortada = {
+  ...datosInicialesPortada,
+  ...props.modelValue,
+  fondo: {
+    ...datosInicialesPortada.fondo,
+    ...props.modelValue.fondo,
+  },
+  posicionFondo: {
+    ...datosInicialesPortada.posicionFondo,
+    ...props.modelValue.posicionFondo,
+  },
+  posicionFondoGuardada: {
+    ...datosInicialesPortada.posicionFondoGuardada,
+    ...props.modelValue.posicionFondoGuardada,
+  },
+};
+
 const modalCambiarPortada = ref(null);
 const modalEditarTextoPortada = ref(null);
 const portadaEditor = ref(null);
@@ -7,13 +53,11 @@ const reposicionando = ref(false);
 const arrastrandoFondo = ref(false);
 
 const posicionFondo = ref({
-  x: 50,
-  y: 50,
+  ...datosPortada.posicionFondo,
 });
 
 const posicionFondoGuardada = ref({
-  x: 50,
-  y: 50,
+  ...datosPortada.posicionFondoGuardada,
 });
 
 const inicioArrastre = ref({
@@ -23,18 +67,13 @@ const inicioArrastre = ref({
   posicionY: 50,
 });
 
-const tituloPortada = ref('Constructor de landing page');
-
-const subtituloPortada = ref(
-  'Personaliza los textos, el logotipo y la información principal que se mostrará en la página de inicio.'
-);
-
-const colorTituloPortada = ref('#FFFFFF');
-const colorSubtituloPortada = ref('#FFFFFF');
+const tituloPortada = ref(datosPortada.titulo);
+const subtituloPortada = ref(datosPortada.subtitulo);
+const colorTituloPortada = ref(datosPortada.colorTitulo);
+const colorSubtituloPortada = ref(datosPortada.colorSubtitulo);
 
 const fondoActual = ref({
-  tipo: 'video',
-  url: '/inicio/Portada_SIGIC_1_1.mp4',
+  ...datosPortada.fondo,
 });
 
 let urlTemporal;
@@ -53,6 +92,40 @@ const nombreArchivoDescarga = computed(() => {
 const estiloFondo = computed(() => ({
   objectPosition: `${posicionFondo.value.x}% ${posicionFondo.value.y}%`,
 }));
+
+function emitirCambiosPortada() {
+  emit('update:modelValue', {
+    titulo: tituloPortada.value,
+    subtitulo: subtituloPortada.value,
+    colorTitulo: colorTituloPortada.value,
+    colorSubtitulo: colorSubtituloPortada.value,
+    fondo: {
+      ...fondoActual.value,
+    },
+    posicionFondo: {
+      ...posicionFondo.value,
+    },
+    posicionFondoGuardada: {
+      ...posicionFondoGuardada.value,
+    },
+  });
+}
+
+watch(
+  [
+    tituloPortada,
+    subtituloPortada,
+    colorTituloPortada,
+    colorSubtituloPortada,
+    fondoActual,
+    posicionFondo,
+    posicionFondoGuardada,
+  ],
+  emitirCambiosPortada,
+  {
+    deep: true,
+  }
+);
 
 function esDispositivoTactil() {
   return import.meta.client && window.matchMedia('(hover: none), (pointer: coarse)').matches;
