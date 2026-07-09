@@ -50,7 +50,7 @@ function limpiarBusqueda() {
 }
 
 function alCrear(mapa) {
-  navigateTo(`/geocontenidos/mapas/${mapa.id}/editar`);
+  navigateTo(`/geocontenidos/mapas/${mapa.id}`);
 }
 
 watch(paginaActual, (p) => cargar(p));
