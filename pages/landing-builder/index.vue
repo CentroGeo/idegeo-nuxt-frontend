@@ -14,7 +14,12 @@ onMounted(() => {
   <div class="landing-builder-pagina">
     <!-- Portada del constructor -->
     <LandingBuilderLienzoBloques />
-    <!-- Formulario existente -->
+
+    <!--
+    Formulario existente (config, editor de portada/sección/logo, tarjetas y vista previa).
+    Se deja comentado mientras el lienzo en blanco reemplaza este flujo; no se elimina por si
+    se necesita recuperar la lógica más adelante.
+
     <section
       class="contenedor m-y-4 landing-builder-configuracion"
       aria-labelledby="landing-builder-configuracion-titulo"
@@ -33,7 +38,6 @@ onMounted(() => {
       </div>
 
       <div v-else class="landing-builder-contenido">
-        <!-- Panel de edición -->
         <div class="landing-builder-panel">
           <h3 class="landing-builder-panel__titulo">Editor</h3>
 
@@ -61,7 +65,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Vista previa -->
         <div class="landing-builder-panel landing-builder-panel--vista-previa">
           <h3 class="landing-builder-panel__titulo">Vista previa</h3>
 
@@ -78,6 +81,7 @@ onMounted(() => {
         </div>
       </div>
     </section>
+    -->
   </div>
 </template>
 

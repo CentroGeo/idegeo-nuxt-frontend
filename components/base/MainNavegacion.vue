@@ -111,7 +111,7 @@ function seleccionarEnlaceLogoSecundario(enlace) {
         <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
       </li>
       <li v-if="mostrarLandingBuilder && status === 'authenticated'">
-        <NuxtLink class="nav-hipervinculo" to="/landing-builder">Landing Builder</NuxtLink>
+        <NuxtLink class="nav-hipervinculo" to="/landing-builder">Constructor de Páginas</NuxtLink>
       </li>
       <li v-if="mostrarAcercaDe">
         <NuxtLink class="nav-hipervinculo" to="/acerca-de">Acerca de</NuxtLink>
