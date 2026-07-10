@@ -78,7 +78,8 @@ onMounted(cargarEstilos);
 
 <style lang="scss" scoped>
 .selector-estilo {
-  margin-top: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .selector-input {

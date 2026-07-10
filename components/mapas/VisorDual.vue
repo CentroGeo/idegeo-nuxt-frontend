@@ -121,6 +121,22 @@ const vistaDer = ref({ ...vistaInicial });
 
 let sincronizando = false;
 
+// Cambios externos (panel de capas): mover ambos mapas al nuevo zoom/centro.
+// Se ignora si viene del paneo interno (sincronizando) o si ya coincide.
+watch(
+  () => [props.mapa.zoom, props.mapa.center_lat, props.mapa.center_long],
+  ([z, lat, lng]) => {
+    if (sincronizando) return;
+    const centro = Array.isArray(vistaIzq.value.centro) ? vistaIzq.value.centro : [];
+    const mismoZoom = Number(z) === Number(vistaIzq.value.acercamiento);
+    const mismoCentro = Number(lat) === Number(centro[0]) && Number(lng) === Number(centro[1]);
+    if (mismoZoom && mismoCentro) return;
+    const nueva = { centro: [lat, lng], acercamiento: z };
+    vistaIzq.value = { ...nueva };
+    vistaDer.value = { ...nueva };
+  }
+);
+
 function sincronizarDesdeIzq({ acercamiento, centro }) {
   if (sincronizando) return;
   sincronizando = true;

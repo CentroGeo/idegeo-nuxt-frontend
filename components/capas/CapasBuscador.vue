@@ -4,6 +4,12 @@ import { computed, onMounted, ref, watch } from 'vue';
 const props = defineProps({
   existingLayerIds: { type: Array, default: () => [] },
   selectedLayerIds: { type: Array, default: () => [] },
+  // Estrategia para el nombre visible de una categoría. Por defecto usa los
+  // campos que expone GeoNode; geohistorias pasa una que traduce al español.
+  nombreCategoria: {
+    type: Function,
+    default: (cat) => cat.gn_description || cat.description || cat.identifier,
+  },
 });
 
 const emit = defineEmits(['select-layer']);
@@ -40,7 +46,10 @@ async function cargarCategorias() {
     const res = await fetch(`${api}/categories/?page_size=200`, { headers: headers() });
     if (!res.ok) throw new Error('error');
     const data = await res.json();
-    categorias.value = data.categories || data.results || [];
+    const lista = data.categories || data.results || [];
+    categorias.value = [...lista].sort((a, b) =>
+      props.nombreCategoria(a).localeCompare(props.nombreCategoria(b))
+    );
     if (!categoriaSeleccionada.value && categorias.value.length) {
       categoriaSeleccionada.value = categorias.value[0];
     }
@@ -131,7 +140,7 @@ function limpiarHtml(s) {
 }
 
 watch(categoriaSeleccionada, (n, o) => {
-  if (n?.id !== o?.id && !busqueda.value) cargarCapas();
+  if (n?.identifier !== o?.identifier && !busqueda.value) cargarCapas();
 });
 
 onMounted(async () => {
@@ -161,14 +170,12 @@ onMounted(async () => {
           <ul v-else-if="categorias.length" class="lista-categorias">
             <li
               v-for="cat in categorias"
-              :key="cat.id"
+              :key="cat.identifier"
               class="item-categoria"
-              :class="{ activa: categoriaSeleccionada?.id === cat.id }"
+              :class="{ activa: categoriaSeleccionada?.identifier === cat.identifier }"
               @click="elegirCategoria(cat)"
             >
-              <span class="cat-nombre">
-                {{ cat.gn_description || cat.description || cat.identifier }}
-              </span>
+              <span class="cat-nombre">{{ nombreCategoria(cat) }}</span>
               <span class="cat-contador">{{ cat.count ?? 0 }}</span>
             </li>
           </ul>

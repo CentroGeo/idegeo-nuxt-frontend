@@ -1,6 +1,7 @@
 <script setup>
 import { valoresPorDefecto as valoresModal } from '~/components/geocontenidos/loaderModal.vue';
-import { wait } from '~/utils/consulta';
+import { useEscenasCapasAdapter } from '~/composables/capas/useEscenasCapasAdapter';
+import { categoriesNamesInSpanish, wait } from '~/utils/consulta';
 
 definePageMeta({ middleware: 'auth' });
 
@@ -13,6 +14,20 @@ const { escenario } = useRoute().params;
 
 const escenas = ref([]);
 const estaCargando = ref(false);
+
+const modalMarcadores = ref(null);
+function abrirModalMarcadores(id) {
+  modalMarcadores.value?.abrir(id);
+}
+
+// Modal de capas (componente compartido components/capas/CapasModalAgregar).
+const escenaCapasId = ref(null);
+const abiertoCapas = ref(false);
+const adaptadorCapas = useEscenasCapasAdapter(escenaCapasId);
+function abrirModalCapas(id) {
+  escenaCapasId.value = id;
+  abiertoCapas.value = true;
+}
 
 async function cargarEscenas() {
   estaCargando.value = true;
@@ -176,21 +191,23 @@ async function Eliminar(id) {
                 Editar escena
               </NuxtLink>
 
-              <NuxtLink
+              <button
+                type="button"
                 class="boton boton-chico boton-secundario"
-                :to="`/geocontenidos/geohistorias/${escenario}/escenas/${escena.id}/capas`"
+                @click="abrirModalCapas(escena.id)"
               >
                 <span :class="`pictograma-${escena.layers.length ? 'editar' : 'agregar'} m-r-1`" />
                 {{ escena.layers.length ? 'Editar' : 'Agregar' }} capas
-              </NuxtLink>
+              </button>
 
-              <NuxtLink
+              <button
+                type="button"
                 class="boton boton-chico boton-secundario"
-                :to="`/geocontenidos/geohistorias/${escenario}/escenas/${escena.id}/marcadores`"
+                @click="abrirModalMarcadores(escena.id)"
               >
                 <span :class="`pictograma-${escena.markers.length ? 'editar' : 'agregar'} m-r-1`" />
                 {{ escena.markers.length ? 'Editar' : 'Agregar' }} marcadores
-              </NuxtLink>
+              </button>
 
               <button class="boton boton-chico boton-primario" @click="Eliminar(escena.id)">
                 <span class="pictograma-eliminar m-r-1" />
@@ -205,6 +222,22 @@ async function Eliminar(id) {
         <button class="boton-primario" @click="guardarCambios">Guardar orden</button>
       </section>
     </template>
+
+    <CapasModalAgregar
+      v-model:abierto="abiertoCapas"
+      :adaptador="adaptadorCapas"
+      :opciones="{
+        contexto: 'escena',
+        titulo: 'Agregar/Editar capas',
+        mostrarOpacidad: true,
+        mostrarEstilo: true,
+        permitirDuplicados: true,
+        nombreCategoria: (c) => categoriesNamesInSpanish[c.identifier] ?? c.identifier,
+      }"
+      @guardado="cargarEscenas"
+    />
+
+    <GeocontenidosModalAgregarMarcadores ref="modalMarcadores" @guardado="cargarEscenas" />
 
     <GeocontenidosLoaderModal v-bind="modal" />
   </div>

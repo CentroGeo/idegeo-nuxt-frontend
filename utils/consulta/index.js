@@ -72,6 +72,7 @@ export const categoriesInSpanish = {
   'Sensores remotos y mapas base': 'Sensores remotos y mapas base',
 };
 export const categoriesNamesInSpanish = {
+  externalCatalog: 'Catálogo externo',
   biota: 'Biota',
   boundaries: 'Fronteras',
   climatologyMeteorologyAtmosphere: 'Climatología, Meteorología y Atmósfera',

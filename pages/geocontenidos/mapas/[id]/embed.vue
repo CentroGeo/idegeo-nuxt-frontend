@@ -47,10 +47,18 @@ onUnmounted(() => {
 
     <template v-else>
       <div :key="mapasStore.activeMap.map_type" class="contenedor-mapa">
-        <MapasVisorMapa
+        <MapasVisor
           v-if="mapasStore.activeMap.map_type === 'regular'"
-          :mapa="mapasStore.activeMap"
+          :vista="{
+            centro: [mapasStore.activeMap.center_lat, mapasStore.activeMap.center_long],
+            acercamiento: mapasStore.activeMap.zoom,
+          }"
           :capas="mapasStore.activeLayers"
+          :base-layer="mapasStore.activeMap.base_layer"
+          :opciones="{
+            titulo: mapasStore.activeMap.name,
+            colorControles: mapasStore.activeMap.highlight_color,
+          }"
         />
         <MapasVisorSwipe
           v-else-if="mapasStore.activeMap.map_type === 'swipe'"

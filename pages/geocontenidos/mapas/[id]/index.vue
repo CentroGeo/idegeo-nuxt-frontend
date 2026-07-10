@@ -1,6 +1,9 @@
 <script setup>
+import { useMapaPreview } from '~/composables/mapas/useMapaPreview';
+
 const route = useRoute();
 const mapasStore = useMapasStore();
+const { capturarVisor } = useMapaPreview();
 const { data: session } = useAuth();
 const { esAdmin, cargarEsAdmin } = useEsAdmin();
 
@@ -33,6 +36,32 @@ function abrirEditar() {
   modalEditar.value?.abrir();
 }
 
+// Vista previa de la tarjeta: captura el canvas del visor en pantalla y lo sube.
+const visorRef = ref(null);
+const generandoPreview = ref(false);
+const previewMensaje = ref('');
+
+async function generarVistaPrevia() {
+  if (!visorRef.value || !mapasStore.activeMap) return;
+  generandoPreview.value = true;
+  previewMensaje.value = '';
+  try {
+    const blob = await capturarVisor(visorRef.value, mapasStore.activeMap.map_type);
+    const file = new File([blob], `preview-mapa-${mapasStore.activeMap.id}.png`, {
+      type: 'image/png',
+    });
+    const data = await mapasStore.subirImagenMapa(mapasStore.activeMap.id, file);
+    previewMensaje.value = data
+      ? 'Vista previa actualizada.'
+      : 'No se pudo guardar la vista previa.';
+  } catch (e) {
+    previewMensaje.value = e?.message || 'No se pudo generar la vista previa.';
+  } finally {
+    generandoPreview.value = false;
+    setTimeout(() => (previewMensaje.value = ''), 5000);
+  }
+}
+
 async function alternarVisible({ id, visible }) {
   await mapasStore.actualizarCapa(id, { visible });
 }
@@ -59,9 +88,19 @@ async function eliminarMapa() {
   if (ok) navigateTo('/geocontenidos/mapas');
 }
 
-function cambiarVista(vista) {
-  if (!mapasStore.activeMap) return;
-  mapasStore.activeMap = { ...mapasStore.activeMap, ...vista };
+// Acepta ambos payloads: el del visor ({ acercamiento, centro:[lat, long] }) y
+// el del panel de capas ({ zoom, center_lat, center_long }).
+function cambiarVista(payload) {
+  if (!mapasStore.activeMap || !payload) return;
+  const zoom = payload.acercamiento ?? payload.zoom;
+  const lat = Array.isArray(payload.centro) ? payload.centro[0] : payload.center_lat;
+  const long = Array.isArray(payload.centro) ? payload.centro[1] : payload.center_long;
+  mapasStore.activeMap = {
+    ...mapasStore.activeMap,
+    ...(zoom !== undefined ? { zoom } : {}),
+    ...(lat !== undefined ? { center_lat: lat } : {}),
+    ...(long !== undefined ? { center_long: long } : {}),
+  };
 }
 
 async function guardarVista(vista) {
@@ -121,6 +160,16 @@ onUnmounted(() => {
             <span class="pictograma-editar" aria-hidden="true" />
             &nbsp;{{ editandoCapas ? 'Cerrar Edición' : 'Editar Capas' }}
           </button>
+          <button
+            v-if="puedeEditar"
+            class="boton-secundario"
+            type="button"
+            :disabled="generandoPreview"
+            @click="generarVistaPrevia"
+          >
+            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+            &nbsp;{{ generandoPreview ? 'Generando…' : 'Generar vista previa' }}
+          </button>
           <NuxtLink to="/geocontenidos/mapas" class="boton-secundario">Lista de Mapas</NuxtLink>
           <button class="boton-primario boton-eliminar" type="button" @click="eliminarMapa">
             <span class="pictograma-tache" aria-hidden="true" /> Eliminar mapa
@@ -128,22 +177,35 @@ onUnmounted(() => {
         </div>
       </header>
 
+      <p v-if="previewMensaje" class="texto-secundario m-0">{{ previewMensaje }}</p>
+
       <div class="contenido-visor flex">
         <div :key="mapasStore.activeMap.map_type" class="contenedor-mapa">
-          <MapasVisorMapa
+          <MapasVisor
             v-if="mapasStore.activeMap.map_type === 'regular'"
-            :mapa="mapasStore.activeMap"
+            ref="visorRef"
+            :vista="{
+              centro: [mapasStore.activeMap.center_lat, mapasStore.activeMap.center_long],
+              acercamiento: mapasStore.activeMap.zoom,
+            }"
             :capas="mapasStore.activeLayers"
+            :base-layer="mapasStore.activeMap.base_layer"
+            :opciones="{
+              titulo: mapasStore.activeMap.name,
+              colorControles: mapasStore.activeMap.highlight_color,
+            }"
             @vista="cambiarVista"
           />
           <MapasVisorSwipe
             v-else-if="mapasStore.activeMap.map_type === 'swipe'"
+            ref="visorRef"
             :mapa="mapasStore.activeMap"
             :capas="mapasStore.activeLayers"
             @vista="cambiarVista"
           />
           <MapasVisorDual
             v-else-if="mapasStore.activeMap.map_type === 'dual'"
+            ref="visorRef"
             :mapa="mapasStore.activeMap"
             :capas="mapasStore.activeLayers"
             @vista="cambiarVista"
@@ -197,8 +259,8 @@ a {
   border: 3px solid #e5c743;
   /* Alto definido: el visor (.visor-mapa) usa height:100% y lo llena.
      --altura-visor lo hereda el divisor del swipe. Ajustable. */
-  height: 47rem;
-  --altura-visor: 47rem;
+  height: 45rem;
+  --altura-visor: 45rem;
 }
 
 .boton-eliminar {
