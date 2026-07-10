@@ -13,6 +13,7 @@ const escena = reactive({
   map_center_lat: null,
   map_center_long: null,
   zoom: null,
+  base_layer: 'satellite',
   layers: [],
   markers: [],
 });
@@ -33,6 +34,7 @@ async function consultarEscena() {
   }
 
   Object.assign(escena, datos);
+  if (!escena.base_layer) escena.base_layer = 'satellite';
   valores_estaticos = JSON.stringify(escena);
   modal.visible = false;
 }
@@ -72,7 +74,7 @@ function alMoverVista({ acercamiento, centro }) {
   // console.log(acercamiento, centro);
   escena.map_center_long = centro[0];
   escena.map_center_lat = centro[1];
-  escena.zoom = acercamiento;
+  escena.zoom = Number(acercamiento).toFixed(1);
 }
 const vistaDelMapa = computed(() => {
   const vista = { acercamiento: escena.zoom || 2 };
@@ -159,20 +161,32 @@ const vistaDelMapa = computed(() => {
               id="zoom"
               v-model="escena.zoom"
               type="number"
-              step="any"
+              step="0.1"
               max="90"
               min="-90"
               required
             />
           </fieldset>
+
+          <fieldset>
+            <label for="capa-base">Capa base</label>
+            <select id="capa-base" v-model="escena.base_layer">
+              <option value="osm">OpenStreetMap</option>
+              <option value="carto">Carto Light</option>
+              <option value="carto_dark">Carto Dark</option>
+              <option value="satellite">Satélite</option>
+            </select>
+          </fieldset>
         </div>
 
-        <GeocontenidosEscenaMapa
+        <MapasVisor
           :vista="vistaDelMapa"
           class="columna-8-mov columna-10-esc"
           :capas="escena.layers"
           :marcadores="escena.markers"
-          @al-mover-vista="alMoverVista"
+          :base-layer="escena.base_layer"
+          :opciones="{ titulo: escena.name }"
+          @vista="alMoverVista"
         />
       </div>
     </section>

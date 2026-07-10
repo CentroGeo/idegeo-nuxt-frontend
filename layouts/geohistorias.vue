@@ -1,30 +1,26 @@
 <script setup>
-import SisdaiMenuAccesibilidad from '@centrogeomx/sisdai-componentes/src/componentes/menu-accesibilidad/SisdaiMenuAccesibilidad.vue';
-import SisdaiNavegacionGobMx from '@centrogeomx/sisdai-componentes/src/componentes/navegacion-gob-mx/SisdaiNavegacionGobMx.vue';
-import SisdaiPiePaginaGobMx from '@centrogeomx/sisdai-componentes/src/componentes/pie-pagina-gob-mx/SisdaiPiePaginaGobMx.vue';
-import { useAccesibilidadStore } from '~/stores/accesibilidad';
-
-const accesibilidadStore = useAccesibilidadStore();
+// Font Awesome 6 para los iconos (fa-solid) de los controles del visor de mapa
+// (MapasControlInfo, MapasControlCapaBase). El resto de layouts ya lo cargan.
+useHead({
+  link: [
+    {
+      rel: 'stylesheet',
+      href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',
+    },
+  ],
+});
 </script>
 
 <template>
   <div>
-    <a href="#principal" class="ir-contenido-principal">Ir a contenido principal</a>
-    <SisdaiNavegacionGobMx />
-
     <div class="contenido vista-geohistorias">
       <slot />
     </div>
-
-    <client-only>
-      <SisdaiMenuAccesibilidad :objeto-store="accesibilidadStore" perfil-color="sigic" />
-    </client-only>
-    <SisdaiPiePaginaGobMx />
   </div>
 </template>
 
 <style lang="scss" scoped>
 .vista-geohistorias {
-  min-height: calc(100vh - 51px);
+  height: 100%;
 }
 </style>

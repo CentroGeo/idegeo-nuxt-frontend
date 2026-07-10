@@ -71,6 +71,11 @@ async function redirigir(escenaId) {
 
       <NuxtPage
         :titulo="escenario.datos.name"
+        :gradiente="[
+          escenario.datos.scenes_layout_styles.gradient_start,
+          escenario.datos.scenes_layout_styles.gradient_end,
+        ]"
+        :text-panel="escenario.datos.scenes_layout_styles.text_panel"
         :style="`--ancho-panel-texto: ${escenario.datos.scenes_layout_styles.text_panel}%`"
       />
 
