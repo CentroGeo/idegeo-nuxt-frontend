@@ -80,6 +80,12 @@ const tiposBloquePadre = [
     descripcion: 'Bloque con varias diapositivas de imagen y texto.',
     icono: '▤',
   },
+  {
+    id: 'tarjetas',
+    etiqueta: 'Sección de tarjetas',
+    descripcion: 'Muestra un conjunto de tarjetas (3 columnas) editables en sitio.',
+    icono: '▤',
+  },
 ];
 
 function crearId() {
@@ -168,6 +174,24 @@ function crearDatosCarrusel() {
   };
 }
 
+function crearDatosTarjetas() {
+  return {
+    disposicion: 'vertical',
+    tarjetas: [
+      {
+        id: 'tarjeta-' + Math.random().toString(36).substring(2),
+        titulo: '',
+        descripcion: '',
+        imagenUrl: '/inicio/tarjeta_visualiza.png',
+        tituloTipo: 'h2',
+        tituloAlineacion: 'left',
+        descripcionTipo: 'p',
+        descripcionAlineacion: 'left',
+      },
+    ],
+  };
+}
+
 function crearDatosPorTipo(tipoBloque) {
   if (tipoBloque.id === 'portada') {
     return crearDatosPortada();
@@ -179,6 +203,10 @@ function crearDatosPorTipo(tipoBloque) {
 
   if (tipoBloque.id === 'carrusel') {
     return crearDatosCarrusel();
+  }
+
+  if (tipoBloque.id === 'tarjetas') {
+    return crearDatosTarjetas();
   }
 
   return {};
@@ -296,6 +324,7 @@ function obtenerEtiquetaBloque(bloque) {
   if (bloque.tipo === 'portada') return 'Portada';
   if (bloque.tipo === 'texto') return 'Sección de texto';
   if (bloque.tipo === 'carrusel') return 'Carrusel';
+  if (bloque.tipo === 'tarjetas') return 'Sección de tarjetas';
 
   return 'Bloque';
 }
@@ -464,29 +493,14 @@ onBeforeUnmount(() => {
             v-else-if="bloque.tipo === 'carrusel'"
             :diapositivas="bloque.datos.diapositivas"
           />
+
+          <LandingBuilderSeccionesTarjetasBloque
+            v-else-if="bloque.tipo === 'tarjetas'"
+            :seccion-id="bloque.id"
+            :datos="bloque.datos"
+          />
         </div>
       </article>
-
-      <div class="lienzo-bloques__agregar-final">
-        <button
-          type="button"
-          class="lienzo-bloques__boton-agregar"
-          aria-label="Agregar bloque al final"
-          @click="abrirModalAgregarBloque('final')"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 5v14M5 12h14"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
-        </button>
-
-        <span>Agregar otro bloque</span>
-      </div>
     </div>
 
     <ClientOnly>

@@ -15,7 +15,7 @@ const CAMPOS_REQUERIDOS = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-  const form = formidable({ multiples: false, maxFileSize: TAMANO_MAXIMO_LOGO });
+  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_LOGO });
   const { fields, files } = await new Promise<{
     fields: formidable.Fields;
     files: formidable.Files;
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     });
   });
 
-  const campos: Record<string, string> = {};
+  const campos: Record<string, any> = {};
   for (const campo of CAMPOS_REQUERIDOS) {
     const valor = fields[campo]?.[0]?.trim();
     if (!valor) {
@@ -35,10 +35,42 @@ export default defineEventHandler(async (event) => {
     campos[campo] = valor;
   }
 
-  // Parse optional fields
   if (fields.logoSecundarioUrl?.[0] !== undefined) {
     campos.logoSecundarioUrl = fields.logoSecundarioUrl[0].trim();
   }
+
+  const seccionesRaw = fields.secciones?.[0];
+  const secciones = seccionesRaw ? JSON.parse(seccionesRaw) : [];
+
+  for (const key of Object.keys(files)) {
+    if (key.startsWith('tarjeta_imagen_')) {
+      const parts = key.replace('tarjeta_imagen_', '').split('_');
+      const sectionId = parts[0];
+      const cardId = parts[1];
+      const archivoCard = files[key]?.[0];
+      if (archivoCard) {
+        if (archivoCard.mimetype && TIPOS_LOGO_PERMITIDOS.includes(archivoCard.mimetype)) {
+          const data = await fsp.readFile(archivoCard.filepath);
+          const url = await saveLandingBuilderCardImage(
+            sectionId,
+            cardId,
+            data,
+            archivoCard.mimetype
+          );
+
+          const seccion = secciones.find((s: any) => s.id === sectionId);
+          if (seccion && seccion.datos && seccion.datos.tarjetas) {
+            const card = seccion.datos.tarjetas.find((c: any) => c.id === cardId);
+            if (card) {
+              card.imagenUrl = url;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  campos.secciones = secciones;
 
   let logo: { data: Buffer; mimetype: string } | undefined;
   const archivoLogo = files.logo?.[0];

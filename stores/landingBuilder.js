@@ -27,6 +27,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     logoSecundarioFile: ref(null),
     tarjetas: ref([]),
     tarjetaImagenFiles: ref({}),
+    secciones: ref([]),
     isLoading: ref(false),
     isSaving: ref(false),
     error: ref(null),
@@ -47,6 +48,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.logoSecundarioUrl = config.logoSecundarioUrl;
         this.tarjetas = config.tarjetas ?? [];
         this.tarjetaImagenFiles = {};
+        this.secciones = config.secciones || [];
       } catch (err) {
         console.error('Error al cargar la configuración de la landing page:', err);
         this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
@@ -181,12 +183,55 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           formData.append(`tarjetaImagen_${id}`, archivo);
         }
 
+        const seccionesMetadata = this.secciones.map((sec) => {
+          if (sec.tipo === 'tarjetas' && sec.datos.tarjetas) {
+            return {
+              id: sec.id,
+              tipo: sec.tipo,
+              datos: {
+                ...sec.datos,
+                disposicion: sec.datos.disposicion || 'vertical',
+                tarjetas: sec.datos.tarjetas.map((t) => ({
+                  id: t.id,
+                  titulo: t.titulo,
+                  descripcion: t.descripcion,
+                  imagenUrl: t.imagenUrl,
+                  orientacion: t.orientacion || 'vertical-abajo',
+                  tituloTipo: t.tituloTipo || 'h2',
+                  tituloAlineacion: t.tituloAlineacion || 'left',
+                  tituloColor: t.tituloColor || 'inherit',
+                  descripcionTipo: t.descripcionTipo || 'p',
+                  descripcionAlineacion: t.descripcionAlineacion || 'left',
+                  descripcionColor: t.descripcionColor || 'inherit',
+                  botonTexto: t.botonTexto || '',
+                  botonUrl: t.botonUrl || '',
+                })),
+              },
+            };
+          }
+          return sec;
+        });
+
+        formData.append('secciones', JSON.stringify(seccionesMetadata));
+
+        this.secciones.forEach((sec) => {
+          if (sec.tipo === 'tarjetas' && sec.datos.tarjetas) {
+            sec.datos.tarjetas.forEach((t) => {
+              if (t.imagenFile) {
+                formData.append(`tarjeta_imagen_${sec.id}_${t.id}`, t.imagenFile);
+              }
+            });
+          }
+        });
+
         const config = await $fetch('/api/landing-builder/config', {
           method: 'POST',
           body: formData,
         });
+
         this.logoUrl = config.logoUrl;
         this.logoSecundarioUrl = config.logoSecundarioUrl;
+        this.secciones = config.secciones || [];
         this.logoFile = null;
         this.logoSecundarioFile = null;
         this.tarjetas = config.tarjetas ?? [];

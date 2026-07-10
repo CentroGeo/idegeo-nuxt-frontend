@@ -7,6 +7,30 @@ export interface LandingBuilderTarjeta {
   imagenUrl: string | null;
 }
 
+export interface LandingBuilderCard {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  imagenUrl: string;
+  urlDestino: string;
+  textoBoton: string;
+  tipoDestino: string;
+  orientacion: string;
+  tituloTipo?: string;
+  tituloAlineacion?: string;
+  descripcionTipo?: string;
+  descripcionAlineacion?: string;
+}
+
+export interface LandingBuilderSection {
+  id: string;
+  tipo: 'tarjetas';
+  datos: {
+    disposicion: 'vertical' | 'horizontal';
+    tarjetas: LandingBuilderCard[];
+  };
+}
+
 export interface LandingBuilderConfig {
   nombrePlataforma: string;
   titulo: string;
@@ -17,6 +41,7 @@ export interface LandingBuilderConfig {
   logoUrl: string | null;
   logoSecundarioUrl: string | null;
   tarjetas: LandingBuilderTarjeta[];
+  secciones?: LandingBuilderSection[];
   actualizadoEn: string;
 }
 
@@ -86,14 +111,13 @@ const configPorDefecto: LandingBuilderConfig = {
   logoUrl: null,
   logoSecundarioUrl: null,
   tarjetas: tarjetasPorDefecto,
+  secciones: [],
   actualizadoEn: new Date(0).toISOString(),
 };
 
 export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
   const storage = useStorage('landingBuilder');
   const config = await storage.getItem<LandingBuilderConfig>(CONFIG_KEY);
-  // Se combina con los valores por defecto para migrar configuraciones guardadas
-  // antes de que existiera el campo `tarjetas`.
   return config ? { ...configPorDefecto, ...config } : configPorDefecto;
 }
 
@@ -202,6 +226,31 @@ export async function getLandingBuilderTarjetaImagen(
   const [data, meta] = await Promise.all([
     storage.getItemRaw<Buffer>(tarjetaImagenKey(id)),
     storage.getItem<{ mimetype: string }>(tarjetaImagenMetaKey(id)),
+  ]);
+  if (!data || !meta) return null;
+  return { data, mimetype: meta.mimetype };
+}
+
+export async function saveLandingBuilderCardImage(
+  sectionId: string,
+  cardId: string,
+  data: Buffer,
+  mimetype: string
+): Promise<string> {
+  const storage = useStorage('landingBuilder');
+  await storage.setItemRaw(`secciones:${sectionId}:tarjetas:${cardId}:archivo`, data);
+  await storage.setItem(`secciones:${sectionId}:tarjetas:${cardId}:meta.json`, { mimetype });
+  return `/api/landing-builder/tarjetas/${sectionId}/${cardId}/imagen?v=${Date.now()}`;
+}
+
+export async function getLandingBuilderCardImage(
+  sectionId: string,
+  cardId: string
+): Promise<LandingBuilderLogo | null> {
+  const storage = useStorage('landingBuilder');
+  const [data, meta] = await Promise.all([
+    storage.getItemRaw<Buffer>(`secciones:${sectionId}:tarjetas:${cardId}:archivo`),
+    storage.getItem<{ mimetype: string }>(`secciones:${sectionId}:tarjetas:${cardId}:meta.json`),
   ]);
   if (!data || !meta) return null;
   return { data, mimetype: meta.mimetype };
