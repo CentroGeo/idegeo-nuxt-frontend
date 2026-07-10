@@ -25,6 +25,14 @@ const tarjetaEnlaceIndex = ref(-1);
 const tempBotonTexto = ref('');
 const tempBotonUrl = ref('');
 
+// Asegurar que existan las propiedades básicas en datos para evitar crashes por bases de datos antiguas
+if (!props.datos.tarjetas) {
+  props.datos.tarjetas = [];
+}
+if (!props.datos.disposicion) {
+  props.datos.disposicion = 'vertical';
+}
+
 // Watch para sanitizar la orientación de las tarjetas si cambia la disposición global
 watch(
   () => props.datos.disposicion,
