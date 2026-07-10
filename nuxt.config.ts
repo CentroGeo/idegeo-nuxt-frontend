@@ -153,5 +153,14 @@ export default defineNuxtConfig({
         'resize-detector',
       ],
     },
+    // sisdai-mapas se importa por el entry (SisdaiMapa) y por rutas profundas
+    // /src/ (useCapa en CapaTeselada, SisdaiCapaVectorial en ia). Si Vite
+    // pre-bundlea el entry pero deja los deep-imports crudos, `identificadores.js`
+    // se evalua dos veces y MAPA_INYECTADO (`mapa-${idAleatorio()}`) queda con
+    // dos valores distintos -> provide/inject no casa -> "injection not found" y
+    // `mapa` undefined en useCapa. Excluirlo fuerza una sola instancia en dev.
+    optimizeDeps: {
+      exclude: ['@centrogeomx/sisdai-mapas'],
+    },
   },
 });
