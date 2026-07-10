@@ -9,7 +9,7 @@ export class GestionCapas {
    */
   get categoriasOrdenadas() {
     return Object.keys(this.categorias)
-      .map((identifier) => [identifier, categoriesNamesInSpanish[identifier]])
+      .map((identifier) => [identifier, categoriesNamesInSpanish[identifier] ?? identifier])
       .sort((a, b) => a[1].localeCompare(b[1]));
   }
 
