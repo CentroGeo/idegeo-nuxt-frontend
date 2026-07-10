@@ -1,5 +1,9 @@
 <script setup>
 import { convertirBytes } from '~/utils/catalogo';
+import {
+  LIMITE_CARGA_ARCHIVOS_BYTES,
+  LIMITE_CARGA_ARCHIVOS_MIB,
+} from '#shared/utils/limiteCargaArchivos';
 // emit para pasar los archivos al componente padre
 const emit = defineEmits(['pasarArchivo']);
 
@@ -13,22 +17,44 @@ const props = defineProps({
 const archivos = ref({});
 const archivosArriba = ref(false);
 const archivoValido = ref(false);
+const mensajeError = ref('');
+
+function filtrarPorTamano(listaArchivos) {
+  const arreglo = Array.from(listaArchivos);
+  const validos = arreglo.filter((f) => f.size <= LIMITE_CARGA_ARCHIVOS_BYTES);
+  const invalidos = arreglo.filter((f) => f.size > LIMITE_CARGA_ARCHIVOS_BYTES);
+
+  if (invalidos.length) {
+    archivoValido.value = true;
+    mensajeError.value =
+      invalidos.length === 1
+        ? `"${invalidos[0].name}" supera el límite de ${LIMITE_CARGA_ARCHIVOS_MIB} MiB y no se agregó.`
+        : `${invalidos.length} archivos superan el límite de ${LIMITE_CARGA_ARCHIVOS_MIB} MiB y no se agregaron.`;
+  } else {
+    archivoValido.value = false;
+    mensajeError.value = '';
+  }
+
+  const dt = new DataTransfer();
+  validos.forEach((f) => dt.items.add(f));
+  return dt.files;
+}
 
 const onDropZone = ref(null);
 const { files } = useDropZone(onDropZone, { onDrop });
 async function onDrop() {
   if (props.disabled) return;
 
-  archivos.value = files.value;
-  archivosArriba.value = true;
+  archivos.value = filtrarPorTamano(files.value);
+  archivosArriba.value = archivos.value.length > 0;
 }
 
 const { open, onChange } = useFileDialog({ multiple: true });
 onChange(async (files) => {
   if (props.disabled) return;
 
-  archivos.value = files;
-  archivosArriba.value = true;
+  archivos.value = filtrarPorTamano(files);
+  archivosArriba.value = archivos.value.length > 0;
 });
 
 const abrirSelector = () => {
@@ -39,6 +65,7 @@ const removerArchivos = () => {
   archivos.value = {};
   archivosArriba.value = false;
   archivoValido.value = false;
+  mensajeError.value = '';
 };
 
 const archivoNoValido = () => {
@@ -54,6 +81,7 @@ function deleteFile(file) {
   if (archivos.value.length === 0) {
     archivosArriba.value = false;
     archivoValido.value = false;
+    mensajeError.value = '';
   }
 }
 
@@ -125,7 +153,7 @@ defineExpose({
         </div>
       </div>
 
-      <p v-if="archivoValido" class="texto-color-error">Archivo inválido</p>
+      <p v-if="archivoValido" class="texto-color-error">{{ mensajeError }}</p>
 
       <div class="botones-dragnddrop flex">
         <client-only>
