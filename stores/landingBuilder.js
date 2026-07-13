@@ -25,6 +25,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     logoFile: ref(null),
     logoSecundarioUrl: ref(null),
     logoSecundarioFile: ref(null),
+    logoTerceroUrl: ref(null),
+    logoTerceroFile: ref(null),
+    logoCuartoUrl: ref(null),
+    logoCuartoFile: ref(null),
     tarjetas: ref([]),
     tarjetaImagenFiles: ref({}),
     secciones: ref([]),
@@ -46,6 +50,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.seccionTexto = config.seccionTexto;
         this.logoUrl = config.logoUrl;
         this.logoSecundarioUrl = config.logoSecundarioUrl;
+        this.logoTerceroUrl = config.logoTerceroUrl || null;
+        this.logoCuartoUrl = config.logoCuartoUrl || null;
         this.tarjetas = config.tarjetas ?? [];
         this.tarjetaImagenFiles = {};
         this.secciones = config.secciones || [];
@@ -118,6 +124,14 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoUrl = URL.createObjectURL(archivo);
     },
 
+    setLogoUrl(url) {
+      if (this.logoUrl && this.logoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoUrl);
+      }
+      this.logoUrl = url;
+      this.logoFile = null;
+    },
+
     setLogoSecundarioFile(archivo) {
       this.logoSecundarioFile = archivo;
       if (this.logoSecundarioUrl && this.logoSecundarioUrl.startsWith('blob:')) {
@@ -132,6 +146,38 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       }
       this.logoSecundarioUrl = url;
       this.logoSecundarioFile = null;
+    },
+
+    setLogoTerceroFile(archivo) {
+      this.logoTerceroFile = archivo;
+      if (this.logoTerceroUrl && this.logoTerceroUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoTerceroUrl);
+      }
+      this.logoTerceroUrl = URL.createObjectURL(archivo);
+    },
+
+    setLogoTerceroUrl(url) {
+      if (this.logoTerceroUrl && this.logoTerceroUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoTerceroUrl);
+      }
+      this.logoTerceroUrl = url;
+      this.logoTerceroFile = null;
+    },
+
+    setLogoCuartoFile(archivo) {
+      this.logoCuartoFile = archivo;
+      if (this.logoCuartoUrl && this.logoCuartoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoCuartoUrl);
+      }
+      this.logoCuartoUrl = URL.createObjectURL(archivo);
+    },
+
+    setLogoCuartoUrl(url) {
+      if (this.logoCuartoUrl && this.logoCuartoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoCuartoUrl);
+      }
+      this.logoCuartoUrl = url;
+      this.logoCuartoFile = null;
     },
 
     async guardarConfiguracion() {
@@ -149,6 +195,14 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
 
         if (this.logoFile) {
           formData.append('logo', this.logoFile);
+        } else if (
+          this.logoUrl &&
+          !this.logoUrl.startsWith('blob:') &&
+          !this.logoUrl.startsWith('/api/')
+        ) {
+          formData.append('logoUrl', this.logoUrl);
+        } else if (!this.logoUrl) {
+          formData.append('logoUrl', '');
         }
 
         if (this.logoSecundarioFile) {
@@ -161,6 +215,30 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           formData.append('logoSecundarioUrl', this.logoSecundarioUrl);
         } else if (!this.logoSecundarioUrl) {
           formData.append('logoSecundarioUrl', '');
+        }
+
+        if (this.logoTerceroFile) {
+          formData.append('logoTercero', this.logoTerceroFile);
+        } else if (
+          this.logoTerceroUrl &&
+          !this.logoTerceroUrl.startsWith('blob:') &&
+          !this.logoTerceroUrl.startsWith('/api/')
+        ) {
+          formData.append('logoTerceroUrl', this.logoTerceroUrl);
+        } else if (!this.logoTerceroUrl) {
+          formData.append('logoTerceroUrl', '');
+        }
+
+        if (this.logoCuartoFile) {
+          formData.append('logoCuarto', this.logoCuartoFile);
+        } else if (
+          this.logoCuartoUrl &&
+          !this.logoCuartoUrl.startsWith('blob:') &&
+          !this.logoCuartoUrl.startsWith('/api/')
+        ) {
+          formData.append('logoCuartoUrl', this.logoCuartoUrl);
+        } else if (!this.logoCuartoUrl) {
+          formData.append('logoCuartoUrl', '');
         }
 
         formData.append(
@@ -231,15 +309,19 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
 
         this.logoUrl = config.logoUrl;
         this.logoSecundarioUrl = config.logoSecundarioUrl;
+        this.logoTerceroUrl = config.logoTerceroUrl || null;
+        this.logoCuartoUrl = config.logoCuartoUrl || null;
         this.secciones = config.secciones || [];
         this.logoFile = null;
         this.logoSecundarioFile = null;
+        this.logoTerceroFile = null;
+        this.logoCuartoFile = null;
         this.tarjetas = config.tarjetas ?? [];
         this.tarjetaImagenFiles = {};
         this.saveSuccess = true;
       } catch (err) {
         console.error('Error al guardar la configuración de la landing page:', err);
-        this.error = 'No se pudo guardar la configuración. Intenta de nuevo.';
+        this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
       } finally {
         this.isSaving = false;
       }

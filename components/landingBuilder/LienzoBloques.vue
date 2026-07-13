@@ -83,7 +83,7 @@ const tiposBloquePadre = [
   {
     id: 'tarjetas',
     etiqueta: 'Sección de tarjetas',
-    descripcion: 'Muestra un conjunto de tarjetas (3 columnas) editables en sitio.',
+    descripcion: 'Muestra un conjunto de tarjetas editables en sitio.',
     icono: '▤',
   },
 ];
@@ -362,11 +362,6 @@ onBeforeUnmount(() => {
 
       <h3>Tu lienzo está vacío</h3>
       <p class="m-b-3">Presiona el botón para agregar una portada o una sección de texto.</p>
-
-      <!-- Agregar este botón aquí adentro -->
-      <button type="button" class="boton-primario" @click="abrirModalAgregarBloque('final')">
-        Agregar bloque
-      </button>
     </div>
 
     <div v-else class="lienzo-bloques__lista">
@@ -501,6 +496,27 @@ onBeforeUnmount(() => {
           />
         </div>
       </article>
+
+      <div class="lienzo-bloques__agregar-final">
+        <button
+          type="button"
+          class="lienzo-bloques__boton-agregar"
+          aria-label="Agregar bloque al final"
+          @click="abrirModalAgregarBloque('final')"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 5v14M5 12h14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+
+        <span>Agregar otro bloque</span>
+      </div>
     </div>
 
     <ClientOnly>

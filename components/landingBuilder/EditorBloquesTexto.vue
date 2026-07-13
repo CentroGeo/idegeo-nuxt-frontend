@@ -1,4 +1,5 @@
 <script setup>
+/* eslint-disable no-unused-vars */
 const props = defineProps({
   modelValue: {
     type: Array,
@@ -125,10 +126,7 @@ function cerrarMenu() {
 
 function registrarEditable(elemento, bloqueId) {
   if (elemento) {
-    elementosEditables.value = {
-      ...elementosEditables.value,
-      [bloqueId]: elemento,
-    };
+    elementosEditables[bloqueId] = elemento;
 
     const bloque = bloques.value.find((item) => item.id === bloqueId);
 
@@ -139,14 +137,12 @@ function registrarEditable(elemento, bloqueId) {
     return;
   }
 
-  elementosEditables.value = Object.fromEntries(
-    Object.entries(elementosEditables.value).filter(([id]) => id !== bloqueId)
-  );
+  delete elementosEditables[bloqueId];
 }
 
 function enfocarBloque(bloqueId) {
   nextTick(() => {
-    const elemento = elementosEditables.value[bloqueId];
+    const elemento = elementosEditables[bloqueId];
 
     if (!elemento) return;
 
@@ -219,7 +215,7 @@ function sincronizarTextoBloque(bloque, event) {
 }
 
 function crearBloqueSiguiente(bloque, event) {
-  sincronizarTextoBloque(bloque, event);
+  guardarTextoBloque(bloque, event);
 
   if (!bloque.texto.trim()) {
     eliminarBloque(bloque.id);
@@ -453,7 +449,6 @@ onBeforeUnmount(() => {
           :data-placeholder="bloque.placeholder"
           contenteditable="true"
           spellcheck="true"
-          @input="sincronizarTextoBloque(bloque, $event)"
           @blur="guardarTextoBloque(bloque, $event)"
           @keydown.enter.prevent="crearBloqueSiguiente(bloque, $event)"
         />

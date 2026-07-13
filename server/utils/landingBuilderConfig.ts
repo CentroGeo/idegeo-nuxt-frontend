@@ -40,6 +40,8 @@ export interface LandingBuilderConfig {
   seccionTexto: string;
   logoUrl: string | null;
   logoSecundarioUrl: string | null;
+  logoTerceroUrl: string | null;
+  logoCuartoUrl: string | null;
   tarjetas: LandingBuilderTarjeta[];
   secciones?: LandingBuilderSection[];
   actualizadoEn: string;
@@ -57,6 +59,11 @@ const LOGO_KEY = 'logo:archivo';
 const LOGO_META_KEY = 'logo:meta.json';
 const LOGO_SECUNDARIO_KEY = 'logo_secundario:archivo';
 const LOGO_SECUNDARIO_META_KEY = 'logo_secundario:meta.json';
+const LOGO_TERCERO_KEY = 'logo_tercero:archivo';
+const LOGO_TERCERO_META_KEY = 'logo_tercero:meta.json';
+const LOGO_CUARTO_KEY = 'logo_cuarto:archivo';
+const LOGO_CUARTO_META_KEY = 'logo_cuarto:meta.json';
+
 const tarjetaImagenKey = (id: string) => `tarjeta:${id}:archivo`;
 const tarjetaImagenMetaKey = (id: string) => `tarjeta:${id}:meta.json`;
 
@@ -100,7 +107,7 @@ const tarjetasPorDefecto: LandingBuilderTarjeta[] = [
 ];
 
 const configPorDefecto: LandingBuilderConfig = {
-  nombrePlataforma: 'SIGIC',
+  nombrePlataforma: '',
   titulo: 'Sistema Integral de Gestión de Información Científica (SIGIC)',
   subtitulo: 'Integra, visualiza y aprovecha el conocimiento científico de México',
   tituloSeccion: '¿Qué es SIGIC?',
@@ -110,6 +117,8 @@ const configPorDefecto: LandingBuilderConfig = {
     'Reúne datos abiertos, capas geográficas, documentos y herramientas de inteligencia artificial en un solo lugar, para que investigadores, tomadores de decisiones y público en general puedan explorar el conocimiento generado por el sistema nacional de ciencia y tecnología.',
   logoUrl: null,
   logoSecundarioUrl: null,
+  logoTerceroUrl: null,
+  logoCuartoUrl: null,
   tarjetas: tarjetasPorDefecto,
   secciones: [],
   actualizadoEn: new Date(0).toISOString(),
@@ -124,13 +133,23 @@ export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
 export async function saveLandingBuilderConfig(
   campos: Omit<
     LandingBuilderConfig,
-    'logoUrl' | 'logoSecundarioUrl' | 'tarjetas' | 'actualizadoEn'
+    | 'logoUrl'
+    | 'logoSecundarioUrl'
+    | 'logoTerceroUrl'
+    | 'logoCuartoUrl'
+    | 'tarjetas'
+    | 'actualizadoEn'
   > & {
+    logoUrl?: string;
     logoSecundarioUrl?: string;
+    logoTerceroUrl?: string;
+    logoCuartoUrl?: string;
     tarjetas: Array<Omit<LandingBuilderTarjeta, 'imagenUrl'> & { imagenUrl?: string | null }>;
   },
   logo?: LandingBuilderLogo,
   logoSecundario?: LandingBuilderLogo,
+  logoTercero?: LandingBuilderLogo,
+  logoCuarto?: LandingBuilderLogo,
   imagenesTarjetas?: Record<string, LandingBuilderLogo>
 ): Promise<LandingBuilderConfig> {
   const storage = useStorage('landingBuilder');
@@ -148,6 +167,8 @@ export async function saveLandingBuilderConfig(
     await storage.setItemRaw(LOGO_KEY, logo.data);
     await storage.setItem(LOGO_META_KEY, { mimetype: logo.mimetype });
     logoUrl = `/api/landing-builder/logo?v=${Date.now()}`;
+  } else if (campos.logoUrl !== undefined) {
+    logoUrl = campos.logoUrl || null;
   }
 
   let logoSecundarioUrl = actual.logoSecundarioUrl;
@@ -157,6 +178,24 @@ export async function saveLandingBuilderConfig(
     logoSecundarioUrl = `/api/landing-builder/logo-secundario?v=${Date.now()}`;
   } else if (campos.logoSecundarioUrl !== undefined) {
     logoSecundarioUrl = campos.logoSecundarioUrl || null;
+  }
+
+  let logoTerceroUrl = actual.logoTerceroUrl;
+  if (logoTercero) {
+    await storage.setItemRaw(LOGO_TERCERO_KEY, logoTercero.data);
+    await storage.setItem(LOGO_TERCERO_META_KEY, { mimetype: logoTercero.mimetype });
+    logoTerceroUrl = `/api/landing-builder/logo-tercero?v=${Date.now()}`;
+  } else if (campos.logoTerceroUrl !== undefined) {
+    logoTerceroUrl = campos.logoTerceroUrl || null;
+  }
+
+  let logoCuartoUrl = actual.logoCuartoUrl;
+  if (logoCuarto) {
+    await storage.setItemRaw(LOGO_CUARTO_KEY, logoCuarto.data);
+    await storage.setItem(LOGO_CUARTO_META_KEY, { mimetype: logoCuarto.mimetype });
+    logoCuartoUrl = `/api/landing-builder/logo-cuarto?v=${Date.now()}`;
+  } else if (campos.logoCuartoUrl !== undefined) {
+    logoCuartoUrl = campos.logoCuartoUrl || null;
   }
 
   const idsActuales = new Set(actual.tarjetas.map((tarjeta) => tarjeta.id));
@@ -192,6 +231,8 @@ export async function saveLandingBuilderConfig(
     ...campos,
     logoUrl,
     logoSecundarioUrl,
+    logoTerceroUrl,
+    logoCuartoUrl,
     tarjetas,
     actualizadoEn: new Date().toISOString(),
   };
@@ -214,6 +255,26 @@ export async function getLandingBuilderLogoSecundario(): Promise<LandingBuilderL
   const [data, meta] = await Promise.all([
     storage.getItemRaw<Buffer>(LOGO_SECUNDARIO_KEY),
     storage.getItem<{ mimetype: string }>(LOGO_SECUNDARIO_META_KEY),
+  ]);
+  if (!data || !meta) return null;
+  return { data, mimetype: meta.mimetype };
+}
+
+export async function getLandingBuilderLogoTercero(): Promise<LandingBuilderLogo | null> {
+  const storage = useStorage('landingBuilder');
+  const [data, meta] = await Promise.all([
+    storage.getItemRaw<Buffer>(LOGO_TERCERO_KEY),
+    storage.getItem<{ mimetype: string }>(LOGO_TERCERO_META_KEY),
+  ]);
+  if (!data || !meta) return null;
+  return { data, mimetype: meta.mimetype };
+}
+
+export async function getLandingBuilderLogoCuarto(): Promise<LandingBuilderLogo | null> {
+  const storage = useStorage('landingBuilder');
+  const [data, meta] = await Promise.all([
+    storage.getItemRaw<Buffer>(LOGO_CUARTO_KEY),
+    storage.getItem<{ mimetype: string }>(LOGO_CUARTO_META_KEY),
   ]);
   if (!data || !meta) return null;
   return { data, mimetype: meta.mimetype };

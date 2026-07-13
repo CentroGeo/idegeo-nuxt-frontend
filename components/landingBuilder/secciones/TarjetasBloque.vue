@@ -539,9 +539,14 @@ function manejarInput(limite, event, tarjeta, campo) {
                     v-if="tarjeta.botonTexto !== undefined && tarjeta.botonTexto !== ''"
                     class="posicion-relativa wrapper-boton-editable"
                   >
-                    <span class="boton-primario boton-chico cursor-pointer text-no-select">
+                    <NuxtLink
+                      :to="tarjeta.botonUrl || '#'"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="boton-primario boton-chico cursor-pointer text-no-select"
+                    >
                       {{ tarjeta.botonTexto }}
-                    </span>
+                    </NuxtLink>
 
                     <div class="boton-editable-acciones">
                       <button

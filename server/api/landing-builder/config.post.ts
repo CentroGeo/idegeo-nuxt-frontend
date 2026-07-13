@@ -35,8 +35,20 @@ export default defineEventHandler(async (event) => {
     campos[campo] = valor;
   }
 
+  if (fields.logoUrl?.[0] !== undefined) {
+    campos.logoUrl = fields.logoUrl[0].trim();
+  }
+
   if (fields.logoSecundarioUrl?.[0] !== undefined) {
     campos.logoSecundarioUrl = fields.logoSecundarioUrl[0].trim();
+  }
+
+  if (fields.logoTerceroUrl?.[0] !== undefined) {
+    campos.logoTerceroUrl = fields.logoTerceroUrl[0].trim();
+  }
+
+  if (fields.logoCuartoUrl?.[0] !== undefined) {
+    campos.logoCuartoUrl = fields.logoCuartoUrl[0].trim();
   }
 
   const seccionesRaw = fields.secciones?.[0];
@@ -114,6 +126,54 @@ export default defineEventHandler(async (event) => {
     };
   }
 
+  let logoTercero: { data: Buffer; mimetype: string } | undefined;
+  const archivoLogoTercero = files.logoTercero?.[0];
+  if (archivoLogoTercero) {
+    if (
+      !archivoLogoTercero.mimetype ||
+      !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoTercero.mimetype)
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El logo tercero debe ser una imagen PNG, JPEG, WEBP o SVG',
+      });
+    }
+    if (archivoLogoTercero.size > TAMANO_MAXIMO_LOGO) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El logo tercero no debe superar 2MB',
+      });
+    }
+    logoTercero = {
+      data: await fsp.readFile(archivoLogoTercero.filepath),
+      mimetype: archivoLogoTercero.mimetype,
+    };
+  }
+
+  let logoCuarto: { data: Buffer; mimetype: string } | undefined;
+  const archivoLogoCuarto = files.logoCuarto?.[0];
+  if (archivoLogoCuarto) {
+    if (
+      !archivoLogoCuarto.mimetype ||
+      !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoCuarto.mimetype)
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El logo cuarto debe ser una imagen PNG, JPEG, WEBP o SVG',
+      });
+    }
+    if (archivoLogoCuarto.size > TAMANO_MAXIMO_LOGO) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El logo cuarto no debe superar 2MB',
+      });
+    }
+    logoCuarto = {
+      data: await fsp.readFile(archivoLogoCuarto.filepath),
+      mimetype: archivoLogoCuarto.mimetype,
+    };
+  }
+
   let tarjetasCrudas: unknown;
   try {
     tarjetasCrudas = JSON.parse(fields.tarjetas?.[0] ?? '[]');
@@ -187,13 +247,23 @@ export default defineEventHandler(async (event) => {
       tarjetas,
     } as unknown as Omit<
       LandingBuilderConfig,
-      'logoUrl' | 'logoSecundarioUrl' | 'tarjetas' | 'actualizadoEn'
+      | 'logoUrl'
+      | 'logoSecundarioUrl'
+      | 'logoTerceroUrl'
+      | 'logoCuartoUrl'
+      | 'tarjetas'
+      | 'actualizadoEn'
     > & {
+      logoUrl?: string;
       logoSecundarioUrl?: string;
+      logoTerceroUrl?: string;
+      logoCuartoUrl?: string;
       tarjetas: Array<Omit<LandingBuilderTarjeta, 'imagenUrl'> & { imagenUrl?: string | null }>;
     },
     logo,
     logoSecundario,
+    logoTercero,
+    logoCuarto,
     imagenesTarjetas
   );
 });
