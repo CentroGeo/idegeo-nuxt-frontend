@@ -76,9 +76,28 @@ watch(() => props.siteId, cargar, { immediate: true });
       <div class="tab-banda__seccion">
         <h3 class="tab-banda__titulo-seccion">Configuración de la banda</h3>
 
-        <div class="tab-banda__campo">
-          <label class="formulario-etiqueta" for="banda-show"> Mostrar banda institucional </label>
-          <input id="banda-show" v-model="form.show" type="checkbox" />
+        <div class="tab-banda__campo tab-banda__campo--visibilidad">
+          <label class="tab-banda__interruptor" for="banda-show">
+            <input
+              id="banda-show"
+              v-model="form.show"
+              type="checkbox"
+              aria-describedby="banda-show-ayuda"
+            />
+            <span>Mostrar banda institucional</span>
+          </label>
+
+          <p
+            id="banda-show-ayuda"
+            class="formulario-ayuda tab-banda__estado"
+            :class="{ 'tab-banda__estado--activa': form.show }"
+          >
+            {{
+              form.show
+                ? 'La banda se mostrará en el tablero al guardar la configuración.'
+                : 'La banda está oculta, pero puedes editar toda su configuración.'
+            }}
+          </p>
         </div>
 
         <div class="tab-banda__campo">
@@ -88,7 +107,6 @@ watch(() => props.siteId, cargar, { immediate: true });
             v-model="form.title"
             type="text"
             placeholder="Ej: Secretaría de Energía · CNE"
-            :disabled="!form.show"
           />
         </div>
 
@@ -96,18 +114,12 @@ watch(() => props.siteId, cargar, { immediate: true });
           <div class="tab-banda__campo">
             <label class="formulario-etiqueta" for="banda-bg">Color de fondo</label>
             <div class="tab-banda__color-fila">
-              <input
-                id="banda-bg"
-                v-model="form.background_color"
-                type="color"
-                :disabled="!form.show"
-              />
+              <input id="banda-bg" v-model="form.background_color" type="color" />
               <input
                 v-model="form.background_color"
                 type="text"
                 maxlength="7"
                 placeholder="#ffffff"
-                :disabled="!form.show"
               />
             </div>
           </div>
@@ -115,19 +127,8 @@ watch(() => props.siteId, cargar, { immediate: true });
           <div class="tab-banda__campo">
             <label class="formulario-etiqueta" for="banda-text">Color de texto</label>
             <div class="tab-banda__color-fila">
-              <input
-                id="banda-text"
-                v-model="form.text_color"
-                type="color"
-                :disabled="!form.show"
-              />
-              <input
-                v-model="form.text_color"
-                type="text"
-                maxlength="7"
-                placeholder="#333333"
-                :disabled="!form.show"
-              />
+              <input id="banda-text" v-model="form.text_color" type="color" />
+              <input v-model="form.text_color" type="text" maxlength="7" placeholder="#333333" />
             </div>
           </div>
 
@@ -139,7 +140,6 @@ watch(() => props.siteId, cargar, { immediate: true });
               type="number"
               min="32"
               max="120"
-              :disabled="!form.show"
             />
           </div>
         </div>
@@ -194,7 +194,8 @@ watch(() => props.siteId, cargar, { immediate: true });
   }
 
   &__seccion {
-    background: var(--color-neutro-1, #f8f8f8);
+    background: var(--color-fondo-1, #ffffff);
+    color: inherit;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 8px;
     padding: 1.25rem;
@@ -213,9 +214,31 @@ watch(() => props.siteId, cargar, { immediate: true });
     }
 
     input[type='checkbox'] {
-      margin-left: 0.5rem;
-      width: auto;
+      width: 1.125rem;
+      height: 1.125rem;
+      margin: 0;
+      flex: 0 0 auto;
     }
+  }
+
+  &__campo--visibilidad {
+    margin-bottom: 1.25rem;
+  }
+
+  &__interruptor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  &__estado {
+    margin: 0.4rem 0 0;
+  }
+
+  &__estado--activa {
+    color: var(--color-exito, #2e7d32);
   }
 
   &__fila {
@@ -235,7 +258,7 @@ watch(() => props.siteId, cargar, { immediate: true });
       width: 40px;
       height: 36px;
       padding: 2px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--color-neutro-2, #ccc);
       border-radius: 4px;
       cursor: pointer;
     }
@@ -252,7 +275,7 @@ watch(() => props.siteId, cargar, { immediate: true });
     padding: 0 1rem;
     border-radius: 4px;
     margin: 1rem 0;
-    border: 1px dashed #ccc;
+    border: 1px dashed var(--color-neutro-2, #ccc);
     transition:
       background-color 0.2s,
       color 0.2s,
