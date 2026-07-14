@@ -31,6 +31,20 @@ const gMarcadores = ref(new GestionMarcadores());
 // Marcador actualmente en edición (según el selector).
 const marcadorActivo = computed(() => gMarcadores.value.byId(escena.idMarcadorActivo));
 
+// La API serializa los decimales como cadenas; sisdai-mapas exige números.
+const vistaDelMapa = computed(() => {
+  const { map_center_long, map_center_lat, zoom } = escena.datos;
+  const vista = { acercamiento: Number(zoom) || 2 };
+
+  if (map_center_long && map_center_lat) {
+    vista.centro = [Number(map_center_long), Number(map_center_lat)];
+  } else {
+    vista.extension = '-118.3651,14.5321,-86.7104,32.7187';
+  }
+
+  return vista;
+});
+
 async function API(endPoint, method = 'GET', body = {}) {
   const parametros = {
     method,
@@ -170,13 +184,10 @@ defineExpose({ abrir, cerrar });
 
             <MapasVisor
               class="mapa-escena borde borde-color-secundario"
-              :vista="{
-                acercamiento: escena.datos.zoom,
-                centro: [escena.datos.map_center_long, escena.datos.map_center_lat],
-              }"
+              :vista="vistaDelMapa"
               :capas="escena.datos.layers"
               :marcadores="gMarcadores.visualizar"
-              :base-layer="escena.datos.base_layer || 'satellite'"
+              :base-layer="escena.datos.styles?.base_layer || 'satellite'"
               :opciones="{ info: false, cambiarBase: false, leyenda: false, coordenadas: false }"
               @click-vista="clickVista"
             />

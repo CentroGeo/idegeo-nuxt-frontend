@@ -5,6 +5,9 @@ import { wait } from '~/utils/consulta';
 definePageMeta({ middleware: 'auth' });
 
 const { escenario: escenario_id, escena: escena_id } = useRoute().params;
+
+const ESTILOS_POR_DEFECTO = { text_panel: 40, map_panel: 60 };
+
 const escena = reactive({
   name: '',
   text_content: '',
@@ -14,6 +17,7 @@ const escena = reactive({
   map_center_long: null,
   zoom: null,
   base_layer: 'satellite',
+  styles: { ...ESTILOS_POR_DEFECTO },
   layers: [],
   markers: [],
 });
@@ -34,7 +38,8 @@ async function consultarEscena() {
   }
 
   Object.assign(escena, datos);
-  if (!escena.base_layer) escena.base_layer = 'satellite';
+  escena.styles = { ...ESTILOS_POR_DEFECTO, ...datos.styles };
+  escena.base_layer = escena.styles.base_layer || 'satellite';
   valores_estaticos = JSON.stringify(escena);
   modal.visible = false;
 }
@@ -49,7 +54,10 @@ async function guardarCambios() {
   mostrarModalCargando();
 
   const url = `scenes/${escena_id !== 'nuevo' ? `${escena_id}/` : ''}/`;
-  const { datos } = await api(url, escena_id === 'nuevo' ? 'POST' : 'PUT', escena);
+  const { base_layer, ...cuerpo } = escena;
+  cuerpo.styles = { ...escena.styles, base_layer };
+
+  const { datos } = await api(url, escena_id === 'nuevo' ? 'POST' : 'PUT', cuerpo);
 
   if (datos?.success === false) {
     mostrarModalError(datos.errors);
@@ -60,6 +68,7 @@ async function guardarCambios() {
   await wait(1500);
 
   if (escena_id === 'nuevo') {
+    modal.visible = false;
     navigateTo(`/geocontenidos/geohistorias/${escenario_id}/escenas/`);
 
     // const { datos } = await api(`scenarios/${escenario_id}/scenes/`);
@@ -74,13 +83,14 @@ function alMoverVista({ acercamiento, centro }) {
   // console.log(acercamiento, centro);
   escena.map_center_long = centro[0];
   escena.map_center_lat = centro[1];
-  escena.zoom = Number(acercamiento).toFixed(1);
+  escena.zoom = Number(Number(acercamiento).toFixed(1));
 }
 const vistaDelMapa = computed(() => {
-  const vista = { acercamiento: escena.zoom || 2 };
+  // La API serializa los decimales como cadenas; sisdai-mapas exige números.
+  const vista = { acercamiento: Number(escena.zoom) || 2 };
 
   if (escena.map_center_long && escena.map_center_lat) {
-    vista.centro = [escena.map_center_long, escena.map_center_lat];
+    vista.centro = [Number(escena.map_center_long), Number(escena.map_center_lat)];
   } else {
     vista.extension = '-118.3651,14.5321,-86.7104,32.7187';
   }

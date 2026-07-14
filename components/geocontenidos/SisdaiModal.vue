@@ -73,7 +73,8 @@ onBeforeMount(() => {
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keyup', revisarTecla);
-  window.addEventListener('click', revisarClick);
+  window.removeEventListener('click', revisarClick);
+  document.querySelector('body').classList.remove('overflow-hidden');
 });
 
 defineExpose({
