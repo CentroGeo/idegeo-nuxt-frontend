@@ -194,11 +194,11 @@ watch(() => props.siteId, cargar, { immediate: true });
   }
 
   &__seccion {
-    background: var(--color-fondo-1, #ffffff);
+    background: transparent;
     color: inherit;
-    border: 1px solid var(--color-neutro-2, #e0e0e0);
-    border-radius: 8px;
-    padding: 1.25rem;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
     margin-bottom: 1.5rem;
   }
 
