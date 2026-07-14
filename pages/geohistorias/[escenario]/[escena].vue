@@ -1,7 +1,7 @@
 <script setup>
 const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
-const { /* escenario, */ escena: escenaId } = useRoute().params;
+const { escenario: escenarioId, escena: escenaId } = useRoute().params;
 
 const props = defineProps({
   titulo: { type: String, default: '' },
@@ -9,6 +9,8 @@ const props = defineProps({
   gradiente: { type: Array, default: () => [] },
   // Ancho del panel de texto en % (scenes_layout_styles.text_panel del escenario).
   textPanel: { type: [Number, String], default: 50 },
+  // Escenas del escenario (lo pasa el padre [escenario].vue) para navegar entre ellas.
+  escenas: { type: Array, default: () => [] },
 });
 
 /**
@@ -40,6 +42,14 @@ function toggleTextPanel() {
   isTextPanelCollapsed.value = !isTextPanelCollapsed.value;
 }
 const anchoPanelTexto = computed(() => (isTextPanelCollapsed.value ? '0%' : `${props.textPanel}%`));
+
+/**
+ * Navega a otra escena del mismo escenario (controles anterior/siguiente)
+ * @param {Number|String} id Identificador de la escena destino
+ */
+function irAEscena(id) {
+  navigateTo(`/geohistorias/${escenarioId}/${id}`);
+}
 </script>
 
 <template>
@@ -54,7 +64,10 @@ const anchoPanelTexto = computed(() => (isTextPanelCollapsed.value ? '0%' : `${p
         :style="{ width: anchoPanelTexto }"
         :contenido="escena.datos.text_content"
         :marcador="marcador_visible"
+        :escenas="escenas"
+        :gradiente="gradiente"
         @al-cerrar="marcador_visible = null"
+        @al-navegar="irAEscena"
       />
 
       <button
@@ -78,8 +91,8 @@ const anchoPanelTexto = computed(() => (isTextPanelCollapsed.value ? '0%' : `${p
           }"
           :capas="escena.datos.layers"
           :marcadores="escena.datos.markers"
-          :base-layer="escena.datos.base_layer || 'satellite'"
-          :opciones="{ titulo: escena.datos.name, gradienteControles: gradiente }"
+          :base-layer="escena.datos.styles?.base_layer || 'satellite'"
+          :opciones="{ gradienteControles: gradiente }"
           @click-marcador="(marcador) => (marcador_visible = marcador)"
         />
       </div>
@@ -104,7 +117,10 @@ const anchoPanelTexto = computed(() => (isTextPanelCollapsed.value ? '0%' : `${p
         :style="{ width: anchoPanelTexto }"
         :contenido="escena.datos.text_content"
         :marcador="marcador_visible"
+        :escenas="escenas"
+        :gradiente="gradiente"
         @al-cerrar="marcador_visible = null"
+        @al-navegar="irAEscena"
       />
     </template>
   </div>
