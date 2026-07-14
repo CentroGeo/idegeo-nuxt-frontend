@@ -2,6 +2,7 @@
 FROM node:22 AS builder
 
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max_old_space_size=4096
 
 WORKDIR /app
 
@@ -15,6 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # --- copiar solo package.json primero ---
 COPY package*.json ./
+
+# scripts necesarios para postinstall
+COPY scripts/ ./scripts/
 
 # instalar dependencias
 RUN npm install --include=dev --legacy-peer-deps \

@@ -9,9 +9,8 @@ export const config = {
   },
 };
 
-const configEnv = useRuntimeConfig();
-
 export default defineEventHandler(async (event) => {
+  const configEnv = useRuntimeConfig();
   const form = formidable({ multiples: false });
 
   // Parseo del form data recibido
@@ -29,14 +28,39 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Archivo o token faltante' });
   }
 
+  const quotaRes = await fetch(`${configEnv.public.geonodeApi}/data-importer/jobs/quota/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!quotaRes.ok) {
+    throw createError({
+      statusCode: quotaRes.status,
+      message: 'No fue posible validar los espacios disponibles',
+    });
+  }
+
+  const quota = await quotaRes.json();
+
+  if (!quota.can_upload) {
+    throw createError({
+      statusCode: 409,
+      message: 'Alcanzaste el límite de archivos y capas pendientes de aprobación.',
+    });
+  }
+
   // Crear FormData para enviar a GeoNode
   const formData = new FormData();
   const buffer = await fsp.readFile(base_file[0].filepath);
-  formData.append(
-    'base_file',
-    new Blob([buffer], { type: base_file[0].mimetype }),
-    base_file[0].originalFilename
-  );
+  const filename = base_file[0].originalFilename ?? 'archivo';
+  const blob = new Blob([buffer], { type: base_file[0].mimetype });
+  formData.append('base_file', blob, filename);
+
+  // GeoNode requiere zip_file además de base_file para activar la extracción del ZIP
+  if (filename.toLowerCase().endsWith('.zip')) {
+    formData.append('zip_file', blob, filename);
+  }
 
   try {
     // 1️⃣ Subir archivo al GeoNode
@@ -93,7 +117,7 @@ export default defineEventHandler(async (event) => {
         success: true,
         message: 'Procesamiento completado',
         id: resource.id,
-        url: `${configEnv.public.geonodeHost}${resource.detail_url}`,
+        url: `${configEnv.public.geonodeUrl}${resource.detail_url}`,
         time: statusJson.finished,
       };
     } else {
