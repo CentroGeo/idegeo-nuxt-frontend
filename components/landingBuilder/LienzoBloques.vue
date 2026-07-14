@@ -11,7 +11,17 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 function clonarValor(valor) {
-  return JSON.parse(JSON.stringify(valor ?? null));
+  if (valor === null || valor === undefined) return valor ?? null;
+  if (valor instanceof File) return valor;
+  if (Array.isArray(valor)) return valor.map((item) => clonarValor(item));
+  if (typeof valor === 'object') {
+    const copia = {};
+    for (const clave of Object.keys(valor)) {
+      copia[clave] = clonarValor(valor[clave]);
+    }
+    return copia;
+  }
+  return valor;
 }
 
 function clonarBloquesLanding(listaBloques = []) {

@@ -10,10 +10,75 @@ const esConstructor = computed(() => {
   return route.path.startsWith('/landing-builder');
 });
 
-onMounted(() => {
-  if (esConstructor.value && !store.logoSecundarioUrl) {
-    store.cargarConfiguracion();
+const esPaginaPublica = computed(() => {
+  return route.path.startsWith('/paginas/');
+});
+
+const mostrarMenuPaginas = ref(false);
+
+const IDENTIDAD_PUBLICA_VACIA = {
+  nombrePlataforma: '',
+  logoUrl: null,
+  logoSecundarioUrl: null,
+  logoTerceroUrl: null,
+  logoCuartoUrl: null,
+};
+
+// Identidad (logos + nombre) de la página pública que se está viendo, propia
+// de esa página y por eso independiente del borrador del constructor.
+const identidadPublica = ref({ ...IDENTIDAD_PUBLICA_VACIA });
+
+function alternarMenuPaginas() {
+  mostrarMenuPaginas.value = !mostrarMenuPaginas.value;
+}
+
+function cerrarMenuPaginasAlClickAfuera(event) {
+  if (!(event.target instanceof Element)) return;
+  if (!event.target.closest('.nav-menu-paginas')) {
+    mostrarMenuPaginas.value = false;
   }
+}
+
+// MainNavegacion vive en el layout persistente: al navegar entre páginas por
+// SPA (ej. el menú "Páginas") el componente no se remonta, así que hay que
+// observar la ruta en vez de depender solo de onMounted para refrescar la
+// identidad de la página pública que se está viendo.
+watch(
+  () => route.fullPath,
+  async () => {
+    if (import.meta.server) return;
+
+    if (esConstructor.value) {
+      if (!store.logoSecundarioUrl) {
+        store.cargarConfiguracion();
+      }
+      return;
+    }
+
+    store.cargarPaginas();
+
+    if (!esPaginaPublica.value) {
+      identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
+      return;
+    }
+
+    try {
+      const pagina = await $fetch(`/api/landing-builder/paginas/${route.params.slug}`);
+      identidadPublica.value = pagina?.identidad || IDENTIDAD_PUBLICA_VACIA;
+    } catch (err) {
+      console.error('Error al cargar la identidad de la página:', err);
+      identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  document.addEventListener('click', cerrarMenuPaginasAlClickAfuera);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', cerrarMenuPaginasAlClickAfuera);
 });
 
 async function iniciarSesion() {
@@ -237,6 +302,60 @@ function seleccionarEnlaceLogo4(enlace) {
         </div>
       </div>
 
+      <!-- Páginas publicadas del constructor: logos y nombre de la plataforma, en modo solo lectura -->
+      <div
+        v-else-if="esPaginaPublica"
+        class="contenedor-identidades-nav constructor-identidades-nav"
+      >
+        <div v-if="identidadPublica.logoUrl" class="contenedor-logo-nav">
+          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+            <img
+              :src="identidadPublica.logoUrl"
+              class="nav-logo color-invertir"
+              alt="Logo principal"
+              height="36"
+            />
+          </NuxtLink>
+        </div>
+
+        <div v-if="identidadPublica.logoSecundarioUrl" class="contenedor-logo-nav">
+          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+            <img
+              :src="identidadPublica.logoSecundarioUrl"
+              class="nav-logo color-invertir"
+              :alt="identidadPublica.nombrePlataforma || 'Logo secundario'"
+              height="36"
+            />
+          </NuxtLink>
+        </div>
+
+        <div v-if="identidadPublica.logoTerceroUrl" class="contenedor-logo-nav">
+          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+            <img
+              :src="identidadPublica.logoTerceroUrl"
+              class="nav-logo color-invertir"
+              alt="Logo tercero"
+              height="36"
+            />
+          </NuxtLink>
+        </div>
+
+        <div v-if="identidadPublica.logoCuartoUrl" class="contenedor-logo-nav">
+          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+            <img
+              :src="identidadPublica.logoCuartoUrl"
+              class="nav-logo color-invertir"
+              alt="Logo cuarto"
+              height="36"
+            />
+          </NuxtLink>
+        </div>
+
+        <div v-if="identidadPublica.nombrePlataforma" class="contenedor-titulo-plataforma-nav">
+          <span class="nav-titulo-plataforma">{{ identidadPublica.nombrePlataforma }}</span>
+        </div>
+      </div>
+
       <!-- Modo Público (Resto de páginas): Diseño original de 2 logotipos de Sisdai -->
       <div v-else class="contenedor-identidades-nav">
         <a
@@ -267,6 +386,31 @@ function seleccionarEnlaceLogo4(enlace) {
     <ul class="nav-menu">
       <li v-if="mostrarInicio">
         <NuxtLink class="nav-hipervinculo" to="/" exact-path>Inicio</NuxtLink>
+      </li>
+      <li v-if="store.paginas.length" class="nav-menu-paginas">
+        <button
+          type="button"
+          class="nav-hipervinculo nav-menu-paginas__boton"
+          aria-label="Ver páginas"
+          aria-haspopup="true"
+          :aria-expanded="mostrarMenuPaginas"
+          @click="alternarMenuPaginas"
+        >
+          <span class="pictograma-menu-hamburguesa" aria-hidden="true">☰</span>
+          Páginas
+        </button>
+
+        <ul v-if="mostrarMenuPaginas" class="nav-menu-paginas__lista">
+          <li v-for="pagina in store.paginas" :key="pagina.id">
+            <NuxtLink
+              class="nav-hipervinculo"
+              :to="`/paginas/${pagina.slug}`"
+              @click="mostrarMenuPaginas = false"
+            >
+              {{ pagina.nombre }}
+            </NuxtLink>
+          </li>
+        </ul>
       </li>
       <li v-if="mostrarCatalogo">
         <NuxtLink class="nav-hipervinculo" to="/catalogo">Catálogo</NuxtLink>
@@ -519,6 +663,45 @@ body[data-tema='oscuro'] {
       border: 1px solid var(--campo-enfoque-borde);
       box-shadow: 0 0 8px var(--campo-enfoque-sombra);
       background: var(--campo-enfoque-fondo);
+    }
+  }
+}
+
+.nav-menu-paginas {
+  position: relative;
+
+  &__boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  &__lista {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    min-width: 180px;
+    margin: 4px 0 0;
+    padding: 6px 0;
+    border: 1px solid var(--color-neutro-2, #e0e0e0);
+    border-radius: 6px;
+    background: var(--fondo-primario, #ffffff);
+    box-shadow: 0 8px 18px rgb(0 0 0 / 18%);
+    list-style: none;
+
+    li {
+      display: block;
+    }
+
+    .nav-hipervinculo {
+      display: block;
+      padding: 8px 16px;
+      white-space: nowrap;
     }
   }
 }

@@ -44,8 +44,42 @@ export interface LandingBuilderConfig {
   logoCuartoUrl: string | null;
   tarjetas: LandingBuilderTarjeta[];
   secciones?: LandingBuilderSection[];
+  bloques?: LandingBuilderBloque[];
+  paginas?: LandingBuilderPagina[];
   actualizadoEn: string;
 }
+
+export interface LandingBuilderBloque {
+  id: string;
+  tipo: 'portada' | 'texto' | 'carrusel' | 'tarjetas';
+  etiqueta?: string;
+  datos: Record<string, unknown>;
+}
+
+export interface LandingBuilderPaginaIdentidad {
+  nombrePlataforma: string;
+  logoUrl: string | null;
+  logoSecundarioUrl: string | null;
+  logoTerceroUrl: string | null;
+  logoCuartoUrl: string | null;
+}
+
+export interface LandingBuilderPagina {
+  id: string;
+  nombre: string;
+  slug: string;
+  bloques: LandingBuilderBloque[];
+  identidad: LandingBuilderPaginaIdentidad;
+  creadaEn: string;
+}
+
+export const IDENTIDAD_PAGINA_VACIA: LandingBuilderPaginaIdentidad = {
+  nombrePlataforma: '',
+  logoUrl: null,
+  logoSecundarioUrl: null,
+  logoTerceroUrl: null,
+  logoCuartoUrl: null,
+};
 
 export interface LandingBuilderLogo {
   data: Buffer;
@@ -53,6 +87,24 @@ export interface LandingBuilderLogo {
 }
 
 export const LIMITE_TARJETAS = 10;
+export const LIMITE_PAGINAS = 3;
+export const TIPOS_LOGO_PAGINA_PERMITIDOS = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/svg+xml',
+];
+export const TAMANO_MAXIMO_LOGO_PAGINA = 2 * 1024 * 1024; // 2MB
+export const SLOTS_LOGO_PAGINA = ['logo1', 'logo2', 'logo3', 'logo4'] as const;
+export const CAMPO_IDENTIDAD_POR_SLOT: Record<
+  (typeof SLOTS_LOGO_PAGINA)[number],
+  keyof Omit<LandingBuilderPaginaIdentidad, 'nombrePlataforma'>
+> = {
+  logo1: 'logoUrl',
+  logo2: 'logoSecundarioUrl',
+  logo3: 'logoTerceroUrl',
+  logo4: 'logoCuartoUrl',
+};
 
 const CONFIG_KEY = 'config.json';
 const LOGO_KEY = 'logo:archivo';
@@ -121,6 +173,8 @@ const configPorDefecto: LandingBuilderConfig = {
   logoCuartoUrl: null,
   tarjetas: tarjetasPorDefecto,
   secciones: [],
+  bloques: [],
+  paginas: [],
   actualizadoEn: new Date(0).toISOString(),
 };
 
@@ -133,6 +187,7 @@ export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
 export async function saveLandingBuilderConfig(
   campos: Omit<
     LandingBuilderConfig,
+    | 'nombrePlataforma'
     | 'logoUrl'
     | 'logoSecundarioUrl'
     | 'logoTerceroUrl'
@@ -140,6 +195,7 @@ export async function saveLandingBuilderConfig(
     | 'tarjetas'
     | 'actualizadoEn'
   > & {
+    nombrePlataforma?: string;
     logoUrl?: string;
     logoSecundarioUrl?: string;
     logoTerceroUrl?: string;
@@ -229,11 +285,13 @@ export async function saveLandingBuilderConfig(
 
   const nuevaConfig: LandingBuilderConfig = {
     ...campos,
+    nombrePlataforma: campos.nombrePlataforma ?? actual.nombrePlataforma,
     logoUrl,
     logoSecundarioUrl,
     logoTerceroUrl,
     logoCuartoUrl,
     tarjetas,
+    paginas: actual.paginas,
     actualizadoEn: new Date().toISOString(),
   };
   await storage.setItem(CONFIG_KEY, nuevaConfig);
@@ -315,4 +373,161 @@ export async function getLandingBuilderCardImage(
   ]);
   if (!data || !meta) return null;
   return { data, mimetype: meta.mimetype };
+}
+
+const bloqueImagenKey = (bloqueId: string, tipo: string, itemId: string) =>
+  `bloque:${bloqueId}:${tipo}:${itemId}:archivo`;
+const bloqueImagenMetaKey = (bloqueId: string, tipo: string, itemId: string) =>
+  `bloque:${bloqueId}:${tipo}:${itemId}:meta.json`;
+
+export async function saveLandingBuilderBloqueImagen(
+  bloqueId: string,
+  tipo: string,
+  itemId: string,
+  data: Buffer,
+  mimetype: string
+): Promise<string> {
+  const storage = useStorage('landingBuilder');
+  await storage.setItemRaw(bloqueImagenKey(bloqueId, tipo, itemId), data);
+  await storage.setItem(bloqueImagenMetaKey(bloqueId, tipo, itemId), { mimetype });
+  return `/api/landing-builder/bloque-imagen/${bloqueId}/${tipo}/${itemId}?v=${Date.now()}`;
+}
+
+export async function getLandingBuilderBloqueImagen(
+  bloqueId: string,
+  tipo: string,
+  itemId: string
+): Promise<LandingBuilderLogo | null> {
+  const storage = useStorage('landingBuilder');
+  const [data, meta] = await Promise.all([
+    storage.getItemRaw<Buffer>(bloqueImagenKey(bloqueId, tipo, itemId)),
+    storage.getItem<{ mimetype: string }>(bloqueImagenMetaKey(bloqueId, tipo, itemId)),
+  ]);
+  if (!data || !meta) return null;
+  return { data, mimetype: meta.mimetype };
+}
+
+const paginaLogoKey = (paginaId: string, slot: string) => `pagina:${paginaId}:logo:${slot}:archivo`;
+const paginaLogoMetaKey = (paginaId: string, slot: string) =>
+  `pagina:${paginaId}:logo:${slot}:meta.json`;
+
+export async function saveLandingBuilderPaginaLogo(
+  paginaId: string,
+  slot: string,
+  data: Buffer,
+  mimetype: string
+): Promise<string> {
+  const storage = useStorage('landingBuilder');
+  await storage.setItemRaw(paginaLogoKey(paginaId, slot), data);
+  await storage.setItem(paginaLogoMetaKey(paginaId, slot), { mimetype });
+  return `/api/landing-builder/pagina-logo/${paginaId}/${slot}?v=${Date.now()}`;
+}
+
+export async function getLandingBuilderPaginaLogo(
+  paginaId: string,
+  slot: string
+): Promise<LandingBuilderLogo | null> {
+  const storage = useStorage('landingBuilder');
+  const [data, meta] = await Promise.all([
+    storage.getItemRaw<Buffer>(paginaLogoKey(paginaId, slot)),
+    storage.getItem<{ mimetype: string }>(paginaLogoMetaKey(paginaId, slot)),
+  ]);
+  if (!data || !meta) return null;
+  return { data, mimetype: meta.mimetype };
+}
+
+export async function getLandingBuilderPaginas(): Promise<LandingBuilderPagina[]> {
+  const config = await getLandingBuilderConfig();
+  // Compatibilidad con páginas creadas antes de que existiera la identidad por página.
+  return (config.paginas ?? []).map((pagina) => ({
+    ...pagina,
+    identidad: pagina.identidad ?? IDENTIDAD_PAGINA_VACIA,
+  }));
+}
+
+export async function getLandingBuilderPaginaPorSlug(
+  slug: string
+): Promise<LandingBuilderPagina | null> {
+  const paginas = await getLandingBuilderPaginas();
+  return paginas.find((pagina) => pagina.slug === slug) ?? null;
+}
+
+export async function crearLandingBuilderPagina(
+  bloques: LandingBuilderBloque[],
+  identidad: LandingBuilderPaginaIdentidad = IDENTIDAD_PAGINA_VACIA,
+  idPredefinido?: string
+): Promise<LandingBuilderPagina[]> {
+  const storage = useStorage('landingBuilder');
+  const config = await getLandingBuilderConfig();
+  const paginas = config.paginas ?? [];
+
+  if (paginas.length >= LIMITE_PAGINAS) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `No se permiten más de ${LIMITE_PAGINAS} páginas. Elimina una página existente para crear otra.`,
+    });
+  }
+
+  const numero = paginas.length + 1;
+  const nuevaPagina: LandingBuilderPagina = {
+    id: idPredefinido ?? `pagina-${Date.now()}`,
+    nombre: `Página ${numero}`,
+    slug: `pagina-${numero}`,
+    bloques,
+    identidad,
+    creadaEn: new Date().toISOString(),
+  };
+
+  const nuevasPaginas = [...paginas, nuevaPagina];
+  await storage.setItem(CONFIG_KEY, { ...config, paginas: nuevasPaginas });
+  return nuevasPaginas;
+}
+
+export async function eliminarLandingBuilderPagina(id: string): Promise<LandingBuilderPagina[]> {
+  const storage = useStorage('landingBuilder');
+  const config = await getLandingBuilderConfig();
+  const paginas = (config.paginas ?? []).filter((pagina) => pagina.id !== id);
+
+  await storage.setItem(CONFIG_KEY, { ...config, paginas });
+  return paginas;
+}
+
+export async function renombrarLandingBuilderPagina(
+  id: string,
+  nombre: string
+): Promise<LandingBuilderPagina[]> {
+  const storage = useStorage('landingBuilder');
+  const config = await getLandingBuilderConfig();
+  const paginas = config.paginas ?? [];
+  const pagina = paginas.find((item) => item.id === id);
+
+  if (!pagina) {
+    throw createError({ statusCode: 404, statusMessage: 'Página no encontrada' });
+  }
+
+  pagina.nombre = nombre;
+  await storage.setItem(CONFIG_KEY, { ...config, paginas });
+  return paginas;
+}
+
+export async function actualizarLandingBuilderPagina(
+  id: string,
+  bloques: LandingBuilderBloque[],
+  identidad?: LandingBuilderPaginaIdentidad
+): Promise<LandingBuilderPagina[]> {
+  const storage = useStorage('landingBuilder');
+  const config = await getLandingBuilderConfig();
+  const paginas = config.paginas ?? [];
+  const pagina = paginas.find((item) => item.id === id);
+
+  if (!pagina) {
+    throw createError({ statusCode: 404, statusMessage: 'Página no encontrada' });
+  }
+
+  pagina.bloques = bloques;
+  if (identidad) {
+    pagina.identidad = identidad;
+  }
+  await storage.setItem(CONFIG_KEY, { ...config, paginas });
+  return paginas;
 }

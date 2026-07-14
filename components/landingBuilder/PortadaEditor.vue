@@ -307,6 +307,7 @@ function seleccionarArchivo(archivo) {
   fondoActual.value = {
     tipo: 'imagen',
     url: urlTemporal,
+    archivo,
   };
 
   restablecerPosicionFondo();
@@ -321,6 +322,7 @@ function seleccionarEnlace(enlace) {
   fondoActual.value = {
     tipo: 'imagen',
     url: enlace,
+    archivo: null,
   };
 
   restablecerPosicionFondo();

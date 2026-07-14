@@ -5,8 +5,8 @@ import { LIMITE_TARJETAS } from '../../utils/landingBuilderConfig';
 
 const TIPOS_LOGO_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
 const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024; // 2MB
+const TAMANO_MAXIMO_IMAGEN_BLOQUE = 5 * 1024 * 1024; // 5MB
 const CAMPOS_REQUERIDOS = [
-  'nombrePlataforma',
   'titulo',
   'subtitulo',
   'tituloSeccion',
@@ -15,7 +15,7 @@ const CAMPOS_REQUERIDOS = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_LOGO });
+  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_IMAGEN_BLOQUE });
   const { fields, files } = await new Promise<{
     fields: formidable.Fields;
     files: formidable.Files;
@@ -33,6 +33,10 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: `El campo "${campo}" es requerido` });
     }
     campos[campo] = valor;
+  }
+
+  if (fields.nombrePlataforma?.[0] !== undefined) {
+    campos.nombrePlataforma = fields.nombrePlataforma[0].trim();
   }
 
   if (fields.logoUrl?.[0] !== undefined) {
@@ -83,6 +87,67 @@ export default defineEventHandler(async (event) => {
   }
 
   campos.secciones = secciones;
+
+  const bloquesRaw = fields.bloques?.[0];
+  let bloques: any[] = [];
+  if (bloquesRaw) {
+    try {
+      bloques = JSON.parse(bloquesRaw);
+    } catch {
+      throw createError({ statusCode: 400, statusMessage: 'El listado de bloques es inválido' });
+    }
+    if (!Array.isArray(bloques)) {
+      throw createError({ statusCode: 400, statusMessage: 'El listado de bloques es inválido' });
+    }
+  }
+
+  for (const key of Object.keys(files)) {
+    if (!key.startsWith('bloque_imagen::')) continue;
+
+    const [, bloqueId, tipoImagen, itemId] = key.split('::');
+    const archivoBloque = files[key]?.[0];
+    if (!archivoBloque) continue;
+
+    if (!archivoBloque.mimetype || !TIPOS_LOGO_PERMITIDOS.includes(archivoBloque.mimetype)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'La imagen del bloque debe ser PNG, JPEG, WEBP o SVG',
+      });
+    }
+    if (archivoBloque.size > TAMANO_MAXIMO_IMAGEN_BLOQUE) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'La imagen del bloque no debe superar 5MB',
+      });
+    }
+
+    const data = await fsp.readFile(archivoBloque.filepath);
+    const url = await saveLandingBuilderBloqueImagen(
+      bloqueId,
+      tipoImagen,
+      itemId,
+      data,
+      archivoBloque.mimetype
+    );
+
+    const bloque = bloques.find((b: any) => b.id === bloqueId);
+
+    if (tipoImagen === 'portada') {
+      if (bloque?.datos?.fondo) {
+        bloque.datos.fondo.url = url;
+      }
+      continue;
+    }
+
+    const lista =
+      tipoImagen === 'diapositiva' ? bloque?.datos?.diapositivas : bloque?.datos?.tarjetas;
+    const item = lista?.find((i: any) => i.id === itemId);
+    if (item) {
+      item.imagenUrl = url;
+    }
+  }
+
+  campos.bloques = bloques;
 
   let logo: { data: Buffer; mimetype: string } | undefined;
   const archivoLogo = files.logo?.[0];

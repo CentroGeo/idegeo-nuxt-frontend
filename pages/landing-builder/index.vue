@@ -5,6 +5,27 @@
 
 const store = useLandingBuilderStore();
 
+const paginaEnEdicion = computed(() =>
+  store.paginas.find((pagina) => pagina.id === store.paginaEditandoId)
+);
+
+function eliminarPagina(pagina) {
+  if (!confirm(`¿Estás seguro que deseas eliminar la página publicada "${pagina.nombre}"?`)) {
+    return;
+  }
+  store.eliminarPagina(pagina.id);
+}
+
+function editarPagina(pagina) {
+  if (pagina.id !== store.paginaEditandoId && store.hayCambiosSinGuardar()) {
+    const mensaje = store.paginaEditandoId
+      ? 'Tienes cambios sin guardar en la página que estás editando. Se perderán si continúas. ¿Deseas continuar?'
+      : 'Tienes bloques sin guardar en el lienzo. Se perderán si continúas. ¿Deseas continuar?';
+    if (!confirm(mensaje)) return;
+  }
+  store.cargarPaginaParaEditar(pagina);
+}
+
 onMounted(() => {
   store.cargarConfiguracion();
 });
@@ -12,8 +33,106 @@ onMounted(() => {
 
 <template>
   <div class="landing-builder-pagina">
+    <p v-if="paginaEnEdicion" class="landing-builder-editando-aviso contenedor m-t-3">
+      Editando: <strong>{{ paginaEnEdicion.nombre }}</strong>
+      <button
+        type="button"
+        class="boton-secundario boton-chico m-l-2"
+        @click="store.cancelarEdicionPagina"
+      >
+        Cancelar edición
+      </button>
+    </p>
+
     <!-- Portada del constructor -->
-    <LandingBuilderLienzoBloques />
+    <LandingBuilderLienzoBloques v-model="store.bloques" />
+
+    <div class="contenedor flex flex-vertical-centrado m-y-3 landing-builder-acciones">
+      <button
+        v-if="!store.paginaEditandoId"
+        class="boton-primario boton-chico"
+        type="button"
+        :disabled="store.isSaving || store.isCreandoPagina"
+        @click="store.guardarConfiguracion"
+      >
+        {{ store.isSaving && !store.isCreandoPagina ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+
+      <button
+        :class="store.paginaEditandoId ? 'boton-primario' : 'boton-secundario'"
+        class="boton-chico"
+        type="button"
+        :disabled="
+          store.isSaving ||
+          store.isCreandoPagina ||
+          (!store.paginaEditandoId && !store.puedeCrearPagina())
+        "
+        :title="
+          !store.paginaEditandoId && !store.puedeCrearPagina()
+            ? `Ya tienes el máximo de ${store.limitePaginas} páginas. Elimina una para crear otra.`
+            : undefined
+        "
+        @click="store.crearPagina"
+      >
+        {{
+          store.isCreandoPagina
+            ? 'Guardando página...'
+            : store.paginaEditandoId
+              ? 'Guardar cambios en esta página'
+              : 'Crear página'
+        }}
+      </button>
+
+      <p v-if="store.saveSuccess" class="texto-color-confirmacion m-l-2">
+        {{ store.mensajeExito }}
+      </p>
+
+      <p v-if="store.error" class="texto-color-error m-l-2">
+        {{ store.error }}
+      </p>
+    </div>
+
+    <section class="contenedor m-y-3 landing-builder-paginas">
+      <h3>Páginas publicadas ({{ store.paginas.length }}/{{ store.limitePaginas }})</h3>
+
+      <p v-if="!store.paginas.length" class="texto-color-secundario">
+        Aún no has publicado ninguna página. Arma tu lienzo y presiona "Crear página".
+      </p>
+
+      <ul v-else class="landing-builder-paginas__lista">
+        <li v-for="pagina in store.paginas" :key="pagina.id" class="landing-builder-paginas__item">
+          <span
+            contenteditable="true"
+            class="landing-builder-paginas__nombre"
+            title="Haz clic para editar el nombre"
+            @blur="store.renombrarPagina(pagina.id, $event.target.textContent)"
+            @keydown.enter.prevent="$event.target.blur()"
+          >
+            {{ pagina.nombre }}
+          </span>
+
+          <div class="landing-builder-paginas__acciones">
+            <NuxtLink :to="`/paginas/${pagina.slug}`" target="_blank">Ver</NuxtLink>
+
+            <button
+              type="button"
+              class="boton-secundario boton-chico"
+              @click="editarPagina(pagina)"
+            >
+              Editar
+            </button>
+
+            <button
+              type="button"
+              class="boton-secundario boton-chico"
+              @click="eliminarPagina(pagina)"
+            >
+              Eliminar
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
 
     <!--
     Formulario existente (config, editor de portada/sección/logo, tarjetas y vista previa).
@@ -88,6 +207,54 @@ onMounted(() => {
 <style scoped lang="scss">
 .landing-builder-pagina {
   width: 100%;
+}
+
+.landing-builder-editando-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--color-neutro-1, #f5f5f5);
+  border: 1px solid var(--color-neutro-2, #e0e0e0);
+}
+
+.landing-builder-paginas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-builder-paginas__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-neutro-2, #e0e0e0);
+  border-radius: 6px;
+}
+
+.landing-builder-paginas__nombre {
+  padding: 2px 6px;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  outline: none;
+
+  &:hover,
+  &:focus {
+    border-color: var(--color-neutro-3, #bdbdbd);
+  }
+}
+
+.landing-builder-paginas__acciones {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
 }
 
 .landing-builder-configuracion {
