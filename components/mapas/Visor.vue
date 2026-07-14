@@ -35,6 +35,7 @@ const op = computed(() => ({
   // [inicio, fin] -> fondo degradado de los botones de control (geohistorias).
   // Si esta presente tiene prioridad sobre colorControles.
   gradienteControles: null,
+  // El control de info solo se muestra si ademas hay titulo que mostrar.
   info: true,
   cambiarBase: true,
   leyenda: true,
@@ -269,7 +270,7 @@ const estiloControles = computed(() => {
         <slot />
       </SisdaiMapa>
 
-      <MapasControlInfo v-if="op.info" :titulo="op.titulo" />
+      <MapasControlInfo v-if="op.info && op.titulo?.trim()" :titulo="op.titulo" />
 
       <MapasControlCapaBase v-if="op.cambiarBase" v-model="baseLayerActual" />
 

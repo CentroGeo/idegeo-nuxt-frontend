@@ -7,7 +7,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(['alClickTab']);
+defineEmits(['alClickTab', 'alEntrarTab', 'alSalirTab']);
 
 const route = useRoute();
 // Tab activo = escena actual de la ruta.
@@ -26,12 +26,17 @@ const fondoDegradado = computed(
     <div class="linea-tiempo flex flex-contenido-centrado p-2">
       <div class="timeline-line"></div>
       <button
-        v-for="({ id }, idx) in tabs"
+        v-for="({ id, name }, idx) in tabs"
         :key="`menu-tab-opcion-${id}`"
         class="boton-tab"
         :class="{ seleccionado: esActiva(id) }"
         :style="esActiva(id) ? { background: fondoDegradado } : {}"
+        :aria-label="name"
         @click="() => $emit('alClickTab', id)"
+        @mouseenter="$emit('alEntrarTab', $event, name)"
+        @mouseleave="$emit('alSalirTab')"
+        @focus="$emit('alEntrarTab', $event, name)"
+        @blur="$emit('alSalirTab')"
       >
         {{ idx + 1 }}
       </button>
