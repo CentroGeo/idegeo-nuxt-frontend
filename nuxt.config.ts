@@ -68,6 +68,11 @@ export default defineNuxtConfig({
     baseURL: '/',
     preset: 'node-server',
     compressPublicAssets: false,
+    storage: {
+      // Almacenamiento aislado del constructor de landing page: no toca
+      // GeoNode ni ningún otro backend real de la plataforma.
+      landingBuilder: { driver: 'fs', base: './.data/landing-builder' },
+    },
   },
 
   modules: [
@@ -129,6 +134,7 @@ export default defineNuxtConfig({
       enableGeocontenidos: process.env.NUXT_PUBLIC_ENABLE_GEOCONTENIDOS === 'true',
       enableGeohistorias: process.env.NUXT_PUBLIC_ENABLE_GEOHISTORIAS === 'true',
       enableTableros: process.env.NUXT_PUBLIC_ENABLE_TABLEROS === 'true',
+      enableLandingBuilder: process.env.NUXT_PUBLIC_ENABLE_LANDING_BUILDER === 'true',
     },
   },
 
