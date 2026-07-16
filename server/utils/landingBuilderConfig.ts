@@ -55,7 +55,7 @@ export interface LandingBuilderConfig {
 
 export interface LandingBuilderBloque {
   id: string;
-  tipo: 'portada' | 'texto' | 'carrusel' | 'tarjetas';
+  tipo: 'portada' | 'titulo' | 'parrafo' | 'texto' | 'carrusel' | 'tarjetas';
   etiqueta?: string;
   datos: Record<string, unknown>;
 }

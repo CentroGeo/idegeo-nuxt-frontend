@@ -12,6 +12,50 @@ function estiloFondoPortada(bloque) {
   const posicion = bloque.datos?.posicionFondo || { x: 50, y: 50 };
   return { objectPosition: `${posicion.x}% ${posicion.y}%` };
 }
+
+const tamanosTitulo = {
+  pequeno: '1.5rem',
+  mediano: '2rem',
+  grande: '2.5rem',
+  'extra-grande': '3rem',
+};
+
+const tamanosParrafo = {
+  pequeno: '0.875rem',
+  normal: '1rem',
+  mediano: '1.125rem',
+  grande: '1.25rem',
+};
+
+function obtenerEstilosTitulo(bloque) {
+  const datos = bloque.datos || {};
+  const tamano = datos.tamano || 'grande';
+
+  return {
+    textAlign: datos.alineacion || 'left',
+    color: datos.color || '#FFFFFF',
+    fontWeight: datos.negrita ? 700 : 400,
+    fontSize: tamanosTitulo[tamano] || tamanosTitulo.grande,
+  };
+}
+
+function obtenerEstilosParrafo(bloque) {
+  const datos = bloque.datos || {};
+  const tamano = datos.tamano || 'normal';
+
+  return {
+    textAlign: datos.alineacion || 'left',
+    color: datos.color || '#FFFFFF',
+    fontWeight: datos.negrita ? 700 : 400,
+    fontSize: tamanosParrafo[tamano] || tamanosParrafo.normal,
+  };
+}
+
+function obtenerLineasParrafo(bloque) {
+  return String(bloque.datos?.texto ?? '')
+    .replace(/\r/g, '')
+    .split('\n');
+}
 </script>
 
 <template>
@@ -48,6 +92,37 @@ function estiloFondoPortada(bloque) {
         </div>
       </section>
 
+      <section
+        v-else-if="bloque.tipo === 'titulo'"
+        class="visor-titulo contenedor ancho-fijo m-y-6"
+      >
+        <h2 class="visor-titulo__contenido" :style="obtenerEstilosTitulo(bloque)">
+          {{ bloque.datos?.texto }}
+        </h2>
+      </section>
+
+      <section
+        v-else-if="bloque.tipo === 'parrafo'"
+        class="visor-parrafo contenedor ancho-fijo m-y-6"
+      >
+        <ul
+          v-if="bloque.datos?.tipoLista === 'vinetas'"
+          class="visor-parrafo__lista"
+          :style="obtenerEstilosParrafo(bloque)"
+        >
+          <li
+            v-for="(linea, indice) in obtenerLineasParrafo(bloque)"
+            :key="`${bloque.id}-linea-${indice}`"
+          >
+            {{ linea }}
+          </li>
+        </ul>
+
+        <p v-else class="visor-parrafo__contenido" :style="obtenerEstilosParrafo(bloque)">
+          {{ bloque.datos?.texto }}
+        </p>
+      </section>
+
       <section v-else-if="bloque.tipo === 'texto'" class="visor-texto contenedor ancho-fijo m-y-6">
         <component
           :is="item.componente"
@@ -73,6 +148,36 @@ function estiloFondoPortada(bloque) {
 </template>
 
 <style scoped lang="scss">
+.visor-titulo {
+  &__contenido {
+    margin: 0;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+}
+
+.visor-parrafo {
+  &__contenido,
+  &__lista {
+    margin: 0;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  &__contenido {
+    white-space: pre-wrap;
+  }
+
+  &__lista {
+    padding-left: 1.75rem;
+
+    li {
+      min-height: 1.6em;
+      padding-left: 0.2rem;
+    }
+  }
+}
+
 .visor-portada {
   position: relative;
   min-height: clamp(320px, 52vh, 580px);
