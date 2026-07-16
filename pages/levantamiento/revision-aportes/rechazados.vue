@@ -7,20 +7,24 @@ definePageMeta({
 
 const storeLevantamiento = useLevantamientoStore();
 
-// MOCK DATA: Aportes Aprobados
-const aportesAprobados = ref(Array.from({ length: 10 }, (_, i) => ({
+// MOCK DATA: Aportes Rechazados
+const aportesRechazados = ref(Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   titulo: `un planton calle x ponce y ${i + 1}`,
   fecha: `07/11/2025 07:${40 + i} PM`,
-  folio: `F-85${i} APROBADO`,
+  folio: `F-85${i} RECHAZADO`,
   proyecto: `Proyecto diario`,
-  estado: 'APROBADO',
+  estado: 'RECHAZADO',
   registrante: 'Irving Sanchez',
   atendidoPor: 'Saul Morgado',
   fotos: [ 
     'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg',
     i % 2 === 0 ? 'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg' : '',
     ''
+  ],
+  mensajes: [
+    { id: 1, autor: 'Revisor', texto: 'La fotografía no es clara y no coincide con la ubicación reportada.', fecha: '10:00 AM' },
+    { id: 2, autor: 'Tú', texto: 'Entendido, pediré que se vuelva a tomar la evidencia.', fecha: '10:15 AM' }
   ],
   detalle: {
     preguntaAbierta: `esto es una prueba ${i + 1}. Un texto lo suficientemente largo para demostrar que nuestro hover moderno sigue funcionando a la perfección...`,
@@ -33,15 +37,15 @@ const aportesAprobados = ref(Array.from({ length: 10 }, (_, i) => ({
 const busqueda = ref('');
 
 const aportesFiltrados = computed(() => {
-  if (!busqueda.value) return aportesAprobados.value;
-  return aportesAprobados.value.filter(aporte => 
+  if (!busqueda.value) return aportesRechazados.value;
+  return aportesRechazados.value.filter(aporte => 
     aporte.titulo.toLowerCase().includes(busqueda.value.toLowerCase())
   );
 });
 
 // Paginación
 const paginaActual = ref(1);
-const itemsPorPagina = 8; // 
+const itemsPorPagina = 8; 
 
 const totalPaginas = computed(() => 
   Math.ceil(aportesFiltrados.value.length / itemsPorPagina) || 1
@@ -64,7 +68,7 @@ function irAPagina(pagina) {
 }
 
 // Selección de tarjeta
-const aporteSeleccionado = ref(aportesAprobados.value[0]);
+const aporteSeleccionado = ref(aportesRechazados.value[0]);
 
 function verFichaAporte(aporte) {
   aporteSeleccionado.value = aporte;
@@ -81,6 +85,17 @@ function abrirImagen(url) {
 
 function cerrarImagen() {
   imagenAmpliada.value = null;
+}
+
+// LÓGICA DEL MODAL DE MENSAJES
+const modalMensajesAbierto = ref(false);
+
+function abrirMensajes() {
+  modalMensajesAbierto.value = true;
+}
+
+function cerrarMensajes() {
+  modalMensajesAbierto.value = false;
 }
 </script>
 
@@ -109,7 +124,7 @@ function cerrarImagen() {
 
         <!--Contenedor del título-->
         <div class="flex titulo-contenido-levantamiento m-b-3">
-          <h2>Aportes aprobados</h2>
+          <h2>Aportes rechazados</h2>
           <UiNumeroElementos :numero="aportesFiltrados.length" />
         </div>
 
@@ -151,7 +166,7 @@ function cerrarImagen() {
 
               <!-- Mensaje sin resultados -->
               <div v-if="aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
-                No se encontraron aportes aprobados.
+                No se encontraron aportes rechazados.
               </div>
             </div>
 
@@ -171,15 +186,20 @@ function cerrarImagen() {
             </div>
           </div>
 
-          <!--Ficha de proyecto aprobado-->
+          <!--Ficha de proyecto rechazado-->
           <div class="columna-11">
             <div class="flex m-b-2" style="justify-content: space-between; align-items: center;">
               <h3 class="m-0">Ficha de proyecto</h3>
+              
+              <!-- Botones de Acción (Modificados según tu petición) -->
               <div class="flex botones-exportacion" style="gap: 8px;">
                 <button class="btn-outline">GeoJson</button>
                 <button class="btn-outline">KML</button>
                 <button class="btn-outline">Shapefile (zip)</button>
-                <button class="btn-moderno-chico btn-desaprobar">Desaprobar</button>
+                <!-- Botón de Mensajes posicionado arriba -->
+                <button class="btn-outline" @click="abrirMensajes">Mensajes</button>
+                <!-- Botón Eliminar en vez de Desaprobar -->
+                <button class="btn-moderno-chico btn-eliminar">Eliminar</button>
               </div>
             </div>
 
@@ -194,7 +214,7 @@ function cerrarImagen() {
               <!-- Cabecera del panel interno -->
               <div class="flex m-b-4" style="justify-content: space-between; align-items: center;">
                 <div class="flex" style="gap: 12px; align-items: center;">
-                  <span class="badge-estado">{{ aporteSeleccionado.folio }}</span>
+                  <span class="badge-estado badge-rechazado">{{ aporteSeleccionado.folio }}</span>
                   <button class="btn-outline" style="border-color: #10b981;">Ver proyecto</button>
                 </div>
                 <span class="text-chico" style="color: #64748b; font-weight: 500;">{{ aporteSeleccionado.fecha }}</span>
@@ -253,6 +273,38 @@ function cerrarImagen() {
         </div>
       </main>
 
+      <!-- Modal de Mensajes -->
+      <Teleport to="body">
+        <div v-if="modalMensajesAbierto" class="modal-overlay" @click="cerrarMensajes">
+          <div class="modal-mensajes-contenido" @click.stop>
+            <div class="modal-mensajes-header">
+              <h4 class="m-0" style="color: #334155;">Mensajes de Rechazo</h4>
+              <button class="btn-cerrar-sutil" @click="cerrarMensajes">✕</button>
+            </div>
+            
+            <div class="chat-area">
+              <div 
+                v-for="msj in aporteSeleccionado.mensajes" 
+                :key="msj.id" 
+                :class="['burbuja', msj.autor === 'Tú' ? 'propia' : 'ajena']"
+              >
+                <div style="font-weight: bold; font-size: 0.7rem; margin-bottom: 4px;">{{ msj.autor }}</div>
+                <p class="m-0">{{ msj.texto }}</p>
+                <span class="fecha-msj">{{ msj.fecha }}</span>
+              </div>
+              <div v-if="aporteSeleccionado.mensajes.length === 0" class="texto-centrado" style="color: #94a3b8; font-size: 0.85rem; margin-top: 2rem;">
+                No hay mensajes para este aporte.
+              </div>
+            </div>
+            
+            <div class="chat-input-area">
+              <input type="text" placeholder="Escribe un mensaje..." class="input-chat" />
+              <button class="btn-enviar-chat">Enviar</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
       <!--Modal de imágenes-->
       <Teleport to="body">
         <div v-if="imagenAmpliada" class="modal-imagen-overlay" @click="cerrarImagen">
@@ -272,7 +324,6 @@ function cerrarImagen() {
   align-items: center;
   gap: 8px; 
 }
-
 
 .cursor-pointer { cursor: pointer; }
 .text-chico { font-size: 0.75rem; }
@@ -332,9 +383,9 @@ function cerrarImagen() {
     color: #64748b;
     
     &.activo {
-      background-color: #10b981;
+      background-color: #ef4444; /* Rojo para indicar que estamos en la vista de rechazados */
       color: white;
-      border-color: #10b981;
+      border-color: #ef4444;
     }
   }
 }
@@ -390,6 +441,10 @@ function cerrarImagen() {
   font-size: 0.75rem;
   font-weight: bold;
   letter-spacing: 0.5px;
+
+  &.badge-rechazado {
+    background-color: #ef4444; /* Badge en rojo para rechazados */
+  }
 }
 
 .grid-metadatos {
@@ -584,7 +639,76 @@ function cerrarImagen() {
   }
 }
 
-.btn-desaprobar {
+/* Botón Eliminar modificado */
+.btn-eliminar {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* --- ESTILOS DEL MODAL DE MENSAJES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(15, 23, 42, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9998;
+  backdrop-filter: blur(2px);
+}
+
+.modal-mensajes-contenido {
+  background: #ffffff;
+  width: 100%; max-width: 450px; height: 70vh;
+  border-radius: 12px; display: flex; flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: fadeInZoom 0.2s ease-out;
+  overflow: hidden;
+}
+
+.modal-mensajes-header {
+  padding: 16px 20px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.btn-cerrar-sutil {
+  background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
+  &:hover { color: #ef4444; }
+}
+
+.chat-area {
+  flex: 1; padding: 20px; overflow-y: auto; background-color: #f1f5f9; display: flex; flex-direction: column; gap: 12px;
+}
+
+.burbuja {
+  padding: 12px 16px; border-radius: 12px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; position: relative;
+}
+
+.ajena {
+  background-color: #ffffff; color: #334155; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 4px;
+}
+
+.propia {
+  background-color: #715B62; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px;
+}
+
+.fecha-msj {
+  display: block; font-size: 0.65rem; margin-top: 6px; text-align: right;
+}
+
+.ajena .fecha-msj { color: #94a3b8; }
+.propia .fecha-msj { color: rgba(255,255,255,0.7); }
+
+.chat-input-area {
+  padding: 16px; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 12px;
+}
+
+.input-chat {
+  flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.9rem; transition: border-color 0.2s;
+  &:focus { outline: none; border-color: #715B62; }
+}
+
+.btn-enviar-chat {
+  background-color: #10b981; color: white; border: none; padding: 0 20px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  &:hover { background-color: #059669; }
 }
 </style>
