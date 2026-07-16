@@ -1,5 +1,5 @@
 <script setup>
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Formulario from './formulario.vue';
 import InformacionGeneral from './informacion-general.vue';
 import Participantes from './participantes-permisos.vue';
@@ -9,7 +9,17 @@ definePageMeta({
 });
 
 const storeLevantamiento = useLevantamientoStore();
-const subrutaActual = ref('informacion-general');
+const route = useRoute();
+const seccionesProyecto = new Set([
+  'informacion-general',
+  'participantes-permisos',
+  'formulario',
+]);
+const subrutaActual = ref(
+  seccionesProyecto.has(String(route.query.seccion))
+    ? String(route.query.seccion)
+    : 'informacion-general'
+);
 
 const opcionesMenu = [
   { texto: 'Información general', key: 'informacion-general' },
