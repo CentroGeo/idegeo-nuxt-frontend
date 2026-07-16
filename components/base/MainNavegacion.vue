@@ -117,36 +117,60 @@ function abrirModalLogo4() {
   modalCambiarLogo4.value?.abrirModal();
 }
 
-function seleccionarArchivoLogo1(archivo) {
+function seleccionarArchivoLogo1(archivo, redir) {
   store.setLogoFile(archivo);
+  store.logoRedirectUrl = redir;
 }
 
-function seleccionarEnlaceLogo1(enlace) {
+function seleccionarEnlaceLogo1(enlace, redir) {
   store.setLogoUrl(enlace);
+  store.logoRedirectUrl = redir;
 }
 
-function seleccionarArchivoLogo2(archivo) {
+function eliminarLogo1() {
+  store.eliminarLogo();
+}
+
+function seleccionarArchivoLogo2(archivo, redir) {
   store.setLogoSecundarioFile(archivo);
+  store.logoSecundarioRedirectUrl = redir;
 }
 
-function seleccionarEnlaceLogo2(enlace) {
+function seleccionarEnlaceLogo2(enlace, redir) {
   store.setLogoSecundarioUrl(enlace);
+  store.logoSecundarioRedirectUrl = redir;
 }
 
-function seleccionarArchivoLogo3(archivo) {
+function eliminarLogo2() {
+  store.eliminarLogoSecundario();
+}
+
+function seleccionarArchivoLogo3(archivo, redir) {
   store.setLogoTerceroFile(archivo);
+  store.logoTerceroRedirectUrl = redir;
 }
 
-function seleccionarEnlaceLogo3(enlace) {
+function seleccionarEnlaceLogo3(enlace, redir) {
   store.setLogoTerceroUrl(enlace);
+  store.logoTerceroRedirectUrl = redir;
 }
 
-function seleccionarArchivoLogo4(archivo) {
+function eliminarLogo3() {
+  store.eliminarLogoTercero();
+}
+
+function seleccionarArchivoLogo4(archivo, redir) {
   store.setLogoCuartoFile(archivo);
+  store.logoCuartoRedirectUrl = redir;
 }
 
-function seleccionarEnlaceLogo4(enlace) {
+function seleccionarEnlaceLogo4(enlace, redir) {
   store.setLogoCuartoUrl(enlace);
+  store.logoCuartoRedirectUrl = redir;
+}
+
+function eliminarLogo4() {
+  store.eliminarLogoCuarto();
 }
 </script>
 
@@ -161,28 +185,37 @@ function seleccionarEnlaceLogo4(enlace) {
             <span class="pictograma-agregar" aria-hidden="true"></span>
             <span>Logo 1</span>
           </div>
-          <template v-else>
-            <NuxtLink
-              to="/"
-              rel="noopener noreferrer"
-              class="nav-hiperviculo-logo pointer-events-none"
-            >
-              <img
-                :src="store.logoUrl"
-                class="nav-logo color-invertir"
-                alt="Logo principal"
-                height="36"
-              />
-            </NuxtLink>
+          <NuxtLink
+            v-else
+            to="/"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo pointer-events-none"
+          >
+            <img
+              :src="store.resolverUrlImagen(store.logoUrl)"
+              class="nav-logo color-invertir"
+              alt="Logo principal"
+              height="36"
+            />
+          </NuxtLink>
+          <div class="nav-logo-acciones">
             <button
               type="button"
-              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-editar-logo"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
               aria-label="Cambiar logo principal"
               @click="abrirModalLogo1"
             >
               <span class="pictograma-editar" aria-hidden="true"></span>
             </button>
-          </template>
+            <button
+              type="button"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
+              aria-label="Eliminar logo principal"
+              @click="eliminarLogo1"
+            >
+              <span class="pictograma-eliminar" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
 
         <!-- Logotipo 2 (Editable, sin imagen predeterminada si está vacío) -->
@@ -198,28 +231,37 @@ function seleccionarEnlaceLogo4(enlace) {
             <span class="pictograma-agregar" aria-hidden="true"></span>
             <span>Logo 2</span>
           </div>
-          <template v-else>
-            <NuxtLink
-              to="/"
-              rel="noopener noreferrer"
-              class="nav-hiperviculo-logo pointer-events-none"
-            >
-              <img
-                :src="store.logoSecundarioUrl"
-                class="nav-logo color-invertir"
-                :alt="store.nombrePlataforma || 'SIGIC'"
-                height="36"
-              />
-            </NuxtLink>
+          <NuxtLink
+            v-else
+            to="/"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo pointer-events-none"
+          >
+            <img
+              :src="store.resolverUrlImagen(store.logoSecundarioUrl)"
+              class="nav-logo color-invertir"
+              :alt="store.nombrePlataforma || 'SIGIC'"
+              height="36"
+            />
+          </NuxtLink>
+          <div class="nav-logo-acciones">
             <button
               type="button"
-              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-editar-logo"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
               aria-label="Cambiar logo secundario"
               @click="abrirModalLogo2"
             >
               <span class="pictograma-editar" aria-hidden="true"></span>
             </button>
-          </template>
+            <button
+              type="button"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
+              aria-label="Eliminar logo secundario"
+              @click="eliminarLogo2"
+            >
+              <span class="pictograma-eliminar" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
 
         <!-- Logotipo 3 (Editable, sin imagen predeterminada si está vacío) -->
@@ -231,28 +273,37 @@ function seleccionarEnlaceLogo4(enlace) {
             <span class="pictograma-agregar" aria-hidden="true"></span>
             <span>Logo 3</span>
           </div>
-          <template v-else>
-            <NuxtLink
-              to="/"
-              rel="noopener noreferrer"
-              class="nav-hiperviculo-logo pointer-events-none"
-            >
-              <img
-                :src="store.logoTerceroUrl"
-                class="nav-logo color-invertir"
-                alt="Logo tercero"
-                height="36"
-              />
-            </NuxtLink>
+          <NuxtLink
+            v-else
+            to="/"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo pointer-events-none"
+          >
+            <img
+              :src="store.resolverUrlImagen(store.logoTerceroUrl)"
+              class="nav-logo color-invertir"
+              alt="Logo tercero"
+              height="36"
+            />
+          </NuxtLink>
+          <div class="nav-logo-acciones">
             <button
               type="button"
-              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-editar-logo"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
               aria-label="Cambiar logo tercero"
               @click="abrirModalLogo3"
             >
               <span class="pictograma-editar" aria-hidden="true"></span>
             </button>
-          </template>
+            <button
+              type="button"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
+              aria-label="Eliminar logo tercero"
+              @click="eliminarLogo3"
+            >
+              <span class="pictograma-eliminar" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
 
         <!-- Logotipo 4 (Editable, sin imagen predeterminada si está vacío) -->
@@ -264,28 +315,37 @@ function seleccionarEnlaceLogo4(enlace) {
             <span class="pictograma-agregar" aria-hidden="true"></span>
             <span>Logo 4</span>
           </div>
-          <template v-else>
-            <NuxtLink
-              to="/"
-              rel="noopener noreferrer"
-              class="nav-hiperviculo-logo pointer-events-none"
-            >
-              <img
-                :src="store.logoCuartoUrl"
-                class="nav-logo color-invertir"
-                alt="Logo cuarto"
-                height="36"
-              />
-            </NuxtLink>
+          <NuxtLink
+            v-else
+            to="/"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo pointer-events-none"
+          >
+            <img
+              :src="store.resolverUrlImagen(store.logoCuartoUrl)"
+              class="nav-logo color-invertir"
+              alt="Logo cuarto"
+              height="36"
+            />
+          </NuxtLink>
+          <div class="nav-logo-acciones">
             <button
               type="button"
-              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-editar-logo"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
               aria-label="Cambiar logo cuarto"
               @click="abrirModalLogo4"
             >
               <span class="pictograma-editar" aria-hidden="true"></span>
             </button>
-          </template>
+            <button
+              type="button"
+              class="boton-pictograma boton-sin-contenedor-secundario boton-chico boton-accion-logo"
+              aria-label="Eliminar logo cuarto"
+              @click="eliminarLogo4"
+            >
+              <span class="pictograma-eliminar" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
 
         <!-- Nombre de la plataforma -->
@@ -308,9 +368,14 @@ function seleccionarEnlaceLogo4(enlace) {
         class="contenedor-identidades-nav constructor-identidades-nav"
       >
         <div v-if="identidadPublica.logoUrl" class="contenedor-logo-nav">
-          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+          <NuxtLink
+            :to="identidadPublica.logoRedirectUrl || '/'"
+            :target="identidadPublica.logoRedirectUrl ? '_blank' : undefined"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo"
+          >
             <img
-              :src="identidadPublica.logoUrl"
+              :src="store.resolverUrlImagen(identidadPublica.logoUrl)"
               class="nav-logo color-invertir"
               alt="Logo principal"
               height="36"
@@ -319,9 +384,14 @@ function seleccionarEnlaceLogo4(enlace) {
         </div>
 
         <div v-if="identidadPublica.logoSecundarioUrl" class="contenedor-logo-nav">
-          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+          <NuxtLink
+            :to="identidadPublica.logoSecundarioRedirectUrl || '/'"
+            :target="identidadPublica.logoSecundarioRedirectUrl ? '_blank' : undefined"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo"
+          >
             <img
-              :src="identidadPublica.logoSecundarioUrl"
+              :src="store.resolverUrlImagen(identidadPublica.logoSecundarioUrl)"
               class="nav-logo color-invertir"
               :alt="identidadPublica.nombrePlataforma || 'Logo secundario'"
               height="36"
@@ -330,9 +400,14 @@ function seleccionarEnlaceLogo4(enlace) {
         </div>
 
         <div v-if="identidadPublica.logoTerceroUrl" class="contenedor-logo-nav">
-          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+          <NuxtLink
+            :to="identidadPublica.logoTerceroRedirectUrl || '/'"
+            :target="identidadPublica.logoTerceroRedirectUrl ? '_blank' : undefined"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo"
+          >
             <img
-              :src="identidadPublica.logoTerceroUrl"
+              :src="store.resolverUrlImagen(identidadPublica.logoTerceroUrl)"
               class="nav-logo color-invertir"
               alt="Logo tercero"
               height="36"
@@ -341,9 +416,14 @@ function seleccionarEnlaceLogo4(enlace) {
         </div>
 
         <div v-if="identidadPublica.logoCuartoUrl" class="contenedor-logo-nav">
-          <NuxtLink to="/" rel="noopener noreferrer" class="nav-hiperviculo-logo">
+          <NuxtLink
+            :to="identidadPublica.logoCuartoRedirectUrl || '/'"
+            :target="identidadPublica.logoCuartoRedirectUrl ? '_blank' : undefined"
+            rel="noopener noreferrer"
+            class="nav-hiperviculo-logo"
+          >
             <img
-              :src="identidadPublica.logoCuartoUrl"
+              :src="store.resolverUrlImagen(identidadPublica.logoCuartoUrl)"
               class="nav-logo color-invertir"
               alt="Logo cuarto"
               height="36"
@@ -453,24 +533,28 @@ function seleccionarEnlaceLogo4(enlace) {
     <LandingBuilderModalCambiarLogo
       v-if="esConstructor"
       ref="modalCambiarLogo1"
+      :redireccion-inicial="store.logoRedirectUrl"
       @seleccionar-archivo="seleccionarArchivoLogo1"
       @seleccionar-enlace="seleccionarEnlaceLogo1"
     />
     <LandingBuilderModalCambiarLogo
       v-if="esConstructor"
       ref="modalCambiarLogo2"
+      :redireccion-inicial="store.logoSecundarioRedirectUrl"
       @seleccionar-archivo="seleccionarArchivoLogo2"
       @seleccionar-enlace="seleccionarEnlaceLogo2"
     />
     <LandingBuilderModalCambiarLogo
       v-if="esConstructor"
       ref="modalCambiarLogo3"
+      :redireccion-inicial="store.logoTerceroRedirectUrl"
       @seleccionar-archivo="seleccionarArchivoLogo3"
       @seleccionar-enlace="seleccionarEnlaceLogo3"
     />
     <LandingBuilderModalCambiarLogo
       v-if="esConstructor"
       ref="modalCambiarLogo4"
+      :redireccion-inicial="store.logoCuartoRedirectUrl"
       @seleccionar-archivo="seleccionarArchivoLogo4"
       @seleccionar-enlace="seleccionarEnlaceLogo4"
     />
@@ -568,7 +652,7 @@ body[data-tema='oscuro'] {
     }
   }
 
-  .boton-editar-logo {
+  .nav-logo-acciones {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -578,7 +662,17 @@ body[data-tema='oscuro'] {
     transition:
       opacity 0.2s,
       transform 0.2s;
+    display: inline-flex;
+    gap: 8px;
+  }
 
+  .contenedor-logo-nav:hover .nav-logo-acciones,
+  .nav-logo-acciones:focus-within {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .boton-accion-logo {
     background-color: var(--color-primario-2, rgb(105 28 50)) !important;
     color: #ffffff !important;
     border-radius: 50% !important;
@@ -590,17 +684,12 @@ body[data-tema='oscuro'] {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
     border: none !important;
     padding: 0 !important;
+    cursor: pointer;
 
     span {
       padding: 0 !important;
       font-size: 14px !important;
     }
-  }
-
-  .contenedor-logo-nav:hover .boton-editar-logo,
-  .boton-editar-logo:focus-visible {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
   }
 
   .contenedor-titulo-plataforma-nav {

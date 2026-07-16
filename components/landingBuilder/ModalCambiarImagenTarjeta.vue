@@ -454,9 +454,9 @@ defineExpose({
     justify-content: center;
     padding: 20px 16px;
     overflow: hidden;
-    border: 1px dashed rgb(255 255 255 / 55%) !important;
+    border: 1.5px dashed var(--color-neutro-3, #ced4da);
     border-radius: 10px;
-    background: rgb(255 255 255 / 4%) !important;
+    background: transparent;
     text-align: center;
     cursor: pointer;
     transition:
@@ -467,13 +467,13 @@ defineExpose({
     &:hover,
     &:focus-visible,
     &--activa {
-      border-color: rgb(255 255 255 / 85%) !important;
-      background: rgb(255 255 255 / 8%) !important;
-      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+      border-color: var(--color-primario, rgb(105 28 50));
+      background: rgba(128, 128, 128, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.15);
     }
 
     &:focus-visible {
-      outline: 2px solid white;
+      outline: 2px solid var(--color-primario, rgb(105 28 50));
       outline-offset: 3px;
     }
   }
@@ -493,62 +493,7 @@ defineExpose({
     justify-content: center;
     margin-bottom: 10px;
     border-radius: 50%;
-    color: rgb(255 255 255 / 78%);
-
-    svg {
-      width: 26px;
-      height: 26px;
-    }
-  }
-
-  &__zona-subida {
-    display: flex;
-    min-height: 190px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px 16px;
-    overflow: hidden;
-    border: 1px dashed rgb(255 255 255 / 55%);
-    border-radius: 10px;
-    background: rgb(255 255 255 / 4%);
-    text-align: center;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover,
-    &:focus-visible,
-    &--activa {
-      border-color: rgb(255 255 255 / 85%);
-      background: rgb(255 255 255 / 8%);
-      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
-    }
-
-    &:focus-visible {
-      outline: 2px solid white;
-      outline-offset: 3px;
-    }
-  }
-
-  &__zona-subida > * {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  &__icono-subida {
-    display: inline-flex;
-    width: 36px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
-    border-radius: 50%;
-    color: rgb(255 255 255 / 78%);
+    color: var(--texto-secundario, #6f7276);
 
     svg {
       width: 26px;
@@ -562,10 +507,10 @@ defineExpose({
     margin: 8px 0 14px;
     padding: 7px 14px;
     box-sizing: border-box;
-    border: 1px solid rgb(255 255 255 / 45%);
+    border: 1px solid var(--color-neutro-3, #ced4da);
     border-radius: 6px;
-    background: rgb(255 255 255 / 9%);
-    color: inherit;
+    background: rgba(128, 128, 128, 0.08);
+    color: var(--texto-primario, inherit);
     font: inherit;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -573,7 +518,7 @@ defineExpose({
 
     &:hover,
     &:focus-visible {
-      background: rgb(255 255 255 / 14%);
+      background: rgba(128, 128, 128, 0.15);
     }
 
     &:focus-visible {

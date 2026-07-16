@@ -1,4 +1,6 @@
 <script setup>
+const store = useLandingBuilderStore();
+
 defineProps({
   datos: {
     type: Object,
@@ -21,7 +23,11 @@ defineProps({
           :class="'visor-tarjeta-orientacion-' + (tarjeta.orientacion || 'vertical-abajo')"
         >
           <div class="visor-tarjeta-imagen-wrapper">
-            <img :src="tarjeta.imagenUrl" class="visor-tarjeta-imagen" alt="" />
+            <img
+              :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
+              class="visor-tarjeta-imagen"
+              alt=""
+            />
           </div>
 
           <div class="visor-tarjeta-cuerpo">

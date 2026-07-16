@@ -21,11 +21,35 @@ function crearTarjetaVacia() {
 async function resolverLogoParaEnvio(url, archivoPendiente, slot, paginaId) {
   if (archivoPendiente) return archivoPendiente;
   if (!url || url.startsWith('blob:')) return null;
+
+  const esUrlExterna =
+    url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//');
+
+  const esOrigenLocal = typeof window !== 'undefined' && url.startsWith(window.location.origin);
+
+  if (esUrlExterna && !esOrigenLocal) {
+    return null;
+  }
+
   if (paginaId && url.includes(`/pagina-logo/${paginaId}/${slot}`)) return null;
 
-  const respuesta = await fetch(url);
-  const blob = await respuesta.blob();
-  return new File([blob], `${slot}.png`, { type: blob.type || 'image/png' });
+  try {
+    let requestUrl = url;
+    if (url.startsWith('/api/') && typeof window !== 'undefined') {
+      if (window.location.pathname.startsWith('/admin')) {
+        requestUrl = '/admin' + url;
+      } else if (window.location.pathname.startsWith('/app')) {
+        requestUrl = '/app' + url;
+      }
+    }
+    const respuesta = await fetch(requestUrl);
+    if (!respuesta.ok) return null;
+    const blob = await respuesta.blob();
+    return new File([blob], `${slot}.png`, { type: blob.type || 'image/png' });
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
 }
 
 // El guardado de configuración general (/api/landing-builder/config) devuelve el
@@ -56,6 +80,10 @@ async function construirFormDataPagina(store, paginaId) {
         : null,
     logoCuartoUrl:
       store.logoCuartoUrl && !store.logoCuartoUrl.startsWith('blob:') ? store.logoCuartoUrl : null,
+    logoRedirectUrl: store.logoRedirectUrl || null,
+    logoSecundarioRedirectUrl: store.logoSecundarioRedirectUrl || null,
+    logoTerceroRedirectUrl: store.logoTerceroRedirectUrl || null,
+    logoCuartoRedirectUrl: store.logoCuartoRedirectUrl || null,
   };
   formData.append('identidad', JSON.stringify(identidad));
 
@@ -85,6 +113,10 @@ function sincronizarIdentidadPublicada(store, paginas, paginaId) {
   store.logoSecundarioUrl = pagina.identidad.logoSecundarioUrl;
   store.logoTerceroUrl = pagina.identidad.logoTerceroUrl;
   store.logoCuartoUrl = pagina.identidad.logoCuartoUrl;
+  store.logoRedirectUrl = pagina.identidad.logoRedirectUrl || null;
+  store.logoSecundarioRedirectUrl = pagina.identidad.logoSecundarioRedirectUrl || null;
+  store.logoTerceroRedirectUrl = pagina.identidad.logoTerceroRedirectUrl || null;
+  store.logoCuartoRedirectUrl = pagina.identidad.logoCuartoRedirectUrl || null;
   store.logoFile = null;
   store.logoSecundarioFile = null;
   store.logoTerceroFile = null;
@@ -108,6 +140,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     logoTerceroFile: ref(null),
     logoCuartoUrl: ref(null),
     logoCuartoFile: ref(null),
+    logoRedirectUrl: ref(null),
+    logoSecundarioRedirectUrl: ref(null),
+    logoTerceroRedirectUrl: ref(null),
+    logoCuartoRedirectUrl: ref(null),
     tarjetas: ref([]),
     tarjetaImagenFiles: ref({}),
     secciones: ref([]),
@@ -140,6 +176,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.logoSecundarioUrl = config.logoSecundarioUrl;
         this.logoTerceroUrl = config.logoTerceroUrl || null;
         this.logoCuartoUrl = config.logoCuartoUrl || null;
+        this.logoRedirectUrl = config.logoRedirectUrl || null;
+        this.logoSecundarioRedirectUrl = config.logoSecundarioRedirectUrl || null;
+        this.logoTerceroRedirectUrl = config.logoTerceroRedirectUrl || null;
+        this.logoCuartoRedirectUrl = config.logoCuartoRedirectUrl || null;
         this.tarjetas = config.tarjetas ?? [];
         this.tarjetaImagenFiles = {};
         this.secciones = config.secciones || [];
@@ -209,7 +249,9 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       }
 
       this.isCreandoPagina = true;
-      await this.guardarConfiguracion();
+      if (!editandoExistente) {
+        await this.guardarConfiguracion();
+      }
 
       if (!this.error) {
         this.isPublicando = true;
@@ -217,6 +259,9 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           await this.actualizarPaginaExistente();
         } else {
           await this.publicarPagina();
+          if (!this.error) {
+            this.cancelarEdicionPagina();
+          }
         }
         this.isPublicando = false;
 
@@ -253,6 +298,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoSecundarioUrl = identidad.logoSecundarioUrl || null;
       this.logoTerceroUrl = identidad.logoTerceroUrl || null;
       this.logoCuartoUrl = identidad.logoCuartoUrl || null;
+      this.logoRedirectUrl = identidad.logoRedirectUrl || null;
+      this.logoSecundarioRedirectUrl = identidad.logoSecundarioRedirectUrl || null;
+      this.logoTerceroRedirectUrl = identidad.logoTerceroRedirectUrl || null;
+      this.logoCuartoRedirectUrl = identidad.logoCuartoRedirectUrl || null;
       this.logoFile = null;
       this.logoSecundarioFile = null;
       this.logoTerceroFile = null;
@@ -268,6 +317,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoSecundarioUrl = null;
       this.logoTerceroUrl = null;
       this.logoCuartoUrl = null;
+      this.logoRedirectUrl = null;
+      this.logoSecundarioRedirectUrl = null;
+      this.logoTerceroRedirectUrl = null;
+      this.logoCuartoRedirectUrl = null;
       this.logoFile = null;
       this.logoSecundarioFile = null;
       this.logoTerceroFile = null;
@@ -279,7 +332,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.paginas = await $fetch(`/api/landing-builder/paginas/${id}`, {
           method: 'DELETE',
         });
-        if (this.paginaEditandoId === id) {
+        if (this.paginaEditandoId === id || this.paginas.length === 0) {
           this.cancelarEdicionPagina();
         }
       } catch (err) {
@@ -420,6 +473,42 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoCuartoFile = null;
     },
 
+    eliminarLogo() {
+      if (this.logoUrl && this.logoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoUrl);
+      }
+      this.logoUrl = null;
+      this.logoFile = null;
+      this.logoRedirectUrl = null;
+    },
+
+    eliminarLogoSecundario() {
+      if (this.logoSecundarioUrl && this.logoSecundarioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoSecundarioUrl);
+      }
+      this.logoSecundarioUrl = null;
+      this.logoSecundarioFile = null;
+      this.logoSecundarioRedirectUrl = null;
+    },
+
+    eliminarLogoTercero() {
+      if (this.logoTerceroUrl && this.logoTerceroUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoTerceroUrl);
+      }
+      this.logoTerceroUrl = null;
+      this.logoTerceroFile = null;
+      this.logoTerceroRedirectUrl = null;
+    },
+
+    eliminarLogoCuarto() {
+      if (this.logoCuartoUrl && this.logoCuartoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(this.logoCuartoUrl);
+      }
+      this.logoCuartoUrl = null;
+      this.logoCuartoFile = null;
+      this.logoCuartoRedirectUrl = null;
+    },
+
     async guardarConfiguracion() {
       this.isSaving = true;
       this.error = null;
@@ -432,6 +521,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         formData.append('tituloSeccion', this.tituloSeccion);
         formData.append('descripcion', this.descripcion);
         formData.append('seccionTexto', this.seccionTexto);
+        formData.append('logoRedirectUrl', this.logoRedirectUrl || '');
+        formData.append('logoSecundarioRedirectUrl', this.logoSecundarioRedirectUrl || '');
+        formData.append('logoTerceroRedirectUrl', this.logoTerceroRedirectUrl || '');
+        formData.append('logoCuartoRedirectUrl', this.logoCuartoRedirectUrl || '');
 
         if (this.logoFile) {
           formData.append('logo', this.logoFile);
@@ -637,6 +730,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           config.logoTerceroUrl
         );
         this.logoCuartoUrl = sincronizarLogoDesdeConfig(this.logoCuartoUrl, config.logoCuartoUrl);
+        this.logoRedirectUrl = config.logoRedirectUrl || null;
+        this.logoSecundarioRedirectUrl = config.logoSecundarioRedirectUrl || null;
+        this.logoTerceroRedirectUrl = config.logoTerceroRedirectUrl || null;
+        this.logoCuartoRedirectUrl = config.logoCuartoRedirectUrl || null;
         this.secciones = config.secciones || [];
         this.bloques = config.bloques || [];
         this.logoFile = null;
@@ -650,10 +747,31 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.mensajeExito = 'Configuración guardada.';
       } catch (err) {
         console.error('Error al guardar la configuración de la landing page:', err);
-        this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
+        this.error =
+          err?.data?.statusMessage || 'No se pudo guardar la configuración. Intenta de nuevo.';
       } finally {
         this.isSaving = false;
       }
+    },
+
+    resolverUrlImagen(url) {
+      if (!url) return '';
+      if (
+        url.startsWith('blob:') ||
+        url.startsWith('data:') ||
+        url.startsWith('http://') ||
+        url.startsWith('https://') ||
+        url.startsWith('//')
+      ) {
+        return url;
+      }
+      if (url.startsWith('/api/')) {
+        const config = useRuntimeConfig();
+        const base = config.app.baseURL || '/';
+        const prefijo = base.endsWith('/') ? base.slice(0, -1) : base;
+        return prefijo + url;
+      }
+      return url;
     },
   };
 });

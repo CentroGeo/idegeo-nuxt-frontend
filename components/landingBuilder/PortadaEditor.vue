@@ -1,4 +1,5 @@
 <script setup>
+const store = useLandingBuilderStore();
 const props = defineProps({
   modelValue: {
     type: Object,
@@ -366,13 +367,13 @@ onBeforeUnmount(() => {
       muted
       playsinline
     >
-      <source :src="fondoActual.url" type="video/mp4" />
+      <source :src="store.resolverUrlImagen(fondoActual.url)" type="video/mp4" />
     </video>
 
     <img
       v-else
       class="portada-editor__media"
-      :src="fondoActual.url"
+      :src="store.resolverUrlImagen(fondoActual.url)"
       :style="estiloFondo"
       alt=""
       draggable="false"

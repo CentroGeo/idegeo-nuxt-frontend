@@ -1,4 +1,6 @@
 <script setup>
+const store = useLandingBuilderStore();
+
 defineProps({
   bloques: {
     type: Array,
@@ -27,13 +29,13 @@ function estiloFondoPortada(bloque) {
           muted
           playsinline
         >
-          <source :src="bloque.datos.fondo.url" type="video/mp4" />
+          <source :src="store.resolverUrlImagen(bloque.datos.fondo.url)" type="video/mp4" />
         </video>
 
         <img
           v-else
           class="visor-portada__media"
-          :src="bloque.datos.fondo?.url"
+          :src="store.resolverUrlImagen(bloque.datos.fondo?.url)"
           :style="estiloFondoPortada(bloque)"
           alt=""
         />

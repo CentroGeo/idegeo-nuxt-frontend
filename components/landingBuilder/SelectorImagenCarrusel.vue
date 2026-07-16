@@ -1,4 +1,6 @@
 <script setup>
+const store = useLandingBuilderStore();
+
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
 const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
@@ -61,7 +63,7 @@ function soltarArchivo(event) {
 <template>
   <div class="selector-imagen-carrusel">
     <div v-if="imagenUrl" class="selector-imagen-carrusel__previsualizacion">
-      <img :src="imagenUrl" alt="Imagen de la diapositiva" />
+      <img :src="store.resolverUrlImagen(imagenUrl)" alt="Imagen de la diapositiva" />
 
       <button
         type="button"

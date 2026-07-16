@@ -4,6 +4,8 @@ import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/S
 import ModalAlineacionTexto from '~/components/landingBuilder/ModalAlineacionTexto.vue';
 import ModalCambiarImagenTarjeta from '~/components/landingBuilder/ModalCambiarImagenTarjeta.vue';
 
+const store = useLandingBuilderStore();
+
 const props = defineProps({
   seccionId: { type: String, required: true },
   datos: { type: Object, required: true },
@@ -309,7 +311,11 @@ function manejarInput(limite, event, tarjeta, campo) {
               }"
             >
               <div class="tarjeta-imagen-wrapper">
-                <img :src="tarjeta.imagenUrl" class="tarjeta-imagen" alt="" />
+                <img
+                  :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
+                  class="tarjeta-imagen"
+                  alt=""
+                />
                 <div
                   class="tarjeta-imagen-overlay flex flex-column align-items-center justify-content-center flex-gap-2"
                 >
