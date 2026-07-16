@@ -7,26 +7,32 @@ definePageMeta({
 });
 
 const storeLevantamiento = useLevantamientoStore();
+const { data } = useAuth();
 
 const router = useRouter();
 const route = useRoute();
 
-const enRevision = ref([
-  {
-    id: 0,
-    thumbnail_img: 'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg',
-    title: 'Título del aporte',
-    update_date: formatDate(new Date()),
-    status: 'Por revisar',
-  },
-  {
-    id: 1,
-    thumbnail_img: 'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg',
-    title: 'Título del aporte',
-    update_date: formatDate(new Date()),
-    status: 'Revisando',
-  },
-]);
+const enRevision = shallowRef([]);
+const cargandoAportes = ref(false);
+
+onMounted(async () => {
+  const email = data.value?.user.email;
+  if (!email) return;
+
+  cargandoAportes.value = true;
+  try {
+    const aportes = await storeLevantamiento.obtenerAportesPorEstado(email, 'NO REVISADO');
+    enRevision.value = aportes.map((aporte) => ({
+      ...aporte,
+      title: aporte.title || aporte.titulo || 'Aporte sin título',
+      fecha_formateada: aporte.fecha_guardado
+        ? formatDate(new Date(aporte.fecha_guardado))
+        : '',
+    }));
+  } finally {
+    cargandoAportes.value = false;
+  }
+});
 
 const modalRemoverAporte = ref(null);
 
@@ -90,7 +96,7 @@ function irAEditarAporte() {
           <div class="columna-16">
             <div class="flex">
               <h2>Aportes en revisión</h2>
-              <UiNumeroElementos :numero="0" />
+              <UiNumeroElementos :numero="enRevision.length" etiqueta="Aportes" />
             </div>
           </div>
 
@@ -99,15 +105,20 @@ function irAEditarAporte() {
           </div>
           <div class="columna-16">
             <div class="contenedor-en-revision">
+              <p v-if="cargandoAportes">Cargando aportes…</p>
               <div class="grid">
                 <div v-for="value in enRevision" :key="value.id" class="columna-5">
                   <div class="tarjeta" style="position: relative">
-                    <img class="tarjeta-imagen" alt="" :srcset="value.thumbnail_img" />
+                    <div
+                      class="tarjeta-imagen flex flex-contenido-centrado flex-vertical-centrado fondo-color-acento"
+                    >
+                      <span class="pictograma-documento pictograma-grande" aria-hidden="true" />
+                    </div>
 
                     <div class="tarjeta-cuerpo">
                       <p class="tarjeta-etiqueta">Aporte creado en:</p>
                       <p class="tarjeta-titulo">{{ value.title }}</p>
-                      <p>{{ value.update_date }}</p>
+                      <p>{{ value.fecha_formateada }}</p>
                     </div>
 
                     <div class="tarjeta-pie" style="display: block">

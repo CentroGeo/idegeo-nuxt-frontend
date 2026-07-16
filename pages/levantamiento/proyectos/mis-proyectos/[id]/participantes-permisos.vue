@@ -257,7 +257,7 @@ const solicitarAprobacion = async () => {
 
   const payload = {
     status: 'EN REVISION',
-    requester_email: data.value?.user.email,
+    user_id: data.value?.user.email,
   };
 
   estadoPrivacidad.tipo = '';

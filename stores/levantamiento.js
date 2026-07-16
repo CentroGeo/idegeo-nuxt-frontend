@@ -105,6 +105,61 @@ export const useLevantamientoStore = defineStore('levantamiento', () => {
         console.error('Error cargando proyecto:', err);
       }
     },
+    async crearAporte(formData) {
+      const response = await fetch(`${apiUrl}/raising/user/create`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || 'Error al enviar el aporte');
+        error.data = errorData;
+        throw error;
+      }
+
+      return response.json();
+    },
+    async actualizarAporte(id, formData) {
+      const response = await fetch(`${apiUrl}/raising/user/update/${id}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || 'Error al actualizar el aporte');
+        error.data = errorData;
+        throw error;
+      }
+
+      return response.json();
+    },
+    async obtenerDetalleAporte(id) {
+      return $fetch(`${apiUrl}/raising/user/register/v2`, {
+        method: 'POST',
+        body: { id_levantamiento: id },
+      });
+    },
+    async obtenerAportesPorEstado(email, status) {
+      const data = await $fetch(`${apiUrl}/raising/user/list`, {
+        method: 'POST',
+        body: { email, status },
+      });
+
+      return data.levantamientos || [];
+    },
+    async obtenerMensajesAporte(id) {
+      return $fetch(`${apiUrl}/raising/chat/list`, {
+        method: 'POST',
+        body: { id },
+      });
+    },
+    async eliminarAporte(id) {
+      return $fetch(`${apiUrl}/raising/user/register/${id}`, {
+        method: 'DELETE',
+      });
+    },
     obtenerTotalDescargasAprobadas() {
       return this.descargasAprobadas.length;
     },
