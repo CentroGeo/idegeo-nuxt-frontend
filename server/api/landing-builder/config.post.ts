@@ -156,6 +156,13 @@ export default defineEventHandler(async (event) => {
       continue;
     }
 
+    if (tipoImagen === 'contenido') {
+      if (bloque?.datos?.imagen) {
+        bloque.datos.imagen.url = url;
+      }
+      continue;
+    }
+
     const lista =
       tipoImagen === 'diapositiva' ? bloque?.datos?.diapositivas : bloque?.datos?.tarjetas;
     const item = lista?.find((i: any) => i.id === itemId);

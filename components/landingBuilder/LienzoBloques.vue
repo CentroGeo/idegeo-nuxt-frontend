@@ -91,6 +91,12 @@ const tiposBloquePadre = [
     icono: 'P',
   },
   {
+    id: 'texto-imagen',
+    etiqueta: 'Texto con imagen',
+    descripcion: 'Combina un título, un párrafo editable y una imagen.',
+    icono: '▧',
+  },
+  {
     id: 'carrusel',
     etiqueta: 'Carrusel',
     descripcion: 'Bloque con varias diapositivas de imagen y texto.',
@@ -199,6 +205,25 @@ function crearDatosParrafo() {
   };
 }
 
+function crearDatosTextoImagen() {
+  return {
+    parrafo: {
+      texto: 'Escribe aquí la descripción de la sección.',
+      alineacion: 'left',
+      color: '#FFFFFF',
+      negrita: false,
+      tamano: 'normal',
+      tipoLista: 'ninguna',
+    },
+    posicionImagen: 'derecha',
+    imagen: {
+      url: null,
+      archivo: null,
+      alt: '',
+    },
+  };
+}
+
 function crearDatosCarrusel() {
   return {
     diapositivas: [],
@@ -234,6 +259,10 @@ function crearDatosPorTipo(tipoBloque) {
 
   if (tipoBloque.id === 'parrafo') {
     return crearDatosParrafo();
+  }
+
+  if (tipoBloque.id === 'texto-imagen') {
+    return crearDatosTextoImagen();
   }
 
   if (tipoBloque.id === 'carrusel') {
@@ -359,6 +388,7 @@ function obtenerEtiquetaBloque(bloque) {
   if (bloque.tipo === 'portada') return 'Portada';
   if (bloque.tipo === 'titulo') return 'Título';
   if (bloque.tipo === 'parrafo') return 'Párrafo';
+  if (bloque.tipo === 'texto-imagen') return 'Texto con imagen';
   if (bloque.tipo === 'texto') return 'Sección de texto';
   if (bloque.tipo === 'carrusel') return 'Carrusel';
   if (bloque.tipo === 'tarjetas') return 'Sección de tarjetas';
@@ -522,6 +552,11 @@ onBeforeUnmount(() => {
 
           <LandingBuilderEditorParrafo
             v-else-if="bloque.tipo === 'parrafo'"
+            v-model="bloque.datos"
+          />
+
+          <LandingBuilderEditorTextoImagen
+            v-else-if="bloque.tipo === 'texto-imagen'"
             v-model="bloque.datos"
           />
 
@@ -1022,6 +1057,13 @@ onBeforeUnmount(() => {
   &__aviso {
     color: #ffd6d6;
     font-weight: 700;
+  }
+}
+
+.lienzo-bloques__bloque--barra-oculta {
+  :deep(.editor-texto-imagen__controles),
+  :deep(.editor-texto-imagen__acciones-imagen) {
+    display: none;
   }
 }
 

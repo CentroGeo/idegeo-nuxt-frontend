@@ -56,6 +56,28 @@ function obtenerLineasParrafo(bloque) {
     .replace(/\r/g, '')
     .split('\n');
 }
+
+function obtenerParrafoTextoImagen(bloque) {
+  return bloque.datos?.parrafo || {};
+}
+
+function obtenerEstilosParrafoTextoImagen(bloque) {
+  const parrafo = obtenerParrafoTextoImagen(bloque);
+  const tamano = parrafo.tamano || 'normal';
+
+  return {
+    textAlign: parrafo.alineacion || 'left',
+    color: parrafo.color || '#FFFFFF',
+    fontWeight: parrafo.negrita ? 700 : 400,
+    fontSize: tamanosParrafo[tamano] || tamanosParrafo.normal,
+  };
+}
+
+function obtenerLineasParrafoTextoImagen(bloque) {
+  return String(obtenerParrafoTextoImagen(bloque).texto ?? '')
+    .replace(/\r/g, '')
+    .split('\n');
+}
 </script>
 
 <template>
@@ -123,6 +145,45 @@ function obtenerLineasParrafo(bloque) {
         </p>
       </section>
 
+      <section
+        v-else-if="bloque.tipo === 'texto-imagen'"
+        class="visor-texto-imagen"
+        :class="`visor-texto-imagen--imagen-${bloque.datos?.posicionImagen || 'derecha'}`"
+      >
+        <div class="visor-texto-imagen__rejilla">
+          <div class="visor-texto-imagen__texto">
+            <ul
+              v-if="bloque.datos?.parrafo?.tipoLista === 'vinetas'"
+              class="visor-texto-imagen__lista"
+              :style="obtenerEstilosParrafoTextoImagen(bloque)"
+            >
+              <li
+                v-for="(linea, indice) in obtenerLineasParrafoTextoImagen(bloque)"
+                :key="`${bloque.id}-texto-imagen-linea-${indice}`"
+              >
+                {{ linea }}
+              </li>
+            </ul>
+
+            <p
+              v-else
+              class="visor-texto-imagen__parrafo"
+              :style="obtenerEstilosParrafoTextoImagen(bloque)"
+            >
+              {{ bloque.datos?.parrafo?.texto }}
+            </p>
+          </div>
+
+          <div v-if="bloque.datos?.imagen?.url" class="visor-texto-imagen__media">
+            <img
+              class="visor-texto-imagen__imagen"
+              :src="store.resolverUrlImagen(bloque.datos.imagen.url)"
+              :alt="bloque.datos.imagen.alt || ''"
+            />
+          </div>
+        </div>
+      </section>
+
       <section v-else-if="bloque.tipo === 'texto'" class="visor-texto contenedor ancho-fijo m-y-6">
         <component
           :is="item.componente"
@@ -178,6 +239,79 @@ function obtenerLineasParrafo(bloque) {
   }
 }
 
+.visor-texto-imagen {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 120px;
+
+  &__rejilla {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
+    align-items: center;
+    gap: clamp(24px, 4vw, 64px);
+  }
+
+  &__texto,
+  &__media {
+    min-width: 0;
+  }
+
+  &__parrafo,
+  &__lista {
+    margin: 0;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  &__parrafo {
+    white-space: pre-wrap;
+  }
+
+  &__lista {
+    padding-left: 1.75rem;
+
+    li {
+      min-height: 1.6em;
+      padding-left: 0.2rem;
+    }
+  }
+
+  &__media {
+    display: flex;
+    min-height: 320px;
+    align-items: stretch;
+  }
+
+  &__imagen {
+    display: block;
+    width: 100%;
+    min-height: 320px;
+    max-height: 460px;
+    border-radius: 24px;
+    object-fit: cover;
+  }
+
+  &--imagen-izquierda {
+    .visor-texto-imagen__media {
+      order: 1;
+    }
+
+    .visor-texto-imagen__texto {
+      order: 2;
+    }
+  }
+
+  &--imagen-derecha {
+    .visor-texto-imagen__texto {
+      order: 1;
+    }
+
+    .visor-texto-imagen__media {
+      order: 2;
+    }
+  }
+}
+
 .visor-portada {
   position: relative;
   min-height: clamp(320px, 52vh, 580px);
@@ -223,7 +357,37 @@ function obtenerLineasParrafo(bloque) {
   }
 }
 
+@media (max-width: 1024px) {
+  .visor-texto-imagen {
+    padding: 10px 40px;
+  }
+}
+
 @media (max-width: 767px) {
+  .visor-texto-imagen {
+    padding: 10px 16px;
+
+    &__rejilla {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    &__texto {
+      order: 1;
+    }
+
+    &__media {
+      min-height: 220px;
+      order: 2;
+    }
+
+    &__imagen {
+      min-height: 220px;
+      max-height: 360px;
+      border-radius: 16px;
+    }
+  }
+
   .visor-portada {
     min-height: 420px;
 

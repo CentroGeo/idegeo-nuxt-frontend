@@ -682,6 +682,22 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
             };
           }
 
+          if (bloque.tipo === 'texto-imagen') {
+            // eslint-disable-next-line no-unused-vars
+            const { archivo, ...imagen } = bloque.datos.imagen || {};
+
+            return {
+              ...bloque,
+              datos: {
+                ...bloque.datos,
+                imagen: {
+                  ...imagen,
+                  url: imagen.url && !imagen.url.startsWith('blob:') ? imagen.url : null,
+                },
+              },
+            };
+          }
+
           return bloque;
         });
 
@@ -692,6 +708,13 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
             formData.append(
               `bloque_imagen::${bloque.id}::portada::fondo`,
               bloque.datos.fondo.archivo
+            );
+          }
+
+          if (bloque.tipo === 'texto-imagen' && bloque.datos.imagen?.archivo) {
+            formData.append(
+              `bloque_imagen::${bloque.id}::contenido::imagen`,
+              bloque.datos.imagen.archivo
             );
           }
 
