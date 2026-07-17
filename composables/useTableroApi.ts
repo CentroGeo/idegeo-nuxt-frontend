@@ -156,6 +156,9 @@ export function useTableroApi() {
     actualizarTopBar: (siteId: number, datos: unknown, token?: string | null) =>
       jsonRequest(`${baseUrl}/top-bars/${siteId}/`, 'PATCH', datos, token),
 
+    sincronizarConfiguracionTopBar: (siteId: number, form: FormData, token?: string | null) =>
+      formRequest(`${baseUrl}/top-bars/${siteId}/sync-configuration/`, 'POST', form, token),
+
     crearLogoTopBar: (form: FormData, token?: string | null) =>
       formRequest(`${baseUrl}/top-bar-logos/`, 'POST', form, token),
 
