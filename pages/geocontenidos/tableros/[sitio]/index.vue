@@ -17,6 +17,7 @@ const idRuta = computed(() => route.params.sitio);
 const esNuevo = computed(() => idRuta.value === 'nuevo');
 
 const modalStatus = ref(null);
+const tabIdentidad = ref(null);
 const estatusAlGuardar = reactive({
   cargando: false,
   estado: undefined,
@@ -81,9 +82,13 @@ function aplicarCambios(cambios) {
 
 async function guardar() {
   modalStatus.value?.abrirModal();
+
   estatusAlGuardar.cargando = true;
-  estatusAlGuardar.textoCargando = esNuevo.value ? 'Creando tablero...' : 'Guardando cambios...';
+  estatusAlGuardar.textoCargando = esNuevo.value
+    ? 'Creando tablero...'
+    : 'Guardando datos del tablero...';
   estatusAlGuardar.estado = undefined;
+  estatusAlGuardar.mensaje = '';
 
   const payload = {
     name: sitio.name,
@@ -96,33 +101,61 @@ async function guardar() {
 
   try {
     const token = userData.value?.accessToken;
+
     const data = esNuevo.value
       ? await crearSitio(payload, token)
       : await actualizarSitio(sitio.id, payload, token);
 
-    if (data?.id) {
-      estatusAlGuardar.cargando = false;
-      estatusAlGuardar.estado = true;
-      sitio.id = data.id;
-
-      setTimeout(() => {
-        modalStatus.value?.cerrarModal();
-        if (esNuevo.value) navigateTo(`/geocontenidos/tableros/${data.id}`);
-      }, 1200);
-    } else {
+    if (!data?.id) {
       estatusAlGuardar.cargando = false;
       estatusAlGuardar.estado = false;
-      estatusAlGuardar.mensaje = data?.detail || JSON.stringify(data);
+      estatusAlGuardar.mensaje =
+        data?.detail || JSON.stringify(data) || 'No fue posible guardar el tablero.';
+      return;
     }
+
+    sitio.id = data.id;
+
+    /*
+     * En un tablero existente, el editor de logos ya está disponible.
+     * Los logos se guardan solamente después de guardar los datos generales.
+     */
+    if (!esNuevo.value) {
+      estatusAlGuardar.textoCargando = 'Guardando logos del tablero...';
+
+      const logosGuardados = await tabIdentidad.value?.guardarLogos?.();
+
+      if (logosGuardados === false) {
+        estatusAlGuardar.cargando = false;
+        estatusAlGuardar.estado = false;
+        estatusAlGuardar.mensaje =
+          'Los datos generales del tablero se guardaron, pero no fue posible guardar los logos. Revisa el mensaje mostrado en la sección “Logos del sitio” y vuelve a intentarlo.';
+        return;
+      }
+    }
+
+    estatusAlGuardar.cargando = false;
+    estatusAlGuardar.estado = true;
+
+    setTimeout(() => {
+      modalStatus.value?.cerrarModal();
+
+      if (esNuevo.value) {
+        navigateTo(`/geocontenidos/tableros/${data.id}`);
+      }
+    }, 1200);
   } catch (e) {
+    console.error('Error al guardar el tablero:', e);
+
     estatusAlGuardar.cargando = false;
     estatusAlGuardar.estado = false;
-    estatusAlGuardar.mensaje = e?.message || 'Error desconocido';
+    estatusAlGuardar.mensaje = e?.message || 'Ocurrió un error desconocido al guardar.';
   }
 }
 
 const pestanias = computed(() => [
   { id: 'identidad', titulo: 'Identidad del sitio' },
+  { id: 'banda', titulo: 'Banda institucional', deshabilitada: esNuevo.value },
   { id: 'estructura', titulo: 'Estructura', deshabilitada: esNuevo.value },
   { id: 'datos', titulo: 'Datos estáticos', deshabilitada: esNuevo.value },
 ]);
@@ -186,10 +219,15 @@ cargarSitio();
       <GeocontenidosPestanias v-else :pestanias="pestanias" id-seleccion="identidad">
         <template #contenido-identidad>
           <TablerosAdminTabIdentidad
+            ref="tabIdentidad"
             :sitio="sitio"
             @actualizar="aplicarCambios"
             @guardar="guardar"
           />
+        </template>
+
+        <template #contenido-banda>
+          <TablerosAdminTabBandaInstitucional v-if="sitio.id" :site-id="sitio.id" />
         </template>
 
         <template #contenido-estructura>
