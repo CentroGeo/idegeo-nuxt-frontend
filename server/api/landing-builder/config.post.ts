@@ -1,7 +1,7 @@
 import formidable from 'formidable';
 import { promises as fsp } from 'fs';
 import type { LandingBuilderConfig, LandingBuilderTarjeta } from '../../utils/landingBuilderConfig';
-import { LIMITE_TARJETAS } from '../../utils/landingBuilderConfig';
+import { LIMITE_TARJETAS, validarYObtenerMimetypeImagen } from '../../utils/landingBuilderConfig';
 
 const TIPOS_LOGO_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
 const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024; // 2MB
@@ -53,6 +53,22 @@ export default defineEventHandler(async (event) => {
 
   if (fields.logoCuartoUrl?.[0] !== undefined) {
     campos.logoCuartoUrl = fields.logoCuartoUrl[0].trim();
+  }
+
+  if (fields.logoRedirectUrl?.[0] !== undefined) {
+    campos.logoRedirectUrl = fields.logoRedirectUrl[0].trim();
+  }
+
+  if (fields.logoSecundarioRedirectUrl?.[0] !== undefined) {
+    campos.logoSecundarioRedirectUrl = fields.logoSecundarioRedirectUrl[0].trim();
+  }
+
+  if (fields.logoTerceroRedirectUrl?.[0] !== undefined) {
+    campos.logoTerceroRedirectUrl = fields.logoTerceroRedirectUrl[0].trim();
+  }
+
+  if (fields.logoCuartoRedirectUrl?.[0] !== undefined) {
+    campos.logoCuartoRedirectUrl = fields.logoCuartoRedirectUrl[0].trim();
   }
 
   const seccionesRaw = fields.secciones?.[0];
@@ -108,7 +124,8 @@ export default defineEventHandler(async (event) => {
     const archivoBloque = files[key]?.[0];
     if (!archivoBloque) continue;
 
-    if (!archivoBloque.mimetype || !TIPOS_LOGO_PERMITIDOS.includes(archivoBloque.mimetype)) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(archivoBloque, TIPOS_LOGO_PERMITIDOS);
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'La imagen del bloque debe ser PNG, JPEG, WEBP o SVG',
@@ -127,7 +144,7 @@ export default defineEventHandler(async (event) => {
       tipoImagen,
       itemId,
       data,
-      archivoBloque.mimetype
+      mimetypeValido
     );
 
     const bloque = bloques.find((b: any) => b.id === bloqueId);
@@ -135,6 +152,13 @@ export default defineEventHandler(async (event) => {
     if (tipoImagen === 'portada') {
       if (bloque?.datos?.fondo) {
         bloque.datos.fondo.url = url;
+      }
+      continue;
+    }
+
+    if (tipoImagen === 'contenido') {
+      if (bloque?.datos?.imagen) {
+        bloque.datos.imagen.url = url;
       }
       continue;
     }
@@ -152,7 +176,8 @@ export default defineEventHandler(async (event) => {
   let logo: { data: Buffer; mimetype: string } | undefined;
   const archivoLogo = files.logo?.[0];
   if (archivoLogo) {
-    if (!archivoLogo.mimetype || !TIPOS_LOGO_PERMITIDOS.includes(archivoLogo.mimetype)) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(archivoLogo, TIPOS_LOGO_PERMITIDOS);
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'El logo debe ser una imagen PNG, JPEG, WEBP o SVG',
@@ -163,17 +188,18 @@ export default defineEventHandler(async (event) => {
     }
     logo = {
       data: await fsp.readFile(archivoLogo.filepath),
-      mimetype: archivoLogo.mimetype,
+      mimetype: mimetypeValido,
     };
   }
 
   let logoSecundario: { data: Buffer; mimetype: string } | undefined;
   const archivoLogoSecundario = files.logoSecundario?.[0];
   if (archivoLogoSecundario) {
-    if (
-      !archivoLogoSecundario.mimetype ||
-      !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoSecundario.mimetype)
-    ) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(
+      archivoLogoSecundario,
+      TIPOS_LOGO_PERMITIDOS
+    );
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'El logo secundario debe ser una imagen PNG, JPEG, WEBP o SVG',
@@ -187,17 +213,15 @@ export default defineEventHandler(async (event) => {
     }
     logoSecundario = {
       data: await fsp.readFile(archivoLogoSecundario.filepath),
-      mimetype: archivoLogoSecundario.mimetype,
+      mimetype: mimetypeValido,
     };
   }
 
   let logoTercero: { data: Buffer; mimetype: string } | undefined;
   const archivoLogoTercero = files.logoTercero?.[0];
   if (archivoLogoTercero) {
-    if (
-      !archivoLogoTercero.mimetype ||
-      !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoTercero.mimetype)
-    ) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(archivoLogoTercero, TIPOS_LOGO_PERMITIDOS);
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'El logo tercero debe ser una imagen PNG, JPEG, WEBP o SVG',
@@ -211,17 +235,15 @@ export default defineEventHandler(async (event) => {
     }
     logoTercero = {
       data: await fsp.readFile(archivoLogoTercero.filepath),
-      mimetype: archivoLogoTercero.mimetype,
+      mimetype: mimetypeValido,
     };
   }
 
   let logoCuarto: { data: Buffer; mimetype: string } | undefined;
   const archivoLogoCuarto = files.logoCuarto?.[0];
   if (archivoLogoCuarto) {
-    if (
-      !archivoLogoCuarto.mimetype ||
-      !TIPOS_LOGO_PERMITIDOS.includes(archivoLogoCuarto.mimetype)
-    ) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(archivoLogoCuarto, TIPOS_LOGO_PERMITIDOS);
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'El logo cuarto debe ser una imagen PNG, JPEG, WEBP o SVG',
@@ -235,7 +257,7 @@ export default defineEventHandler(async (event) => {
     }
     logoCuarto = {
       data: await fsp.readFile(archivoLogoCuarto.filepath),
-      mimetype: archivoLogoCuarto.mimetype,
+      mimetype: mimetypeValido,
     };
   }
 
@@ -287,7 +309,8 @@ export default defineEventHandler(async (event) => {
     const archivoImagen = files[`tarjetaImagen_${tarjeta.id}`]?.[0];
     if (!archivoImagen) continue;
 
-    if (!archivoImagen.mimetype || !TIPOS_LOGO_PERMITIDOS.includes(archivoImagen.mimetype)) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(archivoImagen, TIPOS_LOGO_PERMITIDOS);
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'La imagen de la tarjeta debe ser PNG, JPEG, WEBP o SVG',
@@ -302,7 +325,7 @@ export default defineEventHandler(async (event) => {
 
     imagenesTarjetas[tarjeta.id] = {
       data: await fsp.readFile(archivoImagen.filepath),
-      mimetype: archivoImagen.mimetype,
+      mimetype: mimetypeValido,
     };
   }
 

@@ -1,6 +1,13 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
+const props = defineProps({
+  redireccionInicial: {
+    type: String,
+    default: '',
+  },
+});
+
 const emit = defineEmits(['seleccionar-archivo', 'seleccionar-enlace']);
 
 const modalCambiarLogo = ref(null);
@@ -8,6 +15,7 @@ const dragNdrop = ref(null);
 
 const pestanaActiva = ref('subir');
 const urlImagen = ref('');
+const urlRedireccion = ref('');
 const error = ref('');
 
 const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
@@ -16,6 +24,7 @@ const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml
 function abrirModal() {
   pestanaActiva.value = 'subir';
   urlImagen.value = '';
+  urlRedireccion.value = props.redireccionInicial || '';
   error.value = '';
   modalCambiarLogo.value?.abrirModal();
 }
@@ -33,7 +42,13 @@ function seleccionarArchivoDrag(archivos) {
   const archivo = archivos?.[0];
   if (!archivo) return;
 
-  if (!tiposPermitidos.includes(archivo.type)) {
+  const extension = archivo.name.split('.').pop()?.toLowerCase();
+  const extensionesPermitidas = ['jpg', 'jpeg', 'png', 'webp', 'svg'];
+  const esTipoValido =
+    tiposPermitidos.includes(archivo.type) ||
+    (extension && extensionesPermitidas.includes(extension));
+
+  if (!esTipoValido) {
     error.value = 'Selecciona una imagen JPG, PNG, WEBP o SVG.';
     dragNdrop.value?.archivoNoValido();
     return;
@@ -46,7 +61,7 @@ function seleccionarArchivoDrag(archivos) {
   }
 
   error.value = '';
-  emit('seleccionar-archivo', archivo);
+  emit('seleccionar-archivo', archivo, urlRedireccion.value.trim());
   cerrarModal();
 }
 
@@ -68,7 +83,7 @@ function aplicarEnlace() {
   }
 
   error.value = '';
-  emit('seleccionar-enlace', enlace);
+  emit('seleccionar-enlace', enlace, urlRedireccion.value.trim());
   cerrarModal();
 }
 
@@ -174,6 +189,19 @@ defineExpose({
             Usar imagen
           </button>
         </section>
+
+        <div class="modal-logo__campo m-t-3">
+          <label for="logo-redireccion">Enlace de redirección</label>
+          <input
+            id="logo-redireccion"
+            v-model.trim="urlRedireccion"
+            type="url"
+            placeholder="https://"
+          />
+          <p class="formulario-ayuda">
+            Pega la URL a la que se redirigirá al hacer clic en el logo.
+          </p>
+        </div>
 
         <p v-if="error" class="texto-color-error modal-logo__error" role="alert">
           {{ error }}

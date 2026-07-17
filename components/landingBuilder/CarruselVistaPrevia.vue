@@ -5,6 +5,8 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 
+const store = useLandingBuilderStore();
+
 defineProps({
   diapositivas: {
     type: Array,
@@ -35,7 +37,7 @@ const modulosSwiper = [Navigation, Pagination];
             <img
               v-if="diapositiva.imagenUrl"
               class="carrusel-vista-previa__imagen"
-              :src="diapositiva.imagenUrl"
+              :src="store.resolverUrlImagen(diapositiva.imagenUrl)"
               :alt="diapositiva.texto || 'Diapositiva del carrusel'"
             />
             <div v-else class="carrusel-vista-previa__imagen-vacia" aria-hidden="true" />

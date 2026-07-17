@@ -1,4 +1,6 @@
 <script setup>
+const store = useLandingBuilderStore();
+
 defineProps({
   nombrePlataforma: { type: String, default: '' },
   titulo: { type: String, default: '' },
@@ -18,7 +20,7 @@ defineProps({
         <div class="portada-cuerpo">
           <img
             v-if="logoUrl"
-            :src="logoUrl"
+            :src="store.resolverUrlImagen(logoUrl)"
             :alt="`Logo de ${nombrePlataforma || 'la plataforma'}`"
             class="landing-builder-vista-previa__logo"
           />
@@ -43,7 +45,7 @@ defineProps({
                 v-if="tarjeta.imagenUrl"
                 alt=""
                 class="tarjeta-imagen"
-                :src="tarjeta.imagenUrl"
+                :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
               />
               <div class="tarjeta-cuerpo">
                 <p class="tarjeta-titulo">{{ tarjeta.titulo || 'Título de la tarjeta' }}</p>

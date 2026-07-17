@@ -3,7 +3,7 @@ import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/S
 
 const emit = defineEmits(['seleccionar-archivo', 'seleccionar-enlace']);
 
-const modalCambiarImagen = ref(null);
+const modalImagenContenido = ref(null);
 const inputArchivo = ref(null);
 
 const pestanaActiva = ref('subir');
@@ -11,9 +11,9 @@ const urlImagen = ref('');
 const error = ref('');
 const arrastrandoArchivo = ref(false);
 
-const TAMANO_MAXIMO_BYTES = 500 * 1024; // 500 KB
+const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
-const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
 
 function abrirModal() {
   pestanaActiva.value = 'subir';
@@ -24,15 +24,15 @@ function abrirModal() {
     inputArchivo.value.value = '';
   }
 
-  modalCambiarImagen.value?.abrirModal();
+  modalImagenContenido.value?.abrirModal();
 }
 
 function cerrarModal() {
-  modalCambiarImagen.value?.cerrarModal?.();
+  modalImagenContenido.value?.cerrarModal?.();
 }
 
 function cerrarModalAlClickAfuera(event) {
-  const contenedor = document.querySelector('.modal-tarjeta-imagen .modal-contenedor');
+  const contenedor = document.querySelector('.modal-imagen-contenido .modal-contenedor');
 
   if (!contenedor) return;
 
@@ -74,12 +74,12 @@ function procesarArchivo(archivo) {
   if (!archivo) return;
 
   if (!tiposPermitidos.includes(archivo.type)) {
-    error.value = 'Selecciona una imagen JPG, PNG o WEBP.';
+    error.value = 'Selecciona una imagen JPG, PNG, WEBP o SVG.';
     return;
   }
 
   if (archivo.size > TAMANO_MAXIMO_BYTES) {
-    error.value = 'La imagen no puede pesar más de 500 KB.';
+    error.value = 'La imagen no puede pesar más de 5 MB.';
     return;
   }
 
@@ -137,14 +137,14 @@ defineExpose({
 
 <template>
   <ClientOnly>
-    <SisdaiModal ref="modalCambiarImagen" class="modal-tarjeta-imagen">
+    <SisdaiModal ref="modalImagenContenido" class="modal-imagen-contenido">
       <template #encabezado>
-        <div class="modal-tarjeta-imagen__encabezado">
-          <h2 class="modal-tarjeta-imagen__titulo">Cambiar imagen de tarjeta</h2>
+        <div class="modal-imagen-contenido__encabezado">
+          <h2 class="modal-imagen-contenido__titulo">Agregar imagen</h2>
 
           <button
             type="button"
-            class="modal-tarjeta-imagen__cerrar"
+            class="modal-imagen-contenido__cerrar"
             aria-label="Cerrar modal"
             title="Cerrar"
             @click="cerrarModal"
@@ -163,28 +163,32 @@ defineExpose({
       </template>
 
       <template #cuerpo>
-        <div class="modal-tarjeta-imagen__pestanas" role="tablist" aria-label="Origen de la imagen">
+        <div
+          class="modal-imagen-contenido__pestanas"
+          role="tablist"
+          aria-label="Origen de la imagen"
+        >
           <button
-            id="pestana-subir-tarjeta"
+            id="pestana-subir"
             type="button"
             role="tab"
-            class="modal-tarjeta-imagen__pestana"
-            :class="{ 'modal-tarjeta-imagen__pestana--activa': pestanaActiva === 'subir' }"
+            class="modal-imagen-contenido__pestana"
+            :class="{ 'modal-imagen-contenido__pestana--activa': pestanaActiva === 'subir' }"
             :aria-selected="pestanaActiva === 'subir'"
-            aria-controls="panel-subir-tarjeta"
+            aria-controls="panel-subir"
             @click="cambiarPestana('subir')"
           >
             Subir
           </button>
 
           <button
-            id="pestana-enlace-tarjeta"
+            id="pestana-enlace"
             type="button"
             role="tab"
-            class="modal-tarjeta-imagen__pestana"
-            :class="{ 'modal-tarjeta-imagen__pestana--activa': pestanaActiva === 'enlace' }"
+            class="modal-imagen-contenido__pestana"
+            :class="{ 'modal-imagen-contenido__pestana--activa': pestanaActiva === 'enlace' }"
             :aria-selected="pestanaActiva === 'enlace'"
-            aria-controls="panel-enlace-tarjeta"
+            aria-controls="panel-enlace"
             @click="cambiarPestana('enlace')"
           >
             Enlace
@@ -193,26 +197,26 @@ defineExpose({
 
         <section
           v-if="pestanaActiva === 'subir'"
-          id="panel-subir-tarjeta"
-          class="modal-tarjeta-imagen__panel"
+          id="panel-subir"
+          class="modal-imagen-contenido__panel"
           role="tabpanel"
-          aria-labelledby="pestana-subir-tarjeta"
+          aria-labelledby="pestana-subir"
         >
           <input
-            id="tarjeta-archivo"
+            id="imagen-contenido-archivo"
             ref="inputArchivo"
-            class="modal-tarjeta-imagen__input-archivo"
+            class="modal-imagen-contenido__input-archivo"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/svg+xml"
             @change="seleccionarArchivo"
           />
 
           <div
-            class="modal-tarjeta-imagen__zona-subida borde borde-redondeado-16"
-            :class="{ 'modal-tarjeta-imagen__zona-subida--activa': arrastrandoArchivo }"
+            class="modal-imagen-contenido__zona-subida"
+            :class="{ 'modal-imagen-contenido__zona-subida--activa': arrastrandoArchivo }"
             role="button"
             tabindex="0"
-            aria-label="Arrastra o selecciona una imagen de tarjeta"
+            aria-label="Arrastra o selecciona una imagen de contenido"
             @click="abrirSelectorArchivos"
             @keydown.enter.prevent="abrirSelectorArchivos"
             @keydown.space.prevent="abrirSelectorArchivos"
@@ -221,7 +225,7 @@ defineExpose({
             @dragleave.prevent="desactivarArrastre"
             @drop.prevent="soltarArchivo"
           >
-            <span class="modal-tarjeta-imagen__icono-subida" aria-hidden="true">
+            <span class="modal-imagen-contenido__icono-subida" aria-hidden="true">
               <svg viewBox="0 0 24 24">
                 <path
                   d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"
@@ -234,36 +238,39 @@ defineExpose({
               </svg>
             </span>
 
-            <p class="modal-tarjeta-imagen__indicacion">Arrastra o suelta tu archivo</p>
+            <p class="modal-imagen-contenido__indicacion">Arrastra o suelta tu archivo</p>
 
             <button
               type="button"
-              class="modal-tarjeta-imagen__boton-subir"
+              class="modal-imagen-contenido__boton-subir"
               @click.stop="abrirSelectorArchivos"
             >
               Elige Archivo
             </button>
 
-            <p class="modal-tarjeta-imagen__ayuda">
-              Las imágenes con un ancho de 800 a 1200 píxeles funcionan mejor.
+            <p class="modal-imagen-contenido__ayuda">
+              Usa una imagen horizontal de al menos 1200 píxeles de ancho para obtener mejores
+              resultados.
             </p>
 
-            <p class="modal-tarjeta-imagen__formatos">JPG, PNG o WEBP. Tamaño máximo: 500 KB.</p>
+            <p class="modal-imagen-contenido__formatos">
+              JPG, PNG, WEBP o SVG. Tamaño máximo: 5 MB.
+            </p>
           </div>
         </section>
 
         <section
           v-else
-          id="panel-enlace-tarjeta"
-          class="modal-tarjeta-imagen__panel"
+          id="panel-enlace"
+          class="modal-imagen-contenido__panel"
           role="tabpanel"
-          aria-labelledby="pestana-enlace-tarjeta"
+          aria-labelledby="pestana-enlace"
         >
-          <div class="modal-tarjeta-imagen__campo">
-            <label for="tarjeta-enlace">Enlace de la imagen</label>
+          <div class="modal-imagen-contenido__campo">
+            <label for="imagen-contenido-enlace">Enlace de la imagen</label>
 
             <input
-              id="tarjeta-enlace"
+              id="imagen-contenido-enlace"
               v-model.trim="urlImagen"
               type="url"
               placeholder="https://ejemplo.com/imagen.jpg"
@@ -275,14 +282,14 @@ defineExpose({
 
           <button
             type="button"
-            class="boton-primario boton-chico modal-tarjeta-imagen__boton-enlace"
+            class="boton-primario boton-chico modal-imagen-contenido__boton-enlace"
             @click="aplicarEnlace"
           >
             Usar imagen
           </button>
         </section>
 
-        <p v-if="error" class="texto-color-error modal-tarjeta-imagen__error" role="alert">
+        <p v-if="error" class="texto-color-error modal-imagen-contenido__error" role="alert">
           {{ error }}
         </p>
       </template>
@@ -291,7 +298,7 @@ defineExpose({
 </template>
 
 <style scoped lang="scss">
-.modal-tarjeta-imagen {
+.modal-imagen-contenido {
   :deep(.modal-contenedor) {
     width: min(580px, calc(100vw - 32px));
     max-width: 100%;
@@ -454,9 +461,9 @@ defineExpose({
     justify-content: center;
     padding: 20px 16px;
     overflow: hidden;
-    border: 1.5px dashed var(--color-neutro-3, #ced4da);
+    border: 1px dashed rgb(255 255 255 / 55%);
     border-radius: 10px;
-    background: transparent;
+    background: rgb(255 255 255 / 4%);
     text-align: center;
     cursor: pointer;
     transition:
@@ -467,13 +474,13 @@ defineExpose({
     &:hover,
     &:focus-visible,
     &--activa {
-      border-color: var(--color-primario, rgb(105 28 50));
-      background: rgba(128, 128, 128, 0.08);
-      box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.15);
+      border-color: rgb(255 255 255 / 85%);
+      background: rgb(255 255 255 / 8%);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
     }
 
     &:focus-visible {
-      outline: 2px solid var(--color-primario, rgb(105 28 50));
+      outline: 2px solid white;
       outline-offset: 3px;
     }
   }
@@ -493,7 +500,7 @@ defineExpose({
     justify-content: center;
     margin-bottom: 10px;
     border-radius: 50%;
-    color: var(--texto-secundario, #6f7276);
+    color: rgb(255 255 255 / 78%);
 
     svg {
       width: 26px;
@@ -507,10 +514,10 @@ defineExpose({
     margin: 8px 0 14px;
     padding: 7px 14px;
     box-sizing: border-box;
-    border: 1px solid var(--color-neutro-3, #ced4da);
+    border: 1px solid rgb(255 255 255 / 45%);
     border-radius: 6px;
-    background: rgba(128, 128, 128, 0.08);
-    color: var(--texto-primario, inherit);
+    background: rgb(255 255 255 / 9%);
+    color: inherit;
     font: inherit;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -518,13 +525,24 @@ defineExpose({
 
     &:hover,
     &:focus-visible {
-      background: rgba(128, 128, 128, 0.15);
+      background: rgb(255 255 255 / 14%);
     }
 
     &:focus-visible {
       outline: 2px solid currentcolor;
       outline-offset: 2px;
     }
+  }
+
+  &__indicacion,
+  &__ayuda,
+  &__formatos {
+    width: 100%;
+    max-width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   &__indicacion {
@@ -537,7 +555,6 @@ defineExpose({
   &__ayuda {
     margin-top: 0;
     margin-bottom: 0;
-    color: inherit;
     font-size: 0.8125rem;
   }
 
@@ -579,7 +596,7 @@ defineExpose({
 }
 
 @media (max-width: 767px) {
-  .modal-tarjeta-imagen {
+  .modal-imagen-contenido {
     :deep(.modal-contenedor) {
       width: calc(100vw - 24px);
       max-height: calc(100dvh - 24px);
@@ -629,6 +646,10 @@ defineExpose({
       min-height: 32px;
       padding: 6px 12px;
       font-size: 0.75rem;
+    }
+
+    &__boton-subir {
+      white-space: normal;
     }
   }
 }

@@ -42,6 +42,10 @@ export interface LandingBuilderConfig {
   logoSecundarioUrl: string | null;
   logoTerceroUrl: string | null;
   logoCuartoUrl: string | null;
+  logoRedirectUrl?: string | null;
+  logoSecundarioRedirectUrl?: string | null;
+  logoTerceroRedirectUrl?: string | null;
+  logoCuartoRedirectUrl?: string | null;
   tarjetas: LandingBuilderTarjeta[];
   secciones?: LandingBuilderSection[];
   bloques?: LandingBuilderBloque[];
@@ -51,7 +55,7 @@ export interface LandingBuilderConfig {
 
 export interface LandingBuilderBloque {
   id: string;
-  tipo: 'portada' | 'texto' | 'carrusel' | 'tarjetas';
+  tipo: 'portada' | 'titulo' | 'parrafo' | 'texto-imagen' | 'texto' | 'carrusel' | 'tarjetas';
   etiqueta?: string;
   datos: Record<string, unknown>;
 }
@@ -62,6 +66,10 @@ export interface LandingBuilderPaginaIdentidad {
   logoSecundarioUrl: string | null;
   logoTerceroUrl: string | null;
   logoCuartoUrl: string | null;
+  logoRedirectUrl?: string | null;
+  logoSecundarioRedirectUrl?: string | null;
+  logoTerceroRedirectUrl?: string | null;
+  logoCuartoRedirectUrl?: string | null;
 }
 
 export interface LandingBuilderPagina {
@@ -95,6 +103,24 @@ export const TIPOS_LOGO_PAGINA_PERMITIDOS = [
   'image/svg+xml',
 ];
 export const TAMANO_MAXIMO_LOGO_PAGINA = 2 * 1024 * 1024; // 2MB
+
+export function validarYObtenerMimetypeImagen(
+  archivo: any,
+  permitidos: string[] | readonly string[]
+): string | null {
+  if (!archivo) return null;
+  const mimetype = archivo.mimetype || '';
+  if (mimetype && permitidos.includes(mimetype)) {
+    return mimetype;
+  }
+  const extension = archivo.originalFilename?.split('.').pop()?.toLowerCase();
+  if (extension === 'png') return 'image/png';
+  if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
+  if (extension === 'webp') return 'image/webp';
+  if (extension === 'svg') return 'image/svg+xml';
+  return null;
+}
+
 export const SLOTS_LOGO_PAGINA = ['logo1', 'logo2', 'logo3', 'logo4'] as const;
 export const CAMPO_IDENTIDAD_POR_SLOT: Record<
   (typeof SLOTS_LOGO_PAGINA)[number],

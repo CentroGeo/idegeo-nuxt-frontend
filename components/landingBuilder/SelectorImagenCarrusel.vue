@@ -1,4 +1,6 @@
 <script setup>
+const store = useLandingBuilderStore();
+
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
 const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
@@ -9,7 +11,7 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['seleccionar-imagen', 'quitar-imagen']);
+const emit = defineEmits(['seleccionar-imagen']);
 
 const inputArchivo = ref(null);
 const arrastrandoArchivo = ref(false);
@@ -60,26 +62,31 @@ function soltarArchivo(event) {
 
 <template>
   <div class="selector-imagen-carrusel">
-    <div v-if="imagenUrl" class="selector-imagen-carrusel__previsualizacion">
-      <img :src="imagenUrl" alt="Imagen de la diapositiva" />
+    <div
+      v-if="imagenUrl"
+      class="selector-imagen-carrusel__previsualizacion"
+      role="button"
+      tabindex="0"
+      aria-label="Cambiar imagen de la diapositiva"
+      title="Cambiar imagen"
+      @click="abrirSelectorArchivos"
+      @keydown.enter.prevent="abrirSelectorArchivos"
+      @keydown.space.prevent="abrirSelectorArchivos"
+    >
+      <input
+        ref="inputArchivo"
+        class="selector-imagen-carrusel__input"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+        @change="seleccionarArchivo"
+      />
 
-      <button
-        type="button"
-        class="selector-imagen-carrusel__quitar"
-        aria-label="Quitar imagen"
-        title="Quitar imagen"
-        @click="emit('quitar-imagen')"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M6 6l12 12M18 6 6 18"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-      </button>
+      <img :src="store.resolverUrlImagen(imagenUrl)" alt="Imagen de la diapositiva" />
+
+      <span class="selector-imagen-carrusel__superponer" aria-hidden="true">
+        <span class="pictograma-archivo-subir pictograma-chico" />
+        Cambiar imagen
+      </span>
     </div>
 
     <div
@@ -119,6 +126,7 @@ function soltarArchivo(event) {
     position: relative;
     overflow: hidden;
     border-radius: 10px;
+    cursor: pointer;
 
     img {
       display: block;
@@ -126,37 +134,35 @@ function soltarArchivo(event) {
       height: 140px;
       object-fit: cover;
     }
-  }
-
-  &__quitar {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: inline-flex;
-    width: 28px;
-    height: 28px;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    border-radius: 50%;
-    background: rgb(0 0 0 / 55%);
-    color: white;
-    cursor: pointer;
 
     &:hover,
     &:focus-visible {
-      background: rgb(0 0 0 / 75%);
+      .selector-imagen-carrusel__superponer {
+        opacity: 1;
+      }
     }
 
     &:focus-visible {
       outline: 2px solid white;
-      outline-offset: 2px;
+      outline-offset: -2px;
     }
+  }
 
-    svg {
-      width: 16px;
-      height: 16px;
-    }
+  &__superponer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgb(0 0 0 / 55%);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
   }
 
   &__zona {

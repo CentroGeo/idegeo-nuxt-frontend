@@ -47,18 +47,6 @@ function manejarSeleccionImagen(id, archivo) {
   diapositiva.imagenUrl = URL.createObjectURL(archivo);
 }
 
-function quitarImagen(id) {
-  const diapositiva = diapositivas.value.find((d) => d.id === id);
-  if (!diapositiva) return;
-
-  if (diapositiva.imagenUrl?.startsWith('blob:')) {
-    URL.revokeObjectURL(diapositiva.imagenUrl);
-  }
-
-  diapositiva.imagenArchivo = null;
-  diapositiva.imagenUrl = null;
-}
-
 function alIniciarArrastre(id) {
   idArrastrado.value = id;
 }
@@ -170,7 +158,6 @@ defineExpose({
                 class="boton-pictograma boton-sin-contenedor-secundario boton-chico"
                 aria-label="Eliminar diapositiva"
                 title="Eliminar diapositiva"
-                :disabled="diapositivas.length <= 1"
                 @click="eliminarDiapositiva(diapositiva.id)"
               >
                 <span class="pictograma-eliminar" aria-hidden="true" />
@@ -181,7 +168,6 @@ defineExpose({
               <LandingBuilderSelectorImagenCarrusel
                 :imagen-url="diapositiva.imagenUrl"
                 @seleccionar-imagen="(archivo) => manejarSeleccionImagen(diapositiva.id, archivo)"
-                @quitar-imagen="quitarImagen(diapositiva.id)"
               />
             </div>
 

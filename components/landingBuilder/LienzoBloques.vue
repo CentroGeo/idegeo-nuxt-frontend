@@ -79,10 +79,22 @@ const tiposBloquePadre = [
     icono: '▣',
   },
   {
-    id: 'texto',
-    etiqueta: 'Sección de texto',
-    descripcion: 'Bloque editable con encabezados y párrafos.',
-    icono: 'T',
+    id: 'titulo',
+    etiqueta: 'Título',
+    descripcion: 'Encabezado independiente con herramientas de formato.',
+    icono: 'H',
+  },
+  {
+    id: 'parrafo',
+    etiqueta: 'Párrafo',
+    descripcion: 'Texto independiente con formato, alineación y listas.',
+    icono: 'P',
+  },
+  {
+    id: 'texto-imagen',
+    etiqueta: 'Texto con imagen',
+    descripcion: 'Combina un título, un párrafo editable y una imagen.',
+    icono: '▧',
   },
   {
     id: 'carrusel',
@@ -172,9 +184,43 @@ function crearDatosPortada() {
   };
 }
 
-function crearDatosTexto() {
+function crearDatosTitulo() {
   return {
-    bloquesTexto: [],
+    texto: '',
+    alineacion: 'left',
+    color: '#FFFFFF',
+    negrita: true,
+    tamano: 'grande',
+  };
+}
+
+function crearDatosParrafo() {
+  return {
+    texto: '',
+    alineacion: 'left',
+    color: '#FFFFFF',
+    negrita: false,
+    tamano: 'normal',
+    tipoLista: 'ninguna',
+  };
+}
+
+function crearDatosTextoImagen() {
+  return {
+    parrafo: {
+      texto: 'Escribe aquí la descripción de la sección.',
+      alineacion: 'left',
+      color: '#FFFFFF',
+      negrita: false,
+      tamano: 'normal',
+      tipoLista: 'ninguna',
+    },
+    posicionImagen: 'derecha',
+    imagen: {
+      url: null,
+      archivo: null,
+      alt: '',
+    },
   };
 }
 
@@ -207,8 +253,16 @@ function crearDatosPorTipo(tipoBloque) {
     return crearDatosPortada();
   }
 
-  if (tipoBloque.id === 'texto') {
-    return crearDatosTexto();
+  if (tipoBloque.id === 'titulo') {
+    return crearDatosTitulo();
+  }
+
+  if (tipoBloque.id === 'parrafo') {
+    return crearDatosParrafo();
+  }
+
+  if (tipoBloque.id === 'texto-imagen') {
+    return crearDatosTextoImagen();
   }
 
   if (tipoBloque.id === 'carrusel') {
@@ -332,6 +386,9 @@ function moverBloqueAbajo(bloqueId) {
 
 function obtenerEtiquetaBloque(bloque) {
   if (bloque.tipo === 'portada') return 'Portada';
+  if (bloque.tipo === 'titulo') return 'Título';
+  if (bloque.tipo === 'parrafo') return 'Párrafo';
+  if (bloque.tipo === 'texto-imagen') return 'Texto con imagen';
   if (bloque.tipo === 'texto') return 'Sección de texto';
   if (bloque.tipo === 'carrusel') return 'Carrusel';
   if (bloque.tipo === 'tarjetas') return 'Sección de tarjetas';
@@ -371,7 +428,9 @@ onBeforeUnmount(() => {
       </button>
 
       <h3>Tu lienzo está vacío</h3>
-      <p class="m-b-3">Presiona el botón para agregar una portada o una sección de texto.</p>
+      <p class="m-b-3">
+        Presiona el botón para agregar una portada, un título, un párrafo u otra sección.
+      </p>
     </div>
 
     <div v-else class="lienzo-bloques__lista">
@@ -488,6 +547,18 @@ onBeforeUnmount(() => {
 
         <div class="lienzo-bloques__contenido">
           <LandingBuilderPortadaEditor v-if="bloque.tipo === 'portada'" v-model="bloque.datos" />
+
+          <LandingBuilderEditorTitulo v-else-if="bloque.tipo === 'titulo'" v-model="bloque.datos" />
+
+          <LandingBuilderEditorParrafo
+            v-else-if="bloque.tipo === 'parrafo'"
+            v-model="bloque.datos"
+          />
+
+          <LandingBuilderEditorTextoImagen
+            v-else-if="bloque.tipo === 'texto-imagen'"
+            v-model="bloque.datos"
+          />
 
           <LandingBuilderEditorBloquesTexto
             v-else-if="bloque.tipo === 'texto'"
@@ -785,7 +856,7 @@ onBeforeUnmount(() => {
     gap: 16px;
     padding: 10px 12px;
     border-bottom: 1px solid rgb(255 255 255 / 12%);
-    background: rgb(105 28 50 / 36%);
+    background: rgb(105 28 50 / 85%);
   }
 
   &__bloque-tipo {
@@ -989,6 +1060,13 @@ onBeforeUnmount(() => {
   }
 }
 
+.lienzo-bloques__bloque--barra-oculta {
+  :deep(.editor-texto-imagen__controles),
+  :deep(.editor-texto-imagen__acciones-imagen) {
+    display: none;
+  }
+}
+
 @media (max-width: 767px) {
   .lienzo-bloques {
     padding-top: 20px;
@@ -1058,7 +1136,7 @@ onBeforeUnmount(() => {
       gap: 12px;
       padding: 12px;
       border-radius: 16px 16px 0 0;
-      background: rgb(105 28 50 / 52%);
+      background: rgb(105 28 50 / 85%);
     }
 
     &__bloque-tipo {
