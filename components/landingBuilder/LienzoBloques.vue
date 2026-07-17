@@ -856,7 +856,7 @@ onBeforeUnmount(() => {
     gap: 16px;
     padding: 10px 12px;
     border-bottom: 1px solid rgb(255 255 255 / 12%);
-    background: rgb(105 28 50 / 36%);
+    background: rgb(105 28 50 / 85%);
   }
 
   &__bloque-tipo {
@@ -1136,7 +1136,7 @@ onBeforeUnmount(() => {
       gap: 12px;
       padding: 12px;
       border-radius: 16px 16px 0 0;
-      background: rgb(105 28 50 / 52%);
+      background: rgb(105 28 50 / 85%);
     }
 
     &__bloque-tipo {

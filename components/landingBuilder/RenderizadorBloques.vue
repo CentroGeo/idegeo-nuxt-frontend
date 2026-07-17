@@ -27,13 +27,17 @@ const tamanosParrafo = {
   grande: '1.25rem',
 };
 
+function colorTextoResuelto(color) {
+  return color && color !== '#FFFFFF' ? color : 'var(--texto-primario)';
+}
+
 function obtenerEstilosTitulo(bloque) {
   const datos = bloque.datos || {};
   const tamano = datos.tamano || 'grande';
 
   return {
     textAlign: datos.alineacion || 'left',
-    color: datos.color || '#FFFFFF',
+    color: colorTextoResuelto(datos.color),
     fontWeight: datos.negrita ? 700 : 400,
     fontSize: tamanosTitulo[tamano] || tamanosTitulo.grande,
   };
@@ -45,7 +49,7 @@ function obtenerEstilosParrafo(bloque) {
 
   return {
     textAlign: datos.alineacion || 'left',
-    color: datos.color || '#FFFFFF',
+    color: colorTextoResuelto(datos.color),
     fontWeight: datos.negrita ? 700 : 400,
     fontSize: tamanosParrafo[tamano] || tamanosParrafo.normal,
   };
@@ -67,7 +71,7 @@ function obtenerEstilosParrafoTextoImagen(bloque) {
 
   return {
     textAlign: parrafo.alineacion || 'left',
-    color: parrafo.color || '#FFFFFF',
+    color: colorTextoResuelto(parrafo.color),
     fontWeight: parrafo.negrita ? 700 : 400,
     fontSize: tamanosParrafo[tamano] || tamanosParrafo.normal,
   };

@@ -5,6 +5,23 @@ const { status, signIn } = useAuth();
 const route = useRoute();
 const config = useRuntimeConfig();
 const store = useLandingBuilderStore();
+const storeCatalogo = useCatalogoStore();
+
+const esAdmin = computed(() => Boolean(storeCatalogo.userInfo?.is_superuser));
+
+watch(
+  status,
+  (nuevoEstado) => {
+    if (
+      import.meta.client &&
+      nuevoEstado === 'authenticated' &&
+      !storeCatalogo.userInfo?.is_superuser
+    ) {
+      storeCatalogo.getUserInfo();
+    }
+  },
+  { immediate: true }
+);
 
 const esConstructor = computed(() => {
   return route.path.startsWith('/landing-builder');
@@ -507,7 +524,7 @@ function eliminarLogo4() {
       <li v-if="mostrarGeocontenidos && status === 'authenticated'">
         <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
       </li>
-      <li v-if="mostrarLandingBuilder && status === 'authenticated'">
+      <li v-if="mostrarLandingBuilder && status === 'authenticated' && esAdmin">
         <NuxtLink class="nav-hipervinculo" to="/landing-builder">Constructor de Páginas</NuxtLink>
       </li>
       <li v-if="mostrarAcercaDe">
@@ -774,7 +791,7 @@ body[data-tema='oscuro'] {
     top: 100%;
     left: 0;
     z-index: 100;
-    min-width: 180px;
+    width: max-content;
     margin: 4px 0 0;
     padding: 6px 0;
     border: 1px solid var(--color-neutro-2, #e0e0e0);

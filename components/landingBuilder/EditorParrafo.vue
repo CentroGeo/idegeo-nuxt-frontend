@@ -19,9 +19,13 @@ const tamanosParrafo = {
 
 const esLista = computed(() => props.modelValue.tipoLista === 'vinetas');
 
+function colorTextoResuelto(color) {
+  return color && color !== '#FFFFFF' ? color : 'var(--texto-primario)';
+}
+
 const estilosParrafo = computed(() => ({
   textAlign: props.modelValue.alineacion || 'left',
-  color: props.modelValue.color || '#FFFFFF',
+  color: colorTextoResuelto(props.modelValue.color),
   fontWeight: props.modelValue.negrita ? 700 : 400,
   fontSize: tamanosParrafo[props.modelValue.tamano] || tamanosParrafo.normal,
 }));
