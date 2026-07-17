@@ -185,8 +185,6 @@ const formatearFecha = (fechaISO) => {
   return fecha;
 };
 
-const etiquetaPermiso = (rol) => permisos.find((permiso) => permiso.value === rol)?.label || rol;
-
 const modalCambiarPermiso = ref(null);
 const participanteSeleccionado = ref(null);
 const permisoSeleccionado = ref('');
