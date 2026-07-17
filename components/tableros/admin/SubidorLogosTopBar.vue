@@ -136,21 +136,36 @@ function revocarPreview(logo) {
   }
 }
 
-function quitar(index) {
-  const logo = props.logos[index];
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const logoIndexToDelete = ref(null);
 
-  if (
-    !logo?.esNuevo &&
-    !confirm('¿Quitar este logo? Se eliminará de la base de datos al guardar la configuración.')
-  ) {
+function abrirModalEliminar(index) {
+  const logo = props.logos[index];
+  if (logo?.esNuevo) {
+    // Si es un logo nuevo no guardado, lo quitamos sin modal
+    revocarPreview(logo);
+    const copia = props.logos.filter((_, logoIndex) => logoIndex !== index);
+    actualizarLogos(copia);
     return;
   }
+  logoIndexToDelete.value = index;
+  modalEliminar.value?.abrir();
+}
 
+function cancelarEliminar() {
+  logoIndexToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+function confirmarEliminar() {
+  if (logoIndexToDelete.value === null) return;
+  const logo = props.logos[logoIndexToDelete.value];
   revocarPreview(logo);
-
-  const copia = props.logos.filter((_, logoIndex) => logoIndex !== index);
-
+  const copia = props.logos.filter((_, logoIndex) => logoIndex !== logoIndexToDelete.value);
   actualizarLogos(copia);
+  logoIndexToDelete.value = null;
+  modalEliminar.value?.cerrar();
 }
 
 function limpiarPreviewsLocales() {
@@ -268,7 +283,7 @@ defineExpose({
             :disabled="disabled"
             :aria-label="`Quitar logo ${idx + 1}`"
             title="Quitar logo"
-            @click="quitar(idx)"
+            @click="abrirModalEliminar(idx)"
           >
             <span class="pictograma-eliminar" />
           </button>
@@ -352,10 +367,36 @@ defineExpose({
         {{ error }}
       </p>
     </div>
+
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar">
+        <template #encabezado>
+          <h2 class="m-t-0">Quitar logo</h2>
+        </template>
+
+        <p class="alerta-advertencia-modal">
+          ¿Deseas quitar este logo de la banda? El logo se eliminará definitivamente de la base de
+          datos al guardar la configuración.
+        </p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button class="boton boton-secundario" @click="cancelarEliminar">Cancelar</button>
+            <button class="boton boton-primario" @click="confirmarEliminar">Quitar</button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .subidor-logos-topbar {
   &__subtitulo {
     font-size: 0.95rem;
@@ -448,6 +489,15 @@ defineExpose({
   &__acciones {
     display: flex;
     gap: 0.3rem;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+    }
   }
 
   &__nuevo {

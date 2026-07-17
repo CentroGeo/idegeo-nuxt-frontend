@@ -145,19 +145,36 @@ function mover(index, direccion) {
   actualizarOrden();
 }
 
-function quitar(index) {
-  const logo = logos.value[index];
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const logoIndexToDelete = ref(null);
 
-  if (
-    !logo.esNuevo &&
-    !confirm('¿Quitar este logo? Se eliminará de la base de datos al guardar los cambios.')
-  ) {
+function abrirModalEliminar(index) {
+  const logo = logos.value[index];
+  if (logo.esNuevo) {
+    // Si es un logo nuevo no guardado, lo quitamos sin modal
+    revocarPreview(logo);
+    logos.value.splice(index, 1);
+    actualizarOrden();
     return;
   }
+  logoIndexToDelete.value = index;
+  modalEliminar.value?.abrir();
+}
 
+function cancelarEliminar() {
+  logoIndexToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+function confirmarEliminar() {
+  if (logoIndexToDelete.value === null) return;
+  const logo = logos.value[logoIndexToDelete.value];
   revocarPreview(logo);
-  logos.value.splice(index, 1);
+  logos.value.splice(logoIndexToDelete.value, 1);
   actualizarOrden();
+  logoIndexToDelete.value = null;
+  modalEliminar.value?.cerrar();
 }
 
 async function restaurar() {
@@ -358,7 +375,7 @@ defineExpose({
               :disabled="guardando"
               :aria-label="`Quitar logo ${index + 1}`"
               title="Quitar logo"
-              @click="quitar(index)"
+              @click="abrirModalEliminar(index)"
             >
               <span class="pictograma-eliminar" />
             </button>
@@ -411,10 +428,36 @@ defineExpose({
         {{ error }}
       </p>
     </template>
+
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar">
+        <template #encabezado>
+          <h2 class="m-t-0">Quitar logo</h2>
+        </template>
+
+        <p class="alerta-advertencia-modal">
+          ¿Deseas quitar este logo? El logo se eliminará definitivamente de la base de datos al
+          guardar los cambios.
+        </p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button class="boton boton-secundario" @click="cancelarEliminar">Cancelar</button>
+            <button class="boton boton-primario" @click="confirmarEliminar">Quitar</button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .subidor-logos {
   &__vista-previa {
     margin-bottom: 1.5rem;
@@ -619,6 +662,15 @@ defineExpose({
   &__acciones {
     display: flex;
     gap: 0.35rem;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+    }
   }
 
   &__nuevo {

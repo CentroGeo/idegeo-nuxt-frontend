@@ -98,9 +98,12 @@ defineExpose({
   <form class="tab-identidad" @submit.prevent="alSubmit">
     <section class="m-b-4">
       <h3>Datos del sitio</h3>
+      <p class="formulario-ayuda m-b-3">
+        Los campos marcados con <span class="requerido">*</span> son obligatorios.
+      </p>
 
       <div class="m-b-3">
-        <label for="tab-identidad-nombre">Nombre del sitio</label>
+        <label for="tab-identidad-nombre">Nombre del sitio <span class="requerido">*</span></label>
         <input
           id="tab-identidad-nombre"
           v-model="nombre"
@@ -111,7 +114,7 @@ defineExpose({
       </div>
 
       <div class="m-b-3">
-        <label for="tab-identidad-url">URL del sitio (slug)</label>
+        <label for="tab-identidad-url">URL del sitio (slug) <span class="requerido">*</span></label>
         <input
           id="tab-identidad-url"
           v-model="form.url"
@@ -128,7 +131,7 @@ defineExpose({
       </div>
 
       <div class="m-b-3">
-        <label for="tab-identidad-titulo">Título del sitio</label>
+        <label for="tab-identidad-titulo">Título del sitio <span class="requerido">*</span></label>
         <input
           id="tab-identidad-titulo"
           v-model="form.title"
@@ -139,7 +142,7 @@ defineExpose({
       </div>
 
       <div class="m-b-3">
-        <label for="tab-identidad-subtitulo">Subtítulo</label>
+        <label for="tab-identidad-subtitulo">Subtítulo <span class="requerido">*</span></label>
         <input
           id="tab-identidad-subtitulo"
           v-model="form.subtitle"
