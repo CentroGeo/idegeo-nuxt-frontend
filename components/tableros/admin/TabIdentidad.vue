@@ -9,6 +9,7 @@ const props = defineProps({
 const emit = defineEmits(['guardar', 'actualizar']);
 
 const modalVisual = ref(null);
+const subidorLogos = ref(null);
 
 const form = reactive({
   name: '',
@@ -74,12 +75,23 @@ function abrirModalVisual() {
   modalVisual.value?.abrir();
 }
 
+async function guardarLogos() {
+  if (!subidorLogos.value?.guardar) return true;
+
+  return await subidorLogos.value.guardar();
+}
+
 function alSubmit() {
   validarUrl();
   if (errorUrl.value) return;
+
   emit('actualizar', { ...form });
   emit('guardar');
 }
+
+defineExpose({
+  guardarLogos,
+});
 </script>
 
 <template>
@@ -150,7 +162,11 @@ function alSubmit() {
 
     <section v-if="sitio.id" class="m-b-4">
       <h3>Logos del sitio</h3>
-      <TablerosAdminSubidorLogos :site-id="sitio.id" />
+      <TablerosAdminSubidorLogos
+        ref="subidorLogos"
+        :site-id="sitio.id"
+        :site-title="form.title || sitio.title"
+      />
     </section>
 
     <section class="flex flex-contenido-separado m-b-4">

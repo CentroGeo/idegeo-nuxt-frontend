@@ -135,6 +135,9 @@ export function useTableroApi() {
     // ---------- Logos ----------
     fetchLogosDeSitio: (siteId: number) => fetchJson(`${baseUrl}/sites/${siteId}/logos/`),
 
+    sincronizarLogosSitio: (siteId: number, form: FormData, token?: string | null) =>
+      formRequest(`${baseUrl}/sites/${siteId}/sync-logos/`, 'POST', form, token),
+
     crearLogo: (form: FormData, token?: string | null) =>
       formRequest(`${baseUrl}/site-logos/`, 'POST', form, token),
 
