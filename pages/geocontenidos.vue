@@ -42,7 +42,7 @@ const ruta = '/geocontenidos';
                     },
                     {
                       nombre: 'Panoramas',
-                      // ruta: '/geocontenidos/panoramas',
+                      ruta: `${ruta}/panoramas`,
                     },
                     {
                       nombre: 'Geo-historias',
