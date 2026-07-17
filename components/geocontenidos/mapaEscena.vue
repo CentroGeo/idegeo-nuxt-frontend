@@ -32,7 +32,7 @@ const icono = 16;
         :capa="capa.name"
         :opacidad="capa.opacity"
         :posicion="capa.stack_order"
-        :visible="capa.visible"
+        :visible="capa.visibility"
       />
       <!-- :estilo="capa.estilo" -->
       <!-- @al-iniciar-carga="() => console.log('C: alIniciarCarga')" -->

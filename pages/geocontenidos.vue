@@ -38,7 +38,7 @@ const ruta = '/geocontenidos';
                   v-for="item in [
                     {
                       nombre: 'Mapas',
-                      // ruta: '/geocontenidos/mapas',
+                      ruta: '/geocontenidos/mapas',
                     },
                     {
                       nombre: 'Panoramas',
