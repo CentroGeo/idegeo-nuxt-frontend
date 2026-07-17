@@ -7,6 +7,20 @@ defineProps({
     required: true,
   },
 });
+
+const tamanosTitulo = {
+  pequeno: '1.125rem',
+  mediano: '1.25rem',
+  grande: '1.5rem',
+  'extra-grande': '1.875rem',
+};
+
+const tamanosParrafo = {
+  pequeno: '0.8125rem',
+  normal: '0.875rem',
+  mediano: '1rem',
+  grande: '1.125rem',
+};
 </script>
 
 <template>
@@ -31,37 +45,29 @@ defineProps({
           </div>
 
           <div class="visor-tarjeta-cuerpo">
-            <component
-              :is="tarjeta.tituloTipo || 'h2'"
+            <h3
               class="visor-tarjeta-titulo"
-              :class="{
-                'visor-tarjeta-titulo-h1': (tarjeta.tituloTipo || 'h2') === 'h2',
-                'visor-tarjeta-titulo-h2': tarjeta.tituloTipo === 'h3',
-                'visor-tarjeta-titulo-p': tarjeta.tituloTipo === 'p',
-              }"
               :style="{
                 textAlign: tarjeta.tituloAlineacion || 'left',
                 color: tarjeta.tituloColor || 'inherit',
+                fontWeight: tarjeta.tituloNegrita ? '700' : '400',
+                fontSize: tamanosTitulo[tarjeta.tituloTamano] || '1.375rem',
               }"
             >
               {{ tarjeta.titulo }}
-            </component>
+            </h3>
 
-            <component
-              :is="tarjeta.descripcionTipo || 'p'"
+            <p
               class="visor-tarjeta-descripcion"
-              :class="{
-                'visor-tarjeta-desc-h1': tarjeta.descripcionTipo === 'h2',
-                'visor-tarjeta-desc-h2': tarjeta.descripcionTipo === 'h3',
-                'visor-tarjeta-desc-p': (tarjeta.descripcionTipo || 'p') === 'p',
-              }"
               :style="{
                 textAlign: tarjeta.descripcionAlineacion || 'left',
                 color: tarjeta.descripcionColor || 'inherit',
+                fontWeight: tarjeta.descripcionNegrita ? '700' : '400',
+                fontSize: tamanosParrafo[tarjeta.descripcionTamano] || '0.875rem',
               }"
             >
               {{ tarjeta.descripcion }}
-            </component>
+            </p>
 
             <div v-if="tarjeta.botonTexto" class="visor-tarjeta-pie flex flex-contenido-centrado">
               <NuxtLink

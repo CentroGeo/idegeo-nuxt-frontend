@@ -1,7 +1,6 @@
 <script setup>
 /* eslint-disable vue/no-mutating-props */
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
-import ModalAlineacionTexto from '~/components/landingBuilder/ModalAlineacionTexto.vue';
 import ModalCambiarImagenTarjeta from '~/components/landingBuilder/ModalCambiarImagenTarjeta.vue';
 
 const store = useLandingBuilderStore();
@@ -11,16 +10,25 @@ const props = defineProps({
   datos: { type: Object, required: true },
 });
 const modalCambiarImagen = ref(null);
-const modalAlineacion = ref(null);
 const modalEnlace = ref(null);
 
 const indiceTarjetaEdicion = ref(-1);
 const indiceTarjetaArrastrada = ref(-1);
 const indiceTarjetaSobre = ref(-1);
 
-// Estado para controlar qué tarjeta y qué campo de texto estamos estilizando
-const tarjetaEstiloIndex = ref(-1);
-const campoEstilo = ref(''); // 'titulo' o 'descripcion'
+const tamanosTitulo = {
+  pequeno: '1.125rem',
+  mediano: '1.25rem',
+  grande: '1.5rem',
+  'extra-grande': '1.875rem',
+};
+
+const tamanosParrafo = {
+  pequeno: '0.8125rem',
+  normal: '0.875rem',
+  mediano: '1rem',
+  grande: '1.125rem',
+};
 
 // Estados para el modal de configuración de hipervínculo
 const tarjetaEnlaceIndex = ref(-1);
@@ -34,6 +42,29 @@ if (!props.datos.tarjetas) {
 if (!props.datos.disposicion) {
   props.datos.disposicion = 'vertical';
 }
+
+// Inicializar y observar reactivamente cambios en las tarjetas para aplicar sus valores por defecto
+watch(
+  () => props.datos.tarjetas,
+  (nuevasTarjetas) => {
+    if (nuevasTarjetas) {
+      nuevasTarjetas.forEach((t) => {
+        if (t.tituloNegrita === undefined) t.tituloNegrita = false;
+        if (t.tituloTamano === undefined || t.tituloTamano === 'normal') t.tituloTamano = 'grande';
+        if (t.tituloAlineacion === undefined) t.tituloAlineacion = 'left';
+        if (t.tituloColor === undefined || t.tituloColor === 'inherit') t.tituloColor = '#FFFFFF';
+
+        if (t.descripcionNegrita === undefined) t.descripcionNegrita = false;
+        if (t.descripcionTamano === undefined || t.descripcionTamano === 'grande')
+          t.descripcionTamano = 'normal';
+        if (t.descripcionAlineacion === undefined) t.descripcionAlineacion = 'left';
+        if (t.descripcionColor === undefined || t.descripcionColor === 'inherit')
+          t.descripcionColor = '#FFFFFF';
+      });
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 // Watch para sanitizar la orientación de las tarjetas si cambia la disposición global
 watch(
@@ -66,10 +97,14 @@ function agregarTarjeta() {
     orientacion: esHorizontal ? 'horizontal-derecha' : 'vertical-abajo',
     tituloTipo: 'h2',
     tituloAlineacion: 'left',
-    tituloColor: 'inherit',
+    tituloColor: '#FFFFFF',
+    tituloNegrita: false,
+    tituloTamano: 'grande',
     descripcionTipo: 'p',
     descripcionAlineacion: 'left',
-    descripcionColor: 'inherit',
+    descripcionColor: '#FFFFFF',
+    descripcionNegrita: false,
+    descripcionTamano: 'normal',
     botonTexto: '',
     botonUrl: '',
   });
@@ -143,41 +178,6 @@ function registrarDescripcion(elemento, tarjeta) {
       elemento.textContent = tarjeta.descripcion;
     }
   }
-}
-
-// Métodos para abrir el modal de alineación/color y guardar
-function abrirAlineacion(idx, campo) {
-  tarjetaEstiloIndex.value = idx;
-  campoEstilo.value = campo;
-
-  const tarjeta = props.datos.tarjetas[idx];
-  const alineacion =
-    campo === 'titulo'
-      ? tarjeta.tituloAlineacion || 'left'
-      : tarjeta.descripcionAlineacion || 'left';
-  const color =
-    campo === 'titulo' ? tarjeta.tituloColor || '#ffffff' : tarjeta.descripcionColor || '#ffffff';
-
-  modalAlineacion.value?.abrirModal({
-    alineacion,
-    color,
-  });
-}
-
-function guardarEstilosTexto({ alineacion, color }) {
-  if (tarjetaEstiloIndex.value === -1 || !campoEstilo.value) return;
-
-  const tarjeta = props.datos.tarjetas[tarjetaEstiloIndex.value];
-  if (campoEstilo.value === 'titulo') {
-    tarjeta.tituloAlineacion = alineacion;
-    tarjeta.tituloColor = color;
-  } else {
-    tarjeta.descripcionAlineacion = alineacion;
-    tarjeta.descripcionColor = color;
-  }
-
-  tarjetaEstiloIndex.value = -1;
-  campoEstilo.value = '';
 }
 
 // Métodos para abrir el modal de configuración de hipervínculo
@@ -389,144 +389,71 @@ function manejarInput(limite, event, tarjeta, campo) {
 
               <div class="tarjeta-cuerpo flex flex-column">
                 <div class="editable-texto-seccion">
-                  <div class="tarjeta-texto-toolbar flex flex-gap-2 align-items-center">
-                    <div class="flex flex-gap-1">
-                      <button
-                        type="button"
-                        class="btn-config-texto"
-                        :class="{ active: (tarjeta.tituloTipo || 'h2') === 'h2' }"
-                        @click="tarjeta.tituloTipo = 'h2'"
-                      >
-                        H1
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-config-texto"
-                        :class="{ active: tarjeta.tituloTipo === 'h3' }"
-                        @click="tarjeta.tituloTipo = 'h3'"
-                      >
-                        H2
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-config-texto"
-                        :class="{ active: tarjeta.tituloTipo === 'p' }"
-                        @click="tarjeta.tituloTipo = 'p'"
-                      >
-                        P
-                      </button>
-                    </div>
+                  <LandingBuilderBarraHerramientasTexto
+                    tipo="titulo"
+                    :negrita="Boolean(tarjeta.tituloNegrita)"
+                    :alineacion="tarjeta.tituloAlineacion || 'left'"
+                    :tamano="
+                      !tarjeta.tituloTamano || tarjeta.tituloTamano === 'normal'
+                        ? 'grande'
+                        : tarjeta.tituloTamano
+                    "
+                    :color="tarjeta.tituloColor || '#FFFFFF'"
+                    @update:negrita="tarjeta.tituloNegrita = $event"
+                    @update:alineacion="tarjeta.tituloAlineacion = $event"
+                    @update:tamano="tarjeta.tituloTamano = $event"
+                    @update:color="tarjeta.tituloColor = $event"
+                  />
 
-                    <div class="flex flex-gap-1">
-                      <button
-                        type="button"
-                        class="btn-config-texto btn-config-estilo-modal"
-                        title="Estilos y alineación"
-                        @click="abrirAlineacion(idx, 'titulo')"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          style="width: 13px; height: 13px"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <component
-                    :is="tarjeta.tituloTipo || 'h2'"
+                  <h3
                     :ref="(el) => registrarTitulo(el, tarjeta)"
                     class="input-tarjeta-titulo tarjeta-titulo"
                     :class="{
                       'is-empty': !tarjeta.titulo || tarjeta.titulo.trim() === '',
-                      'tarjeta-titulo-h1': (tarjeta.tituloTipo || 'h2') === 'h2',
-                      'tarjeta-titulo-h2': tarjeta.tituloTipo === 'h3',
-                      'tarjeta-titulo-p': tarjeta.tituloTipo === 'p',
                     }"
                     :style="{
                       textAlign: tarjeta.tituloAlineacion || 'left',
                       color: tarjeta.tituloColor || 'inherit',
+                      fontWeight: tarjeta.tituloNegrita ? '700' : '400',
+                      fontSize: tamanosTitulo[tarjeta.tituloTamano] || '1.375rem',
                     }"
                     contenteditable="true"
                     data-placeholder="Título de la tarjeta..."
                     @keydown="evitarExcesoTexto(70, $event)"
                     @input="manejarInput(70, $event, tarjeta, 'titulo')"
                     @blur="tarjeta.titulo = $event.target.textContent.trim() || ''"
+                    @keydown.enter.prevent
                   />
                 </div>
 
                 <div class="editable-texto-seccion">
-                  <div class="tarjeta-texto-toolbar flex flex-gap-2 align-items-center">
-                    <div class="flex flex-gap-1">
-                      <button
-                        type="button"
-                        class="btn-config-texto"
-                        :class="{ active: tarjeta.descripcionTipo === 'h2' }"
-                        @click="tarjeta.descripcionTipo = 'h2'"
-                      >
-                        H1
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-config-texto"
-                        :class="{ active: tarjeta.descripcionTipo === 'h3' }"
-                        @click="tarjeta.descripcionTipo = 'h3'"
-                      >
-                        H2
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-config-texto"
-                        :class="{ active: (tarjeta.descripcionTipo || 'p') === 'p' }"
-                        @click="tarjeta.descripcionTipo = 'p'"
-                      >
-                        P
-                      </button>
-                    </div>
+                  <LandingBuilderBarraHerramientasTexto
+                    tipo="parrafo"
+                    :negrita="Boolean(tarjeta.descripcionNegrita)"
+                    :alineacion="tarjeta.descripcionAlineacion || 'left'"
+                    :tamano="
+                      !tarjeta.descripcionTamano || tarjeta.descripcionTamano === 'grande'
+                        ? 'normal'
+                        : tarjeta.descripcionTamano
+                    "
+                    :color="tarjeta.descripcionColor || '#FFFFFF'"
+                    @update:negrita="tarjeta.descripcionNegrita = $event"
+                    @update:alineacion="tarjeta.descripcionAlineacion = $event"
+                    @update:tamano="tarjeta.descripcionTamano = $event"
+                    @update:color="tarjeta.descripcionColor = $event"
+                  />
 
-                    <div class="flex flex-gap-1">
-                      <button
-                        type="button"
-                        class="btn-config-texto btn-config-estilo-modal"
-                        title="Estilos y alineación"
-                        @click="abrirAlineacion(idx, 'descripcion')"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          style="width: 13px; height: 13px"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <component
-                    :is="tarjeta.descripcionTipo || 'p'"
+                  <p
                     :ref="(el) => registrarDescripcion(el, tarjeta)"
                     class="textarea-tarjeta-desc tarjeta-descripcion"
                     :class="{
                       'is-empty': !tarjeta.descripcion || tarjeta.descripcion.trim() === '',
-                      'tarjeta-desc-h1': tarjeta.descripcionTipo === 'h2',
-                      'tarjeta-desc-h2': tarjeta.descripcionTipo === 'h3',
-                      'tarjeta-desc-p': (tarjeta.descripcionTipo || 'p') === 'p',
                     }"
                     :style="{
                       textAlign: tarjeta.descripcionAlineacion || 'left',
                       color: tarjeta.descripcionColor || 'inherit',
+                      fontWeight: tarjeta.descripcionNegrita ? '700' : '400',
+                      fontSize: tamanosParrafo[tarjeta.descripcionTamano] || '0.875rem',
                     }"
                     contenteditable="true"
                     data-placeholder="Descripción de la tarjeta..."
@@ -609,9 +536,6 @@ function manejarInput(limite, event, tarjeta, campo) {
         @seleccionar-archivo="manejarSeleccionarArchivo"
         @seleccionar-enlace="manejarSeleccionarEnlace"
       />
-
-      <!-- Modal de alineación de texto -->
-      <ModalAlineacionTexto ref="modalAlineacion" @guardar-estilos="guardarEstilosTexto" />
 
       <!-- Modal exclusivo para configurar el Hipervínculo (Limpieza de interfaz) -->
       <SisdaiModal ref="modalEnlace" class="modal-enlace-tarjeta">
@@ -958,7 +882,7 @@ function manejarInput(limite, event, tarjeta, campo) {
   width: 100%;
 
   &:focus-within {
-    .tarjeta-texto-toolbar {
+    :deep(.barra-herramientas-texto) {
       opacity: 1;
       pointer-events: auto;
       transform: translate(-50%, 0);
@@ -966,17 +890,12 @@ function manejarInput(limite, event, tarjeta, campo) {
   }
 }
 
-.tarjeta-texto-toolbar {
+:deep(.barra-herramientas-texto) {
   position: absolute;
   bottom: 100%;
   left: 50%;
   transform: translate(-50%, 2px);
   margin-bottom: 4px;
-  background: var(--color-neutro-0, #ffffff);
-  border: 1px solid var(--color-neutro-2, #e0e0e0);
-  border-radius: 6px;
-  padding: 4px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   z-index: 20;
   opacity: 0;
   pointer-events: none;
