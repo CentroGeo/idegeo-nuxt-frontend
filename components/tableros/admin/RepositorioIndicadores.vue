@@ -40,10 +40,43 @@ const filtrados = computed(() => {
   return lista.filter((i) => i.name?.toLowerCase().includes(t));
 });
 
-async function quitar(id) {
-  if (!confirm('¿Eliminar este indicador?')) return;
-  const ok = await eliminarIndicador(id, userData.value?.accessToken);
-  if (ok) emit('eliminar');
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const indToDelete = ref(null);
+const isBeingDeleted = ref(false);
+const wasDeletionSuccesful = ref(null);
+
+function abrirModalEliminar(ind) {
+  indToDelete.value = ind;
+  wasDeletionSuccesful.value = null;
+  modalEliminar.value?.abrir();
+}
+
+function cancelarEliminar() {
+  indToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!indToDelete.value) return;
+  isBeingDeleted.value = true;
+  try {
+    const ok = await eliminarIndicador(indToDelete.value.id, userData.value?.accessToken);
+    if (ok) {
+      wasDeletionSuccesful.value = true;
+      emit('eliminar');
+      setTimeout(() => {
+        modalEliminar.value?.cerrar();
+      }, 1200);
+    } else {
+      wasDeletionSuccesful.value = false;
+    }
+  } catch (e) {
+    console.error('Error al eliminar indicador:', e);
+    wasDeletionSuccesful.value = false;
+  } finally {
+    isBeingDeleted.value = false;
+  }
 }
 
 function alCrear() {
@@ -150,7 +183,11 @@ async function recalcular(ind) {
           >
             <span class="pictograma-editar" />
           </button>
-          <button type="button" class="boton boton-secundario boton-chico" @click="quitar(ind.id)">
+          <button
+            type="button"
+            class="boton boton-secundario boton-chico"
+            @click="abrirModalEliminar(ind)"
+          >
             <span class="pictograma-eliminar" />
           </button>
         </div>
@@ -172,10 +209,56 @@ async function recalcular(ind) {
       @guardado="alGuardarEdicion"
       @cerrar="indicadorEditando = null"
     />
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
+        <template #encabezado>
+          <h2 class="m-t-0">Eliminar indicador</h2>
+        </template>
+
+        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="alerta-advertencia-modal">
+          El indicador <strong style="font-weight: bold">{{ indToDelete?.name }}</strong> será
+          eliminado permanentemente del servidor y no será posible recuperarlo.
+        </p>
+
+        <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
+          <span class="pictograma-aprobado m-r-1" />
+          El indicador fue eliminado correctamente.
+        </p>
+
+        <p v-else class="texto-color-error">No se pudo eliminar el indicador. Intenta de nuevo.</p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button
+              class="boton boton-secundario"
+              :disabled="isBeingDeleted"
+              @click="cancelarEliminar"
+            >
+              Cancelar
+            </button>
+            <button
+              v-if="wasDeletionSuccesful === null"
+              class="boton boton-primario"
+              :disabled="isBeingDeleted"
+              @click="confirmarEliminar"
+            >
+              <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .repo-indicadores {
   &__toolbar {
     display: flex;
@@ -235,6 +318,15 @@ async function recalcular(ind) {
     display: flex;
     gap: 0.25rem;
     flex-shrink: 0;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+    }
   }
 
   &__estado {
