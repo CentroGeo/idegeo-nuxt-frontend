@@ -25,6 +25,7 @@ interface FeatureFlags {
   enableGeocontenidos: boolean;
   enableGeohistorias: boolean;
   enableTableros: boolean;
+  enablePanoramas: boolean;
 }
 
 export default defineNuxtRouteMiddleware((to) => {
@@ -64,6 +65,9 @@ export default defineNuxtRouteMiddleware((to) => {
 
     // --- Tableros (vista pública, catch-all) ---
     '/tableros': flags.enableTableros,
+
+    // --- Panoramas ---
+    '/geocontenidos/panoramas': flags.enablePanoramas,
   };
 
   for (const [prefix, allowed] of Object.entries(rules)) {

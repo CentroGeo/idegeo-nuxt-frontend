@@ -129,6 +129,7 @@ export default defineNuxtConfig({
       enableGeocontenidos: process.env.NUXT_PUBLIC_ENABLE_GEOCONTENIDOS === 'true',
       enableGeohistorias: process.env.NUXT_PUBLIC_ENABLE_GEOHISTORIAS === 'true',
       enableTableros: process.env.NUXT_PUBLIC_ENABLE_TABLEROS === 'true',
+      enablePanoramas: process.env.NUXT_PUBLIC_ENABLE_PANORAMAS === 'true',
     },
   },
 
