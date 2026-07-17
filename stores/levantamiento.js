@@ -164,6 +164,32 @@ export const useLevantamientoStore = defineStore('levantamiento', () => {
       return this.descargasAprobadas.length;
     },
 
+    async actualizarStatusAporte(payload, idAporte) {
+      try {
+        const response = await fetch(`${apiUrl}/raising/reviewer/status/${idAporte}`, {
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const error = new Error(errorData.message || 'Error al actualizar el estado del aporte');
+          error.data = errorData;
+          throw error;
+        }
+
+        const data = await response.json();
+        console.log('Estado de aporte actualizado en BD:', data);
+        return data;
+      } catch (error) {
+        console.error('Error en actualizarStatusAporte:', error);
+        throw error;
+      }
+    },
+
     async obtenerTotalDescargasEnRevision(user_id) {
       try {
         const response = await $fetch(`${apiUrl}/downloads/user/list`, {
