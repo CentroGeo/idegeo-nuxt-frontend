@@ -9,7 +9,7 @@ const storeLevantamiento = useLevantamientoStore();
 const { data } = useAuth(); 
 
 
-const aportesAprobados = shallowRef([]);
+const aportesRechazados = shallowRef([]);
 const cargandoAportes = ref(false);
 
 
@@ -22,17 +22,16 @@ onMounted(async () => {
 
   cargandoAportes.value = true;
   try {
-    console.log('Solicitando aportes APROBADOS...');
+    console.log('[BACKEND] Solicitando aportes RECHAZADOS...');
+
+    const aportes = await storeLevantamiento.obtenerAportesPorEstado(email, 'RECHAZADO');
     
-    const aportes = await storeLevantamiento.obtenerAportesPorEstado(email, 'APROBADO');
-    
-    // Inspección de data cruda
-    console.log('Datos crudos obtenidos de Aprobados:', aportes);
+    console.log('[BACKEND] Datos crudos obtenidos de Rechazados:', aportes);
     if(aportes.length > 0) {
-      console.log('Estructura del primer aporte aprobado:', aportes[0]);
+      console.log('Estructura del primer aporte rechazado:', aportes[0]);
     }
     
-    aportesAprobados.value = aportes.map(aporte => {
+    aportesRechazados.value = aportes.map(aporte => {
       let fotosArray = [];
       try {
         fotosArray = aporte.media_array ? JSON.parse(aporte.media_array) : [];
@@ -46,9 +45,9 @@ onMounted(async () => {
         id: aporte.id,
         titulo: aporte.title || 'Aporte sin título',
         fecha: fechaFormateada,
-        folio: `F-${aporte.id} ${aporte.status || 'APROBADO'}`,
+        folio: `F-${aporte.id} RECHAZADO`,
         proyecto: aporte.nombre || 'Proyecto sin nombre',
-        estado: aporte.status || 'APROBADO',
+        estado: aporte.status || 'RECHAZADO',
         registrante: aporte.usuario_id || 'Desconocido',
         atendidoPor: aporte.id_curador || 'Curador no asignado',
         latitud: aporte.latitud,
@@ -62,47 +61,39 @@ onMounted(async () => {
       };
     });
 
-    if (aportesAprobados.value.length > 0) {
-      aporteSeleccionado.value = aportesAprobados.value[0];
+    if (aportesRechazados.value.length > 0) {
+      aporteSeleccionado.value = aportesRechazados.value[0];
     }
   } catch (error) {
-    console.error('Error al cargar aportes aprobados:', error);
+    console.error('Error al cargar aportes rechazados:', error);
   } finally {
     cargandoAportes.value = false;
   }
 });
 
-//Función del cambio de estado
-async function cambiarEstadoAporte(idAporte, nuevoEstado) {
+
+async function eliminarAporteRechazado(idAporte) {
   try {
     const email = data.value?.user?.email;
     if (!email) return;
 
-    const payload = {
-      status: nuevoEstado, 
-      user_id: email,
-    };
-
-    // Llamada para actualizar el estado
-    await storeLevantamiento.actualizarStatusAporte(payload, idAporte);
-    console.log(`[DB] El aporte ${idAporte} regresó a: ${nuevoEstado}`);
+    await storeLevantamiento.eliminarAporte(idAporte);
+    console.log(`[DB] El aporte ${idAporte} fue eliminado correctamente`);
     
-    // Removemos la tarjeta
-    aportesAprobados.value = aportesAprobados.value.filter(a => a.id !== idAporte);
+    aportesRechazados.value = aportesRechazados.value.filter(a => a.id !== idAporte);
     
-    if (aportesAprobados.value.length > 0) {
-      aporteSeleccionado.value = aportesAprobados.value[0];
+    if (aportesRechazados.value.length > 0) {
+      aporteSeleccionado.value = aportesRechazados.value[0];
     } else {
       aporteSeleccionado.value = null;
     }
     
-    //Modal de confirmación (debemos modificarlo)
-    mensajeConfirmacion.value = 'El aporte fue desaprobado y devuelto a la sección de Revisión.';
+    mensajeConfirmacion.value = 'El aporte rechazado fue eliminado permanentemente del sistema.';
     modalConfirmacionVisible.value = true;
     
   } catch (error) {
-    console.error('Error al cambiar el estado:', error);
-    mensajeConfirmacion.value = 'Ocurrió un error de conexión al intentar desaprobar el aporte.';
+    console.error('Error al eliminar el aporte:', error);
+    mensajeConfirmacion.value = 'Ocurrió un error de conexión al intentar eliminar el aporte.';
     modalConfirmacionVisible.value = true;
   }
 }
@@ -111,17 +102,17 @@ function cerrarModalConfirmacion() {
   modalConfirmacionVisible.value = false;
 }
 
-// Búsqueda
+
 const busqueda = ref('');
 
 const aportesFiltrados = computed(() => {
-  if (!busqueda.value) return aportesAprobados.value;
-  return aportesAprobados.value.filter(aporte => 
+  if (!busqueda.value) return aportesRechazados.value;
+  return aportesRechazados.value.filter(aporte => 
     aporte.titulo?.toLowerCase().includes(busqueda.value.toLowerCase())
   );
 });
 
-// Paginación
+
 const paginaActual = ref(1);
 const itemsPorPagina = 8; 
 
@@ -145,14 +136,14 @@ function irAPagina(pagina) {
   }
 }
 
-// Selección de tarjeta
+
 const aporteSeleccionado = ref(null);
 
 function verFichaAporte(aporte) {
   aporteSeleccionado.value = aporte;
 }
 
-// Visor de imágenes
+
 const imagenAmpliada = ref(null);
 
 function abrirImagen(url) {
@@ -191,7 +182,7 @@ function cerrarImagen() {
 
         <!--Contenedor del título-->
         <div class="flex titulo-contenido-levantamiento m-b-3">
-          <h2>Aportes aprobados</h2>
+          <h2>Aportes rechazados</h2>
           <UiNumeroElementos :numero="aportesFiltrados.length" />
         </div>
 
@@ -216,7 +207,7 @@ function cerrarImagen() {
               
               <!-- Loader -->
               <div v-if="cargandoAportes" class="texto-centrado p-3" style="color: #888;">
-                Cargando aportes aprobados...
+                Cargando aportes rechazados...
               </div>
 
               <div 
@@ -240,7 +231,7 @@ function cerrarImagen() {
 
               <!-- Mensaje sin resultados -->
               <div v-if="!cargandoAportes && aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
-                No se encontraron aportes aprobados.
+                No se encontraron aportes rechazados.
               </div>
             </div>
 
@@ -260,25 +251,25 @@ function cerrarImagen() {
             </div>
           </div>
 
-          <!--Ficha de proyecto aprobado-->
+          <!--Ficha de proyecto rechazado-->
           <div class="columna-11">
             <div v-if="aporteSeleccionado">
               <div class="flex m-b-2" style="justify-content: space-between; align-items: center;">
                 <h3 class="m-0">Ficha de proyecto</h3>
-                <div class="flex botones-exportacion" style="gap: 8px;">            
+                <div class="flex botones-exportacion" style="gap: 8px;">
                   <button class="boton-secundario boton-chico">GeoJson</button>
                   <button class="boton-secundario boton-chico">KML</button>
-                  <button class="boton-secundario boton-chico">Shapefile</button>              
+                  <button class="boton-secundario boton-chico">Shapefile</button>
+                  
                   <button 
-                    class="btn-moderno-chico btn-desaprobar"
-                    @click="cambiarEstadoAporte(aporteSeleccionado.id, 'NO REVISADO')"
+                    class="btn-moderno-chico btn-eliminar"
+                    @click="eliminarAporteRechazado(aporteSeleccionado.id)"
                   >
-                    Desaprobar
+                    Eliminar
                   </button>
                 </div>
               </div>
 
-              <!-- Mapa satelital -->
               <div class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden;">
                 <iframe 
                   v-if="aporteSeleccionado.latitud && aporteSeleccionado.longitud"
@@ -301,8 +292,8 @@ function cerrarImagen() {
                 
                 <!-- Cabecera del panel interno -->
                 <div class="flex m-b-4" style="justify-content: space-between; align-items: center;">
-                  <div class="flex" style="gap: 12px; align-items: center;">                  
-                    <span class="badge-estado">{{ aporteSeleccionado.folio }}</span>
+                  <div class="flex" style="gap: 12px; align-items: center;">
+                    <span class="badge-estado badge-rechazado">{{ aporteSeleccionado.folio }}</span>
                   </div>
                   <span class="text-chico" style="color: #64748b; font-weight: 500;">{{ aporteSeleccionado.fecha }}</span>
                 </div>
@@ -319,7 +310,6 @@ function cerrarImagen() {
                   <div class="meta-value">{{ aporteSeleccionado.atendidoPor }}</div>
                 </div>
 
-                <!-- Galería de Fotografías -->
                 <div class="flex m-b-4" style="gap: 16px; justify-content: center;">
                   <template v-if="aporteSeleccionado.fotos && aporteSeleccionado.fotos.length > 0">
                     <div 
@@ -329,7 +319,7 @@ function cerrarImagen() {
                       :style="{ backgroundImage: `url(${foto})` }"
                       @click="abrirImagen(foto)"
                     ></div>
-                  </template>                  
+                  </template>
                   <div v-else class="imagen-miniatura bg-placeholder" style="width: 100%;">
                     <span style="color: #94a3b8; font-size: 0.85rem;">Este aporte no contiene fotografías</span>
                   </div>
@@ -366,12 +356,11 @@ function cerrarImagen() {
         </div>
       </main>
 
-      <!--Modal de Confirmación-->
       <Teleport to="body">
         <div v-if="modalConfirmacionVisible" class="modal-overlay" @click="cerrarModalConfirmacion">
           <div class="modal-confirmacion-contenido" @click.stop>
             <div class="modal-confirmacion-header fondo-guinda">
-              <h3 class="m-0" style="color: white; font-weight: 500;">¡Estado Actualizado!</h3>
+              <h3 class="m-0" style="color: white; font-weight: 500;">¡Acción Completada!</h3>
             </div>
             <div class="p-4 texto-centrado">
               <p class="m-b-3" style="color: #334155; font-size: 1.05rem;">{{ mensajeConfirmacion }}</p>
@@ -409,7 +398,7 @@ function cerrarImagen() {
 .ancho-completo { width: 100%; box-sizing: border-box; }
 .flex-columna { flex-direction: column; }
 
-/* Tarjetas laterales*/
+
 .tarjeta-aporte {
   background-color: #715B62;
   border: 1px solid #715B62;
@@ -435,7 +424,7 @@ function cerrarImagen() {
   }
 }
 
-/* Paginación */
+
 .paginacion {
   justify-content: center;
   gap: 8px;
@@ -460,7 +449,7 @@ function cerrarImagen() {
   }
 }
 
-/*Mapara y contenedor de fichas*/
+
 .mapa-placeholder {
   height: 250px; 
   background-color: #f1f5f9; 
@@ -476,14 +465,17 @@ function cerrarImagen() {
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
 }
 
+
 .badge-estado {
-  background-color: #d48d95; 
-  color: #391821; 
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 0.75rem;
   font-weight: bold;
   letter-spacing: 0.5px;
+}
+.badge-rechazado {
+  background-color: #ef4444; 
+  color: #ffffff; 
 }
 
 .grid-metadatos {
@@ -502,7 +494,7 @@ function cerrarImagen() {
   }
 }
 
-/* Fotografías */
+
 .imagen-miniatura {
   width: 140px;
   height: 200px;
@@ -533,7 +525,7 @@ function cerrarImagen() {
   }
 }
 
-/* Modal de imágenes*/
+
 .modal-imagen-overlay, .modal-overlay {
   position: fixed;
   top: 0;
@@ -600,7 +592,7 @@ function cerrarImagen() {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Modal de confirmación*/
+
 .modal-confirmacion-contenido {
   background: #ffffff;
   width: 100%; 
@@ -661,6 +653,27 @@ function cerrarImagen() {
   }
 }
 
+
+// .boton-secundario {
+//   background: white;
+//   border: 1px solid #10b981;
+//   color: #10b981;
+//   border-radius: 6px;
+//   font-size: 0.8rem;
+//   font-weight: 600;
+//   cursor: pointer;
+//   transition: all 0.2s ease;
+
+//   &:hover {
+//     background: #10b981;
+//     color: #FFFFFF;
+//   }
+// }
+
+.boton-chico {
+  padding: 6px 14px;
+}
+
 .btn-moderno-chico {
   display: inline-flex;
   align-items: center;
@@ -699,20 +712,20 @@ function cerrarImagen() {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.btn-desaprobar {
+
+.btn-eliminar {
   background-color: #d48d95;
   color: #391821;
 }
-.btn-desaprobar:hover {
+.btn-eliminar:hover {
   background-color: #c47c84;
-  color:#cbd5e1;
 }
 
 .btn-guinda { 
-  background-color: #715B62; 
+  background-color: #391821; 
   width: 100%; 
   padding: 10px; 
   border-radius: 6px; 
 }
-.btn-guinda:hover { background-color: #5c4a50; }
+.btn-guinda:hover { background-color: #271016; }
 </style>
