@@ -29,7 +29,9 @@ onMounted(async () => {
       let fotosArray = [];
       try {
         fotosArray = aporte.media_array ? JSON.parse(aporte.media_array) : [];
-      } catch(e) {}
+      } catch(error) {
+        console.error('Error al obtener aportes de la base de datos:', error);
+      }
 
       const fechaObj = new Date(aporte.fecha_guardado);
       const fechaFormateada = isNaN(fechaObj) ? 'Fecha desconocida' : fechaObj.toLocaleString('es-MX');
