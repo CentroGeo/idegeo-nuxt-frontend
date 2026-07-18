@@ -32,7 +32,6 @@ onMounted(async () => {
     }));
   } catch {
     errorAportes.value = 'No fue posible cargar los aportes por enviar.';
-    console.log(error);
   } finally {
     cargandoAportes.value = false;
   }

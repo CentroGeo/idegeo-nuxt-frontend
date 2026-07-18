@@ -36,7 +36,6 @@ onMounted(async () => {
     }));
   } catch {
     errorAportes.value = 'No fue posible cargar los aportes por modificar.';
-    console.log(error);
   } finally {
     cargandoAportes.value = false;
   }

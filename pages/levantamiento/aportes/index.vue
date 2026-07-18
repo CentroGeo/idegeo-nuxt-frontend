@@ -33,7 +33,6 @@ onMounted(async () => {
     }));
   } catch {
     errorAprobados.value = 'No fue posible cargar los aportes aprobados.';
-    console.log(error);
   } finally {
     cargandoAprobados.value = false;
   }
