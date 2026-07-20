@@ -257,4 +257,11 @@ onUnmounted(() => {
   background-color: var(--color-secundario-2);
   border-radius: 8px;
 }
+.tarjeta-elemento {
+  label {
+    overflow-wrap: break-word !important;
+    word-break: break-all !important;
+    white-space: normal !important;
+  }
+}
 </style>
