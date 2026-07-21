@@ -95,7 +95,13 @@ async function agregarSubgrupo() {
 }
 
 async function borrarSubgrupo(id) {
-  if (!confirm('¿Eliminar este subgrupo?')) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este subgrupo?',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await eliminarSubgrupo(id, userData.value?.accessToken);
   if (ok) {
     await cargarDetalle();

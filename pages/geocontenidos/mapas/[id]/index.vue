@@ -1,8 +1,13 @@
 <script setup>
 import { useMapaPreview } from '~/composables/mapas/useMapaPreview';
 
+// Página de configuración/edición del mapa: requiere sesión. La autoría real
+// (owner/admin) se valida además con puedeEditar y, sobre todo, en el backend.
+definePageMeta({ middleware: 'auth' });
+
 const route = useRoute();
 const mapasStore = useMapasStore();
+const storeCatalogo = useCatalogoStore();
 const { capturarVisor } = useMapaPreview();
 const { data: session } = useAuth();
 const { esAdmin, cargarEsAdmin } = useEsAdmin();
@@ -10,11 +15,15 @@ const { esAdmin, cargarEsAdmin } = useEsAdmin();
 const mapaId = computed(() => Number(route.params.id));
 
 const esOwner = computed(() => {
-  const ownerUsername = mapasStore.activeMap?.owner?.username;
-  const sessionEmail = session.value?.user?.email;
-  const sessionName = session.value?.user?.name;
-  if (!ownerUsername || !session.value) return false;
-  return ownerUsername === sessionEmail || ownerUsername === sessionName;
+  const owner = mapasStore.activeMap?.owner;
+  if (!owner || !session.value) return false;
+  const info = storeCatalogo.userInfo;
+  return (
+    owner.username === session.value?.user?.email ||
+    owner.username === session.value?.user?.name ||
+    owner.username === info?.username ||
+    (owner.pk !== null && owner.pk !== undefined && owner.pk === info?.pk)
+  );
 });
 
 // Un mapa público solo es editable por su dueño o por un administrador.
@@ -83,7 +92,13 @@ async function eliminarCapa(id) {
 }
 
 async function eliminarMapa() {
-  if (!confirm('¿Eliminar este mapa? Esta acción no se puede deshacer.')) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este mapa? Esta acción no se puede deshacer.',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await mapasStore.eliminarMapa(mapaId.value);
   if (ok) navigateTo('/geocontenidos/mapas');
 }
@@ -171,7 +186,12 @@ onUnmounted(() => {
             &nbsp;{{ generandoPreview ? 'Generando…' : 'Generar vista previa' }}
           </button>
           <NuxtLink to="/geocontenidos/mapas" class="boton-secundario">Lista de Mapas</NuxtLink>
-          <button class="boton-primario boton-eliminar" type="button" @click="eliminarMapa">
+          <button
+            v-if="puedeEditar"
+            class="boton-primario boton-eliminar"
+            type="button"
+            @click="eliminarMapa"
+          >
             <span class="pictograma-tache" aria-hidden="true" /> Eliminar mapa
           </button>
         </div>

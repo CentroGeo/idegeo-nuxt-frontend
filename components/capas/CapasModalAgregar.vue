@@ -75,7 +75,13 @@ async function actualizarEstilo({ layerId, style, styleTitle }) {
 }
 
 async function eliminarExistente(capa) {
-  if (!confirm(`¿Eliminar la capa "${capa.name}" de ${nombreContexto.value}?`)) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: `¿Eliminar la capa "${capa.name}" de ${nombreContexto.value}?`,
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await props.adaptador.eliminar(capa);
   if (ok) emit('guardado');
 }

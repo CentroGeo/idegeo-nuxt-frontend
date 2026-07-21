@@ -60,7 +60,13 @@ async function agregarGrupo() {
 }
 
 async function borrarGrupo(id) {
-  if (!confirm('¿Eliminar este grupo y todos sus subgrupos/indicadores asociados?')) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este grupo y todos sus subgrupos/indicadores asociados?',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await eliminarGrupo(id, userData.value?.accessToken);
   if (ok) grupos.value = grupos.value.filter((g) => g.id !== id);
 }

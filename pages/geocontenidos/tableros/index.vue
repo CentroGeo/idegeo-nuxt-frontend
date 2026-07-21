@@ -27,12 +27,18 @@ async function cargarSitios() {
 }
 
 async function borrarSitio(id) {
-  if (!confirm('¿Eliminar este tablero? Esta acción no se puede deshacer.')) return;
+  const { confirmar, alerta } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este tablero? Esta acción no se puede deshacer.',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await eliminarSitio(id, userData.value?.accessToken);
   if (ok) {
     sitios.value = sitios.value.filter((s) => s.id !== id);
   } else {
-    alert('No se pudo eliminar el tablero.');
+    await alerta('No se pudo eliminar el tablero.');
   }
 }
 
@@ -44,7 +50,8 @@ async function togglearPublico(sitio) {
     }
   } catch (e) {
     console.error('Error al cambiar visibilidad:', e);
-    alert('No se pudo cambiar la visibilidad del tablero.');
+    const { alerta } = useDialogo();
+    await alerta('No se pudo cambiar la visibilidad del tablero.');
   }
 }
 

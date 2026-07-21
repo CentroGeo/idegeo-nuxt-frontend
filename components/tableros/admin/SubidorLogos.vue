@@ -47,7 +47,8 @@ async function subir(event) {
       if (inputArchivo.value) inputArchivo.value.value = '';
     } else {
       console.error('Error al crear logo – respuesta del servidor:', JSON.stringify(creado));
-      alert(`Error al subir logo:\n${JSON.stringify(creado, null, 2)}`);
+      const { alerta } = useDialogo();
+      await alerta(`Error al subir logo:\n${JSON.stringify(creado, null, 2)}`);
     }
   } catch (e) {
     console.error('Error al subir logo:', e);
@@ -63,7 +64,13 @@ async function actualizarLink(logo) {
 }
 
 async function quitar(id) {
-  if (!confirm('¿Eliminar este logo?')) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este logo?',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await eliminarLogo(id, userData.value?.accessToken);
   if (ok) logos.value = logos.value.filter((l) => l.id !== id);
 }

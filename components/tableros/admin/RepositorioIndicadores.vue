@@ -41,7 +41,13 @@ const filtrados = computed(() => {
 });
 
 async function quitar(id) {
-  if (!confirm('¿Eliminar este indicador?')) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este indicador?',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await eliminarIndicador(id, userData.value?.accessToken);
   if (ok) emit('eliminar');
 }

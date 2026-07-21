@@ -128,8 +128,14 @@ function moverAbajo(index) {
   ]);
 }
 
-function eliminar(capa) {
-  if (!confirm(`¿Eliminar la capa "${capa.name}"?`)) return;
+async function eliminar(capa) {
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: `¿Eliminar la capa "${capa.name}"?`,
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   emit('eliminar', capa.id);
 }
 </script>

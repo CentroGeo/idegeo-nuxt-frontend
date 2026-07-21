@@ -53,7 +53,13 @@ async function cargarCuadros() {
 watch(indicadorActivo, cargarCuadros);
 
 async function borrarCuadro(id) {
-  if (!confirm('¿Eliminar este cuadro de datos?')) return;
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este cuadro de datos?',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
   const ok = await eliminarCuadroDatos(id, userData.value?.accessToken);
   if (ok) cuadros.value = cuadros.value.filter((c) => c.id !== id);
 }
