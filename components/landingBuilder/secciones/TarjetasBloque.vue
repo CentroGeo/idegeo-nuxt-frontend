@@ -94,6 +94,7 @@ function agregarTarjeta() {
     titulo: '',
     descripcion: '',
     imagenUrl: '/inicio/tarjeta_visualiza.png',
+    imagenTipo: 'imagen',
     orientacion: esHorizontal ? 'horizontal-derecha' : 'vertical-abajo',
     tituloTipo: 'h2',
     tituloAlineacion: 'left',
@@ -142,6 +143,10 @@ function abrirModalImagen(idx) {
   modalCambiarImagen.value?.abrirModal();
 }
 
+function esUrlDeVideo(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url);
+}
+
 function manejarSeleccionarArchivo(archivo) {
   if (!archivo || indiceTarjetaEdicion.value === -1) return;
 
@@ -151,6 +156,7 @@ function manejarSeleccionarArchivo(archivo) {
   }
   tarjeta.imagenFile = archivo;
   tarjeta.imagenUrl = URL.createObjectURL(archivo);
+  tarjeta.imagenTipo = archivo.type.startsWith('video/') ? 'video' : 'imagen';
 }
 
 function manejarSeleccionarEnlace(url) {
@@ -162,6 +168,7 @@ function manejarSeleccionarEnlace(url) {
   }
   tarjeta.imagenFile = null;
   tarjeta.imagenUrl = url;
+  tarjeta.imagenTipo = esUrlDeVideo(url) ? 'video' : 'imagen';
 }
 
 function registrarTitulo(elemento, tarjeta) {
@@ -311,7 +318,17 @@ function manejarInput(limite, event, tarjeta, campo) {
               }"
             >
               <div class="tarjeta-imagen-wrapper">
+                <video
+                  v-if="tarjeta.imagenTipo === 'video'"
+                  class="tarjeta-imagen"
+                  :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
+                  muted
+                  loop
+                  autoplay
+                  playsinline
+                />
                 <img
+                  v-else
                   :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
                   class="tarjeta-imagen"
                   alt=""
@@ -732,7 +749,8 @@ function manejarInput(limite, event, tarjeta, campo) {
   cursor: grab;
   display: flex;
   height: 100%;
-  min-height: 180px;
+  background: transparent;
+  border-radius: 0;
   transition:
     border-color 0.2s,
     background-color 0.2s,
@@ -762,10 +780,10 @@ function manejarInput(limite, event, tarjeta, campo) {
   background: var(--color-neutro-2, #e0e0e0);
   flex-shrink: 0;
 
-  img {
+  .tarjeta-imagen {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
   }
 
   &:hover {
@@ -1031,8 +1049,11 @@ function manejarInput(limite, event, tarjeta, campo) {
 
   .tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
-    border-radius: 8px 8px 0 0;
+    border-radius: 8px;
+
+    .tarjeta-imagen {
+      height: auto;
+    }
   }
 }
 
@@ -1041,8 +1062,11 @@ function manejarInput(limite, event, tarjeta, campo) {
 
   .tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
-    border-radius: 0 0 8px 8px;
+    border-radius: 8px;
+
+    .tarjeta-imagen {
+      height: auto;
+    }
   }
 }
 
@@ -1056,15 +1080,15 @@ function manejarInput(limite, event, tarjeta, campo) {
     height: auto !important;
     position: relative !important;
     flex-shrink: 0 !important;
-    border-radius: 8px 0 0 8px;
+    border-radius: 8px;
 
-    img {
+    .tarjeta-imagen {
       position: absolute !important;
       top: 0;
       left: 0;
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover !important;
+      object-fit: contain !important;
     }
   }
 }
@@ -1079,15 +1103,15 @@ function manejarInput(limite, event, tarjeta, campo) {
     height: auto !important;
     position: relative !important;
     flex-shrink: 0 !important;
-    border-radius: 0 8px 8px 0;
+    border-radius: 8px;
 
-    img {
+    .tarjeta-imagen {
       position: absolute !important;
       top: 0;
       left: 0;
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover !important;
+      object-fit: contain !important;
     }
   }
 }

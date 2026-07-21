@@ -4,8 +4,11 @@ import type { LandingBuilderConfig, LandingBuilderTarjeta } from '../../utils/la
 import { LIMITE_TARJETAS, validarYObtenerMimetypeImagen } from '../../utils/landingBuilderConfig';
 
 const TIPOS_LOGO_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+const TIPOS_VIDEO_BLOQUE_PERMITIDOS = ['video/mp4', 'video/webm'];
+const TIPOS_MEDIA_BLOQUE_PERMITIDOS = [...TIPOS_LOGO_PERMITIDOS, ...TIPOS_VIDEO_BLOQUE_PERMITIDOS];
 const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024; // 2MB
 const TAMANO_MAXIMO_IMAGEN_BLOQUE = 5 * 1024 * 1024; // 5MB
+const TAMANO_MAXIMO_VIDEO_BLOQUE = 15 * 1024 * 1024; // 15MB
 const CAMPOS_REQUERIDOS = [
   'titulo',
   'subtitulo',
@@ -15,7 +18,7 @@ const CAMPOS_REQUERIDOS = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_IMAGEN_BLOQUE });
+  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_VIDEO_BLOQUE });
   const { fields, files } = await new Promise<{
     fields: formidable.Fields;
     files: formidable.Files;
@@ -124,17 +127,24 @@ export default defineEventHandler(async (event) => {
     const archivoBloque = files[key]?.[0];
     if (!archivoBloque) continue;
 
-    const mimetypeValido = validarYObtenerMimetypeImagen(archivoBloque, TIPOS_LOGO_PERMITIDOS);
+    const mimetypeValido = validarYObtenerMimetypeImagen(
+      archivoBloque,
+      TIPOS_MEDIA_BLOQUE_PERMITIDOS
+    );
     if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'La imagen del bloque debe ser PNG, JPEG, WEBP o SVG',
+        statusMessage: 'El archivo del bloque debe ser PNG, JPEG, WEBP, SVG, MP4 o WEBM',
       });
     }
-    if (archivoBloque.size > TAMANO_MAXIMO_IMAGEN_BLOQUE) {
+    const esVideo = TIPOS_VIDEO_BLOQUE_PERMITIDOS.includes(mimetypeValido);
+    const limiteBloque = esVideo ? TAMANO_MAXIMO_VIDEO_BLOQUE : TAMANO_MAXIMO_IMAGEN_BLOQUE;
+    if (archivoBloque.size > limiteBloque) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'La imagen del bloque no debe superar 5MB',
+        statusMessage: esVideo
+          ? 'El video del bloque no debe superar 15MB'
+          : 'La imagen del bloque no debe superar 5MB',
       });
     }
 
@@ -168,6 +178,7 @@ export default defineEventHandler(async (event) => {
     const item = lista?.find((i: any) => i.id === itemId);
     if (item) {
       item.imagenUrl = url;
+      item.imagenTipo = esVideo ? 'video' : 'imagen';
     }
   }
 

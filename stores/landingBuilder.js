@@ -152,6 +152,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     // saber si hay cambios sin guardar antes de descartar el lienzo.
     ultimoGuardadoBloques: ref('[]'),
     paginas: ref([]),
+    paginaInicioId: ref(null),
     paginaEditandoId: ref(null),
     isPublicando: ref(false),
     isCreandoPagina: ref(false),
@@ -185,6 +186,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         this.secciones = config.secciones || [];
         this.bloques = config.bloques || [];
         this.paginas = config.paginas || [];
+        this.paginaInicioId = config.paginaInicioId ?? null;
         this.marcarBloquesComoGuardados();
       } catch (err) {
         console.error('Error al cargar la configuración de la landing page:', err);
@@ -329,15 +331,36 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
 
     async eliminarPagina(id) {
       try {
-        this.paginas = await $fetch(`/api/landing-builder/paginas/${id}`, {
+        const respuesta = await $fetch(`/api/landing-builder/paginas/${id}`, {
           method: 'DELETE',
         });
+        this.paginas = respuesta.paginas;
+        this.paginaInicioId = respuesta.paginaInicioId;
         if (this.paginaEditandoId === id || this.paginas.length === 0) {
           this.cancelarEdicionPagina();
         }
       } catch (err) {
         console.error('Error al eliminar la página:', err);
         this.error = 'No se pudo eliminar la página. Intenta de nuevo.';
+      }
+    },
+
+    async establecerPaginaInicio(id) {
+      this.error = null;
+      this.saveSuccess = false;
+      try {
+        const respuesta = await $fetch('/api/landing-builder/pagina-inicio', {
+          method: 'POST',
+          body: { paginaInicioId: id },
+        });
+        this.paginaInicioId = respuesta.paginaInicioId;
+        this.saveSuccess = true;
+        this.mensajeExito = 'Página de inicio actualizada.';
+      } catch (err) {
+        console.error('Error al establecer la página de inicio:', err);
+        this.error =
+          err?.data?.statusMessage ||
+          'No se pudo actualizar la página de inicio. Intenta de nuevo.';
       }
     },
 
@@ -656,11 +679,16 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
               ...bloque,
               datos: {
                 ...bloque.datos,
-                diapositivas: (bloque.datos.diapositivas || []).map(({ id, texto, imagenUrl }) => ({
-                  id,
-                  texto,
-                  imagenUrl: imagenUrl && !imagenUrl.startsWith('blob:') ? imagenUrl : null,
-                })),
+                diapositivas: (bloque.datos.diapositivas || []).map(
+                  ({ id, texto, imagenUrl, imagenTipo, botonTexto, botonUrl }) => ({
+                    id,
+                    texto,
+                    imagenUrl: imagenUrl && !imagenUrl.startsWith('blob:') ? imagenUrl : null,
+                    imagenTipo: imagenTipo || 'imagen',
+                    botonTexto: botonTexto || '',
+                    botonUrl: botonUrl || '',
+                  })
+                ),
               },
             };
           }
