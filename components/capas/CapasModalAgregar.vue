@@ -12,7 +12,7 @@ const props = defineProps({
   opciones: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(['update:abierto', 'guardado', 'abrir-marcadores']);
+const emit = defineEmits(['update:abierto', 'guardado', 'abrir-marcadores', 'abrir-narrativa']);
 
 const op = computed(() => ({
   titulo: 'Agregar capas',
@@ -20,6 +20,7 @@ const op = computed(() => ({
   mostrarOpacidad: false,
   mostrarEstilo: true,
   mostrarMarcadores: false,
+  mostrarNarrativas: false,
   posiciones: null, // p.ej. [{ value:'left', label:'Izquierdo' }, …] para swipe/dual
   permitirDuplicados: false,
   nombreCategoria: undefined,
@@ -44,7 +45,13 @@ const guardando = ref(false);
 const error = ref('');
 const posicionDefecto = ref('left');
 
-const capasExistentes = computed(() => [...(props.adaptador.layersOrdered.value ?? [])].reverse());
+// Ordenado por stack_order descendente (la capa que se dibuja encima aparece
+// primero). No basta con invertir el array: tras reordenar, el adaptador
+// actualiza el stack_order de cada capa in-place sin recolocarla en el
+// array, así que hay que ordenar explícitamente en cada render.
+const capasExistentes = computed(() =>
+  [...(props.adaptador.layersOrdered.value ?? [])].sort((a, b) => b.stack_order - a.stack_order)
+);
 const cargando = computed(() => props.adaptador.isLoading?.value ?? false);
 
 const idsSeleccionadas = computed(() => seleccionadas.value.map((l) => l.pk));
@@ -255,6 +262,16 @@ onBeforeUnmount(() => {
                         <span class="pictograma-mapa-generador" aria-hidden="true" />
                       </button>
                       <button
+                        v-if="op.mostrarNarrativas"
+                        class="boton-pictograma boton-sin-contenedor-secundario"
+                        type="button"
+                        aria-label="Narrativa"
+                        title="Narrativa"
+                        @click="emit('abrir-narrativa', capa)"
+                      >
+                        <span class="pictograma-escribir" aria-hidden="true" />
+                      </button>
+                      <button
                         class="boton-pictograma boton-sin-contenedor-secundario"
                         type="button"
                         aria-label="Eliminar capa"
@@ -411,6 +428,13 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
+
+  // Los items de grid tienen min-width:auto: sin esto, el contenido que no
+  // quiere achicarse (nombres de capa largos y sin espacios) ensancha su
+  // columna en vez de ajustar el texto, forzando scroll horizontal del modal.
+  > * {
+    min-width: 0;
+  }
 }
 
 .seccion-titulo {
@@ -447,6 +471,8 @@ onBeforeUnmount(() => {
   padding: 8px;
   margin-bottom: 6px;
   background-color: var(--fondo-acento);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .item-bloque.existente {

@@ -5,10 +5,9 @@ import {
   SisdaiCapaWms,
   SisdaiCapaXyz,
   SisdaiLeyendaWms,
-  SisdaiMapa,
 } from '@centrogeomx/sisdai-mapas';
-import { basemapsPanorama, fuenteBasemap } from '~/utils/geocontenidos/basemapsPanorama';
-import { estiloMarcadorSisdai } from '~/utils/geocontenidos/estiloMarcadorSisdai';
+import DOMPurify from 'dompurify';
+import { basemapsPanorama } from '~/utils/geocontenidos/basemapsPanorama';
 import pictogramas from '~/utils/geocontenidos/pictogramas.json';
 
 definePageMeta({ layout: 'geohistorias' });
@@ -37,6 +36,7 @@ const modalWmsExternos = ref(null);
 const modalBasemap = ref(null);
 const capaMascara = ref(null);
 const leyendaVisible = ref(true);
+const visorRef = ref(null);
 
 function elegirBasemap(id) {
   basemapActivo.value = id;
@@ -143,12 +143,15 @@ function abrirInfoCapa(capa) {
   modalCapaInfo.value?.abrirModal();
 }
 
-function alMoverVista({ acercamiento, vista }) {
+// MapasVisor solo reemite { acercamiento, centro }; para animar la vista nativa
+// de OL (snap-back de zoom) se accede a la instancia real via visorRef.
+function alMoverVista({ acercamiento }) {
   const datos = panorama.datos;
   if (!datos?.limited_zoom || !datos.custom_zoom) return;
-  if (acercamiento < datos.custom_zoom) {
-    vista.animate({ zoom: datos.custom_zoom, duration: 250 });
-  }
+  if (acercamiento >= datos.custom_zoom) return;
+
+  const vistaOl = visorRef.value?.mapaRef?.mapa?.getView();
+  vistaOl?.animate({ zoom: datos.custom_zoom, duration: 250 });
 }
 
 const capasActivas = computed(() => capasPorTopico[topicoActivoId.value] || []);
@@ -162,37 +165,28 @@ function caracterPictograma(nombre) {
   return codigo ? String.fromCharCode(parseInt(codigo, 16)) : '';
 }
 
-function escaparHtml(texto) {
-  const div = document.createElement('div');
-  div.textContent = texto;
-  return div.innerHTML;
-}
-
-const marcadoresGeoJSON = computed(() => ({
-  type: 'FeatureCollection',
-  features: capasVisibles.value.flatMap((capa) =>
+const marcadoresParaVisor = computed(() =>
+  capasVisibles.value.flatMap((capa) =>
     (marcadoresPorCapa[capa.id] || []).map((marcador) => ({
-      type: 'Feature',
-      properties: {
-        id: marcador.id,
-        title: marcador.title,
-        narrative: marcador.narrative,
-        icon: caracterPictograma(marcador.icon),
-        color: (marcador.options && marcador.options.color) || '#df4242',
-      },
-      geometry: { type: 'Point', coordinates: [Number(marcador.lng), Number(marcador.lat)] },
+      id: marcador.id,
+      title: marcador.title,
+      content: marcador.narrative,
+      icon: caracterPictograma(marcador.icon),
+      color: (marcador.options && marcador.options.color) || '#df4242',
+      lat: marcador.lat,
+      lng: marcador.lng,
     }))
-  ),
-}));
+  )
+);
 
-function contenidoGloboMarcador(propiedades) {
-  const partes = [`<strong>${escaparHtml(propiedades.title)}</strong>`];
-  if (propiedades.narrative) partes.push(`<p>${escaparHtml(propiedades.narrative)}</p>`);
+function contenidoGloboMarcador({ title, content }) {
+  const partes = [`<strong>${DOMPurify.sanitize(title)}</strong>`];
+  if (content) partes.push(`<div>${DOMPurify.sanitize(content)}</div>`);
   return partes.join('');
 }
 
 async function contenidoCuadroInfoCapa(url, capa) {
-  const titulo = escaparHtml(capa.dataset_title || capa.name);
+  const titulo = DOMPurify.sanitize(capa.dataset_title || capa.name);
 
   const respuesta = await gnoxyFetch(url);
   if (!respuesta.ok) return `<p>${titulo}</p><p>No hay información disponible.</p>`;
@@ -203,7 +197,10 @@ async function contenidoCuadroInfoCapa(url, capa) {
   }
 
   const filas = Object.entries(datos.features[0].properties)
-    .map(([clave, valor]) => `<li>${escaparHtml(clave)}: ${escaparHtml(String(valor))}</li>`)
+    .map(
+      ([clave, valor]) =>
+        `<li>${DOMPurify.sanitize(clave)}: ${DOMPurify.sanitize(String(valor))}</li>`
+    )
     .join('');
   return `<p>${titulo}</p><ul>${filas}</ul>`;
 }
@@ -307,27 +304,7 @@ const vista = computed(() => {
         </nav>
 
         <div class="panorama__mapa">
-          <div class="panorama__controles">
-            <button
-              type="button"
-              class="boton-pictograma boton-primario"
-              aria-label="Leyenda"
-              title="Mostrar/ocultar leyenda"
-              @click="leyendaVisible = !leyendaVisible"
-            >
-              <span class="pictograma-capas" aria-hidden="true" />
-            </button>
-
-            <button
-              type="button"
-              class="boton-pictograma boton-primario"
-              aria-label="Mapa base"
-              title="Cambiar mapa base"
-              @click="modalBasemap?.abrirModal()"
-            >
-              <span class="pictograma-mapa-centro" aria-hidden="true" />
-            </button>
-
+          <div class="panorama__control panorama__control--info">
             <button
               v-if="panorama.datos.extra_info"
               type="button"
@@ -351,53 +328,64 @@ const vista = computed(() => {
             </button>
           </div>
 
-          <ClientOnly>
-            <SisdaiMapa class="gema" :vista="vista" @al-mover-vista="alMoverVista">
-              <SisdaiCapaXyz
-                :key="basemapActivo"
-                :posicion="0"
-                :fuente="fuenteBasemap(basemapActivo)"
-              />
+          <div class="panorama__control panorama__control--leyenda">
+            <button
+              type="button"
+              class="boton-pictograma boton-primario"
+              aria-label="Leyenda"
+              title="Mostrar/ocultar leyenda"
+              @click="leyendaVisible = !leyendaVisible"
+            >
+              <span class="pictograma-vista-simplificada" aria-hidden="true" />
+            </button>
+          </div>
 
+          <div class="panorama__control panorama__control--basemap">
+            <button
+              type="button"
+              class="boton-pictograma boton-primario"
+              aria-label="Mapa base"
+              title="Cambiar mapa base"
+              @click="modalBasemap?.abrirModal()"
+            >
+              <span class="pictograma-capas" aria-hidden="true" />
+            </button>
+          </div>
+
+          <MapasVisor
+            ref="visorRef"
+            class="panorama__visor"
+            :vista="vista"
+            :capas="capasVisibles"
+            :marcadores="marcadoresParaVisor"
+            :base-layer="basemapActivo"
+            :basemaps="basemapsPanorama"
+            :cuadro-informativo="contenidoCuadroInfoCapa"
+            :globo-marcador="contenidoGloboMarcador"
+            :opciones="{ cambiarBase: false, leyenda: false, info: false, coordenadas: true }"
+            @vista="alMoverVista"
+          >
+            <SisdaiCapaVectorial
+              v-if="capaMascara"
+              :fuente="`${config.public.geoserverUrl}/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=${capaMascara}&outputFormat=application%2Fjson&srsName=EPSG%3A4326`"
+              :posicion="capasVisibles.length + wmsExternosActivos.length + 1"
+              :estilo="{
+                'relleno-color': 'transparent',
+                'contorno-color': '#ff9800',
+                'contorno-grosor': 3,
+              }"
+            />
+
+            <template v-for="externo in wmsExternosActivos" :key="`externo-${externo.id}`">
               <SisdaiCapaWms
-                v-for="capa in capasVisibles"
-                :key="`capa-${capa.id}`"
-                :fuente="`${config.public.geoserverUrl}/ows`"
-                :capa="capa.name"
-                :estilo="capa.style || undefined"
-                :posicion="capa.stack_order"
-                :cuadro-informativo="(url) => contenidoCuadroInfoCapa(url, capa)"
+                v-if="externo.wms_or_tile === 'wms'"
+                :fuente="externo.url"
+                :capa="externo.wms_layers"
+                :posicion="externo.stack_order"
               />
-
-              <template v-for="externo in wmsExternosActivos" :key="`externo-${externo.id}`">
-                <SisdaiCapaWms
-                  v-if="externo.wms_or_tile === 'wms'"
-                  :fuente="externo.url"
-                  :capa="externo.wms_layers"
-                  :posicion="externo.stack_order"
-                />
-                <SisdaiCapaXyz v-else :fuente="externo.url" :posicion="externo.stack_order" />
-              </template>
-
-              <SisdaiCapaVectorial
-                v-if="capaMascara"
-                :fuente="`${config.public.geoserverUrl}/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=${capaMascara}&outputFormat=application%2Fjson&srsName=EPSG%3A4326`"
-                :posicion="capasVisibles.length + wmsExternosActivos.length + 1"
-                :estilo="{
-                  'relleno-color': 'transparent',
-                  'contorno-color': '#ff9800',
-                  'contorno-grosor': 3,
-                }"
-              />
-
-              <SisdaiCapaVectorial
-                :fuente="marcadoresGeoJSON"
-                :posicion="capasVisibles.length + wmsExternosActivos.length + 2"
-                :estilo="estiloMarcadorSisdai()"
-                :globo-informativo="contenidoGloboMarcador"
-              />
-            </SisdaiMapa>
-          </ClientOnly>
+              <SisdaiCapaXyz v-else :fuente="externo.url" :posicion="externo.stack_order" />
+            </template>
+          </MapasVisor>
         </div>
 
         <aside v-if="topicoActivoId && leyendaVisible" class="panorama__leyenda">
@@ -487,7 +475,8 @@ const vista = computed(() => {
             <template v-if="capaInfo?.narrative || capaInfo?.dataset_abstract">
               <div v-if="capaInfo.narrative" class="m-b-4">
                 <h3>Narrativa</h3>
-                <p class="panorama__texto-info">{{ capaInfo.narrative }}</p>
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div class="panorama__texto-info" v-html="DOMPurify.sanitize(capaInfo.narrative)" />
               </div>
               <div v-if="capaInfo.dataset_abstract">
                 <h3>Descripción de la capa</h3>
@@ -632,14 +621,35 @@ const vista = computed(() => {
     position: relative;
   }
 
-  &__controles {
+  &__visor {
+    height: 100%;
+    width: 100%;
+  }
+
+  // Un control por esquina, igual que los controles propios de MapasVisor
+  // (info/leyenda/capa base), dejando la esquina superior derecha libre para
+  // los controles de zoom nativos del mapa.
+  &__control {
     position: absolute;
-    top: 16px;
-    right: 16px;
     z-index: 2;
     display: flex;
     flex-direction: column;
     gap: 4px;
+
+    &--info {
+      top: 8px;
+      left: 8px;
+    }
+
+    &--leyenda {
+      bottom: 42px;
+      left: 8px;
+    }
+
+    &--basemap {
+      bottom: 40px;
+      right: 8px;
+    }
   }
 
   &__opcion-basemap {
@@ -686,15 +696,5 @@ const vista = computed(() => {
   &__texto-info {
     white-space: pre-wrap;
   }
-}
-</style>
-
-<style lang="scss">
-/* Mueve los controles de acercamiento (nativos de sisdai-mapas) al lado
-   izquierdo para que no se encimen con los controles propios del panorama
-   (leyenda, mapa base, info, WMS externos) del lado derecho. */
-.panorama__mapa .sisdai-mapa-control.contenedor-controles-vista {
-  left: var(--margen);
-  right: auto;
 }
 </style>

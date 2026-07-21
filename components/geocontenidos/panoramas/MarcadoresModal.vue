@@ -190,11 +190,13 @@ async function eliminarMarcador(id) {
 
         <div class="flex m-t-4">
           <div class="marcadores-modal__contenedor-mapa columna-8">
-            <GeocontenidosMapaEscena
+            <MapasVisor
               class="borde borde-color-secundario"
               :vista="{ centro: [-103.5, 23.6], acercamiento: 5 }"
               :capas="capaMapa"
               :marcadores="marcadoresMapa"
+              base-layer="satellite"
+              :opciones="{ info: false, cambiarBase: false, leyenda: false, coordenadas: false }"
               @click-vista="clickVista"
             />
           </div>
@@ -211,18 +213,18 @@ async function eliminarMarcador(id) {
               </div>
 
               <div class="m-b-4">
-                <label for="marcador-narrativa">Narrativa</label>
-                <textarea id="marcador-narrativa" v-model="formulario.narrative" rows="3" />
+                <label>Narrativa</label>
+                <UiEditorTexto v-model="formulario.narrative" />
               </div>
 
               <div class="flex flex-contenido-separado m-b-4">
-                <div>
+                <div class="columna-8">
                   <label for="marcador-icono">Ícono</label>
-                  <select id="marcador-icono" v-model="formulario.icon">
-                    <option v-for="icono in iconosTematicaPanorama" :key="icono" :value="icono">
-                      {{ icono }}
-                    </option>
-                  </select>
+                  <GeocontenidosSelectorIcono
+                    id="marcador-icono"
+                    v-model="formulario.icon"
+                    por-nombre
+                  />
                 </div>
 
                 <div>
@@ -291,7 +293,10 @@ async function eliminarMarcador(id) {
 </template>
 
 <style lang="scss">
-.marcadores-modal__contenedor-mapa .sisdai-mapa.gema {
+.marcadores-modal__contenedor-mapa {
   height: 480px;
+}
+.marcadores-modal__contenedor-mapa .visor-mapa-contenedor {
+  height: 100%;
 }
 </style>
