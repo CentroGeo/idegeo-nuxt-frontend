@@ -1,6 +1,7 @@
 export function useSigicMapas() {
   const config = useRuntimeConfig();
   const { data: session } = useAuth();
+  const { alerta } = useDialogo();
 
   const api = config.public.geonodeApi;
 
@@ -8,6 +9,19 @@ export function useSigicMapas() {
     const token = session.value?.accessToken;
     return token ? { Authorization: `Bearer ${token}`, ...extra } : { ...extra };
   }
+
+  // El backend es la autoridad de permisos. Si rechaza una mutación con 403,
+  // avisamos al usuario con el modal en vez de fallar en silencio.
+  function avisarSiSinPermiso(
+    res,
+    mensaje = 'No tienes permisos para editar las capas de este recurso.'
+  ) {
+    if (res.status === 403) {
+      alerta({ titulo: 'Sin permisos', mensaje });
+    }
+  }
+
+  const SIN_PERMISO_MAPA = 'No tienes permisos para modificar este mapa.';
 
   // ── Maps ────────────────────────────────────────────────────────────────
 
@@ -33,7 +47,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res, 'No tienes permisos para crear mapas.');
+      return null;
+    }
     return res.json();
   }
 
@@ -46,6 +63,7 @@ export function useSigicMapas() {
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
       console.warn('[updateMap] !ok', { status: res.status, body: txt });
+      avisarSiSinPermiso(res, SIN_PERMISO_MAPA);
       return null;
     }
     const json = await res.json();
@@ -58,6 +76,7 @@ export function useSigicMapas() {
       method: 'DELETE',
       headers: authHeaders(),
     });
+    if (!res.ok) avisarSiSinPermiso(res, SIN_PERMISO_MAPA);
     return res.ok;
   }
 
@@ -69,7 +88,10 @@ export function useSigicMapas() {
       headers: authHeaders(),
       body: form,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res, SIN_PERMISO_MAPA);
+      return null;
+    }
     return res.json();
   }
 
@@ -95,7 +117,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res);
+      return null;
+    }
     return res.json();
   }
 
@@ -105,7 +130,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res);
+      return null;
+    }
     return res.json();
   }
 
@@ -114,6 +142,7 @@ export function useSigicMapas() {
       method: 'DELETE',
       headers: authHeaders(),
     });
+    if (!res.ok) avisarSiSinPermiso(res);
     return res.ok;
   }
 
@@ -123,7 +152,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ style }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res);
+      return null;
+    }
     return res.json();
   }
 
@@ -133,7 +165,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(layers),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res);
+      return null;
+    }
     return res.json();
   }
 
@@ -143,7 +178,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(layers),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res);
+      return null;
+    }
     return res.json();
   }
 
@@ -153,7 +191,10 @@ export function useSigicMapas() {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(ids.map((id) => ({ id }))),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      avisarSiSinPermiso(res);
+      return null;
+    }
     return res.json();
   }
 
