@@ -59,6 +59,14 @@ function mostrarError({ errors }) {
   modal.permitirCerrar = true;
 }
 async function Eliminar(id) {
+  const { confirmar } = useDialogo();
+  const confirmado = await confirmar({
+    mensaje: '¿Eliminar este escenario? Esta acción no se puede deshacer.',
+    textoAceptar: 'Eliminar',
+    variante: 'peligro',
+  });
+  if (!confirmado) return;
+
   modal.visible = true;
   modal.cargando = true;
 

@@ -120,3 +120,14 @@ defineExpose({
     </div>
   </dialog>
 </template>
+
+<style lang="scss" scoped>
+// Mismo estilo que components/ui/ModalDialogo.vue (borde + backdrop oscuro).
+.modal {
+  border: 2px solid var(--color-secundario-2);
+}
+
+.modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+</style>
