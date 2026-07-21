@@ -12,6 +12,26 @@ const { panorama } = useRoute().params;
 
 const esNuevo = computed(() => panorama === 'nuevo');
 
+const formulario = reactive({
+  name: '',
+  is_public: false,
+  template_style: 'dark',
+  icon_title: false,
+  description: '',
+  config: 'gray',
+  bbox_x0: null,
+  bbox_y0: null,
+  bbox_x1: null,
+  bbox_y1: null,
+  landing_info: false,
+  extra_info: '',
+  template_use: 'light',
+  limited_zoom: false,
+  header_title: '',
+  header_color: '#1a1a2e',
+  header_title_color: '#ffffff',
+});
+
 const pestanas = computed(() =>
   [
     { id: 'configuracion', nombre: 'Configuración', disponible: true },
@@ -35,26 +55,6 @@ const estatusAlGuardar = reactive({
   estado: undefined,
   mensaje: '',
   textoCargando: '',
-});
-
-const formulario = reactive({
-  name: '',
-  is_public: false,
-  template_style: 'dark',
-  icon_title: false,
-  description: '',
-  config: 'gray',
-  bbox_x0: null,
-  bbox_y0: null,
-  bbox_x1: null,
-  bbox_y1: null,
-  landing_info: false,
-  extra_info: '',
-  template_use: 'light',
-  limited_zoom: false,
-  header_title: '',
-  header_color: '#1a1a2e',
-  header_title_color: '#ffffff',
 });
 
 const logoActualUrl = ref(null);

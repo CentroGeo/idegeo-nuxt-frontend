@@ -210,7 +210,7 @@ onMounted(async () => {
               </div>
               <div class="capa-info">
                 <div class="capa-titulo-fila flex flex-contenido-separado">
-                  <strong>{{ capa.title || capa.alternate }}</strong>
+                  <strong class="capa-titulo">{{ capa.title || capa.alternate }}</strong>
                   <span v-if="estaEnMapa(capa.pk)" class="etiqueta etiqueta-ok">Agregada</span>
                   <span v-else-if="estaSeleccionada(capa.pk)" class="etiqueta etiqueta-sel"
                     >Seleccionada</span
@@ -280,6 +280,10 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 2fr;
   gap: 12px;
+
+  > * {
+    min-width: 0;
+  }
 }
 
 .titulo-col {
@@ -355,6 +359,8 @@ onMounted(async () => {
   margin-bottom: 8px;
   cursor: pointer;
   transition: border-color 0.2s;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .item-capa:hover {
@@ -392,6 +398,10 @@ onMounted(async () => {
 
 .capa-info {
   flex: 1;
+  min-width: 0;
+}
+
+.capa-titulo {
   min-width: 0;
 }
 

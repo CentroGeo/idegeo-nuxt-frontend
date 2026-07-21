@@ -203,12 +203,11 @@ async function alCerrarContenidos() {
 
             <div class="m-b-4">
               <label for="icono-tematica-texto">Ícono</label>
-              <select id="icono-tematica-texto" v-model="formulario.icon">
-                <option v-for="icono in iconosTematicaPanorama" :key="icono" :value="icono">
-                  {{ icono }}
-                </option>
-              </select>
-              <span :class="`pictograma-${formulario.icon} pictograma-mediano m-l-2`" />
+              <GeocontenidosSelectorIcono
+                id="icono-tematica-texto"
+                v-model="formulario.icon"
+                por-nombre
+              />
             </div>
 
             <div class="m-b-4">

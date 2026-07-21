@@ -32,6 +32,46 @@ function abrirMarcadores(capa) {
   nextTick(() => modalMarcadores.value?.abrir());
 }
 
+const modalNarrativa = ref(null);
+const capaNarrativa = ref(null);
+
+function abrirNarrativa(capa) {
+  capaNarrativa.value = capa;
+  nextTick(() => modalNarrativa.value?.abrir());
+}
+
+// Selector de capa: marcadores y narrativa son por capa (no por temática), así
+// que si la temática tiene más de una capa hay que preguntar cuál antes de
+// abrir el modal correspondiente. Reutiliza el mismo adaptador/ref de capas
+// que usa el modal "Agregar/Editar capas" solo para cargar la lista.
+const modalSelectorCapa = ref(null);
+const capasSelector = ref([]);
+const modoSelector = ref(null); // 'marcadores' | 'narrativa'
+
+async function abrirSelectorCapa(tematicaId, modo) {
+  modoSelector.value = modo;
+  tematicaCapasId.value = tematicaId;
+  await adaptadorCapas.cargar();
+
+  const capas = adaptadorCapas.layersOrdered.value;
+  if (capas.length === 0) {
+    alert('Esta temática no tiene capas todavía. Agrega capas primero.');
+    return;
+  }
+  if (capas.length === 1) {
+    elegirCapaSelector(capas[0]);
+    return;
+  }
+
+  capasSelector.value = capas;
+  nextTick(() => modalSelectorCapa.value?.abrir());
+}
+
+function elegirCapaSelector(capa) {
+  if (modoSelector.value === 'marcadores') abrirMarcadores(capa);
+  else abrirNarrativa(capa);
+}
+
 async function cargarTematicas() {
   estaCargando.value = true;
   const respuesta = await gnoxyFetch(`${config.public.geonodeApi}/panoramas/${props.panoramaId}/`);
@@ -229,6 +269,24 @@ async function alSoltar(event, idQuitar, posicionQuitar) {
               Agregar/Editar capas
             </button>
 
+            <button
+              class="boton boton-chico boton-secundario"
+              type="button"
+              @click="abrirSelectorCapa(tematica.id, 'marcadores')"
+            >
+              <span class="pictograma-mapa-generador m-r-1" />
+              Agregar/Editar marcadores
+            </button>
+
+            <button
+              class="boton boton-chico boton-secundario"
+              type="button"
+              @click="abrirSelectorCapa(tematica.id, 'narrativa')"
+            >
+              <span class="pictograma-escribir m-r-1" />
+              Agregar/Editar narrativa
+            </button>
+
             <button class="boton boton-chico boton-primario" @click="eliminarTematica(tematica.id)">
               <span class="pictograma-eliminar m-r-1" />
               Eliminar
@@ -260,12 +318,11 @@ async function alSoltar(event, idQuitar, posicionQuitar) {
 
             <div class="m-b-4">
               <label for="icono-tematica">Ícono</label>
-              <select id="icono-tematica" v-model="formulario.icon">
-                <option v-for="icono in iconosTematicaPanorama" :key="icono" :value="icono">
-                  {{ icono }}
-                </option>
-              </select>
-              <span :class="`pictograma-${formulario.icon} pictograma-mediano m-l-2`" />
+              <GeocontenidosSelectorIcono
+                id="icono-tematica"
+                v-model="formulario.icon"
+                por-nombre
+              />
             </div>
 
             <div class="m-b-4">
@@ -309,16 +366,35 @@ async function alSoltar(event, idQuitar, posicionQuitar) {
         titulo: 'Agregar/Editar capas',
         mostrarEstilo: true,
         mostrarMarcadores: true,
+        mostrarNarrativas: true,
         nombreCategoria: (c) => categoriesNamesInSpanish[c.identifier] ?? c.identifier,
       }"
       @guardado="cargarTematicas"
       @abrir-marcadores="abrirMarcadores"
+      @abrir-narrativa="abrirNarrativa"
     />
 
     <GeocontenidosPanoramasMarcadoresModal
       v-if="capaMarcadores"
       ref="modalMarcadores"
       :capa="capaMarcadores"
+    />
+
+    <GeocontenidosPanoramasNarrativaModal
+      v-if="capaNarrativa"
+      ref="modalNarrativa"
+      :capa="capaNarrativa"
+    />
+
+    <GeocontenidosPanoramasSelectorCapaModal
+      ref="modalSelectorCapa"
+      :capas="capasSelector"
+      :titulo="
+        modoSelector === 'marcadores'
+          ? 'Elige la capa para editar sus marcadores'
+          : 'Elige la capa para editar su narrativa'
+      "
+      @elegir="elegirCapaSelector"
     />
   </div>
 </template>
