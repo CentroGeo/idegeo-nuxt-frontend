@@ -125,9 +125,17 @@ onMounted(cargarIndicadores);
             borderColor: cuadro.edge_color,
           }"
         >
-          <header>
-            <span v-if="cuadro.icon" :class="cuadro.icon" class="tab-datos__icono" />
-            <h4>{{ cuadro.name }}</h4>
+          <header class="tab-datos__cabecera-tarjeta">
+            <div class="tab-datos__icono-contenedor">
+              <img
+                v-if="cuadro.icon_custom"
+                :src="cuadro.icon_custom"
+                alt="Icono personalizado"
+                class="tab-datos__icono-img"
+              />
+              <span v-else-if="cuadro.icon" :class="cuadro.icon" class="tab-datos__icono" />
+            </div>
+            <h4 class="tab-datos__titulo-tarjeta">{{ cuadro.name }}</h4>
           </header>
 
           <p class="tab-datos__campo">Campo: {{ cuadro.field }}</p>
@@ -190,15 +198,7 @@ onMounted(cargarIndicadores);
     border-width: 2px;
     border-style: solid;
 
-    header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      h4 {
-        margin: 0;
-      }
-    }
+    /* Cabecera estilizada de forma global */
 
     footer {
       display: flex;
@@ -229,6 +229,34 @@ onMounted(cargarIndicadores);
 
   &__icono {
     font-size: 1.5rem;
+  }
+
+  &__icono-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  &__cabecera-tarjeta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  &__titulo-tarjeta {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  &__icono-contenedor {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.3rem;
   }
 
   &__campo {

@@ -19,10 +19,35 @@ function cerrar() {
 }
 
 onMounted(() => {
+  let filePickerOpened = false;
+
+  const handleFileInputClick = (e) => {
+    if (e.target?.tagName === 'INPUT' && e.target.type === 'file') {
+      filePickerOpened = true;
+    }
+  };
+
+  const handleWindowFocus = () => {
+    setTimeout(() => {
+      filePickerOpened = false;
+    }, 300);
+  };
+
+  window.addEventListener('click', handleFileInputClick, true);
+  window.addEventListener('focus', handleWindowFocus);
+
   // Escape nativo: prevenimos el cierre automático del <dialog> y emitimos nosotros
   dialogRef.value?.addEventListener('cancel', (e) => {
     e.preventDefault();
+    if (filePickerOpened) {
+      return;
+    }
     cerrar();
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('click', handleFileInputClick, true);
+    window.removeEventListener('focus', handleWindowFocus);
   });
 });
 

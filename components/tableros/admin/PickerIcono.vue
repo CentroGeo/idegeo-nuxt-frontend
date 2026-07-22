@@ -133,6 +133,7 @@ function limpiar() {
           placeholder="Buscar ícono..."
           class="campo-texto campo-texto-chico"
           autofocus
+          @keydown.enter.prevent
         />
         <button
           v-if="modelValue"
