@@ -3,7 +3,9 @@ const emit = defineEmits(['cerrar']);
 
 const props = defineProps({
   ancho: { type: String, default: '900px' },
+  altoMaximo: { type: String, default: '90vh' },
   adaptarTema: { type: Boolean, default: false },
+  centrarVertical: { type: Boolean, default: false },
 });
 
 const dialogRef = ref(null);
@@ -85,8 +87,14 @@ defineExpose({ abrir, cerrar });
   <dialog
     ref="dialogRef"
     class="modal-base"
-    :class="{ 'modal-base--oscuro': temaOscuro }"
-    :style="`--modal-ancho: ${props.ancho}`"
+    :class="{
+      'modal-base--oscuro': temaOscuro,
+      'modal-base--centrado': props.centrarVertical,
+    }"
+    :style="{
+      '--modal-ancho': props.ancho,
+      '--modal-alto-maximo': props.altoMaximo,
+    }"
   >
     <div class="modal-base__contenedor">
       <div class="modal-base__cabecera">
@@ -106,6 +114,7 @@ defineExpose({ abrir, cerrar });
 <style lang="scss" scoped>
 .modal-base {
   --modal-ancho: 900px;
+  --modal-alto-maximo: 90vh;
   --tableros-modal-fondo: var(--color-fondo-1, #fff);
   --tableros-modal-cabecera: var(--color-fondo-1, #fff);
   --tableros-modal-texto: inherit;
@@ -114,11 +123,15 @@ defineExpose({ abrir, cerrar });
   --tableros-modal-control-borde: var(--color-borde, #cccccc);
   --tableros-modal-texto-secundario: var(--color-texto-secundario, #777777);
   --tableros-modal-placeholder: #777777;
+  --tableros-modal-superficie-suave: #f7f7f7;
+  --tableros-modal-hover-fondo: #fcf3f5;
+  --tableros-modal-acento: var(--color-primario-4, #991f47);
+  --tableros-modal-acento-suave: var(--color-secundario-3, #f8e1e8);
   --tableros-modal-cerrar-hover-fondo: var(--color-secundario-3, #f8e1e8);
   --tableros-modal-cerrar-hover-texto: var(--color-primario-4, #991f47);
 
   width: min(var(--modal-ancho), 96vw);
-  max-height: 90vh;
+  max-height: min(var(--modal-alto-maximo), calc(100dvh - 2rem));
   padding: 0;
   border: none;
   border-radius: 10px;
@@ -136,10 +149,20 @@ defineExpose({ abrir, cerrar });
     --tableros-modal-control-borde: var(--color-secundario-7, #876670);
     --tableros-modal-texto-secundario: var(--color-secundario-4, #f5d4dd);
     --tableros-modal-placeholder: var(--color-secundario-5, #dab9c2);
+    --tableros-modal-superficie-suave: #4a252f;
+    --tableros-modal-hover-fondo: #57303a;
+    --tableros-modal-acento: #f3a6b8;
+    --tableros-modal-acento-suave: #56303a;
     --tableros-modal-cerrar-hover-fondo: var(--color-secundario-9, #53323c);
     --tableros-modal-cerrar-hover-texto: var(--color-secundario-3, #f8e1e8);
 
     color-scheme: dark;
+  }
+
+  &--centrado {
+    position: fixed;
+    inset: 0;
+    margin: auto;
   }
 
   &::backdrop {
@@ -149,7 +172,7 @@ defineExpose({ abrir, cerrar });
   &__contenedor {
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: min(var(--modal-alto-maximo), calc(100dvh - 2rem));
     background: var(--tableros-modal-fondo);
     color: var(--tableros-modal-texto);
   }
