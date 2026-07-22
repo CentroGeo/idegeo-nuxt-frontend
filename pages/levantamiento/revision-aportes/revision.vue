@@ -1,50 +1,131 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, shallowRef } from 'vue';
 
 definePageMeta({
   middleware: 'auth',
 });
 
+// Importaciones para conectar al backend
 const storeLevantamiento = useLevantamientoStore();
+const { data } = useAuth();
 
-// Data Dummy para probar funcionalidad
-const aportesEnRevision = ref(Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  titulo: `Cámara de cultivo ${i + 1}`,
-  fecha: `14/11/2025 10:${40 + i} AM`,
-  folio: `F-65${i}/NO REVISADO`,
-  proyecto: `Proyecto prueba ${i % 2 === 0 ? 'A' : 'B'}`,
-  estado: i < 3 ? 'Revisando' : 'Por revisar',
-  progreso: Math.floor(Math.random() * 100), 
-  registrante: `Usuario Registrante ${i + 1}`, 
-  fotos: [ 
-    'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg',
-    i % 2 === 0 ? 'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg' : '',
-    ''
-  ],
-  // === NUEVO: Array de mensajes dummy ===
-  mensajes: [
-    { id: 1, autor: 'Revisor', texto: '¿Podrías confirmar la ubicación exacta en el mapa?', fecha: '10:00 AM' },
-    { id: 2, autor: 'Tú', texto: 'Claro, es justo en la intersección principal.', fecha: '10:15 AM' }
-  ],
-  detalle: {
-    preguntaAbierta: `Esta es una respuesta sumamente larga para el aporte ${i + 1} que seguramente se cortará en el input y requerirá hover para leerse por completo...`,
-    siNo: i % 2 === 0 ? 'Sí' : 'No',
-    seleccionSimple: `Opción seleccionada número ${ (i % 3) + 1 } con texto extra`,
-    porqueSi: i % 2 === 0 ? `Porque el proyecto ${i + 1} lo requiere de manera estricta según los lineamientos.` : 'No aplica',
-    seleccionMultiple: `Opción 1, Opción ${ (i % 4) + 2 }, Otra opción más para hacer bulto`,
-    colonia: `Colonia Centro Histórico Ampliación ${i + 1}`,
-    calle: `Avenida Principal de los Insurgentes Sur ${100 + i}`,
-    ciudad: 'Ciudad de México, Entidad Federativa'
+// Arreglo vacío en lugar de datos dummy
+const aportesEnRevision = shallowRef([]);
+const cargandoAportes = ref(false);
+
+const modalConfirmacionVisible = ref(false);
+const mensajeConfirmacion = ref('');
+
+// Conexión de backend
+onMounted(async () => {
+  const email = data.value?.user?.email;
+  if (!email) return;
+
+  cargandoAportes.value = true;
+  try {
+    const aportes = await storeLevantamiento.obtenerAportesPorEstado(email, 'NO REVISADO');
+    
+    aportesEnRevision.value = aportes.map((aporte, index) => {
+      let fotosArray = [];
+      try {
+        fotosArray = aporte.media_array ? JSON.parse(aporte.media_array) : [];
+      } catch(error) {
+        console.error('Error al obtener aportes de la base de datos:', error);
+      }
+
+      const fechaObj = new Date(aporte.fecha_guardado);
+      const fechaFormateada = isNaN(fechaObj) ? 'Fecha desconocida' : fechaObj.toLocaleString('es-MX');
+
+      return {
+        ...aporte, 
+        id: aporte.id || index + 1,
+        titulo: aporte.title || aporte.nombre || `Aporte sin título ${index + 1}`,
+        fecha: fechaFormateada,
+        folio: `F-${aporte.id || index} NO REVISADO`,
+        proyecto: aporte.nombre || 'Proyecto Desconocido',
+        estado: aporte.status || 'NO REVISADO', 
+        progreso: 50, 
+        registrante: aporte.usuario_id || 'Usuario Desconocido', 
+        latitud: aporte.latitud,
+        longitud: aporte.longitud,
+        fotos: fotosArray.length > 0 ? fotosArray : [ '', '', '' ],
+        mensajes: aporte.mensajes || [],
+        detalle: aporte.detalle || {
+          preguntaAbierta: 'Pendiente de enlazar a BD',
+          siNo: 'No',
+          seleccionSimple: 'Sin selección',
+          porqueSi: 'N/A',
+          seleccionMultiple: 'N/A',
+          colonia: 'Sin colonia',
+          calle: 'Sin calle',
+          ciudad: 'Sin ciudad'
+        }
+      };
+    });
+
+    if (aportesEnRevision.value.length > 0) {
+      aporteSeleccionado.value = aportesEnRevision.value[0];
+    }
+
+  } catch (error) {
+    console.error('Error al obtener aportes de la base de datos:', error);
+  } finally {
+    cargandoAportes.value = false;
   }
-})));
+});
 
+// Función de cambio de estado con los botones
+async function cambiarEstadoAporte(idAporte, nuevoEstado) {
+  try {
+    const email = data.value?.user?.email;
+    if (!email) {
+      console.error('No se encontró el email del usuario para realizar la acción.');
+      return;
+    }
+
+    //  JSON (payload)
+    const payload = {
+      status: nuevoEstado,
+      user_id: email,
+    };
+
+    await storeLevantamiento.actualizarStatusAporte(payload, idAporte);
+    
+    console.log(`El aporte ${idAporte} se actualizó con éxito a: ${nuevoEstado}`);
+    
+    aportesEnRevision.value = aportesEnRevision.value.filter(a => a.id !== idAporte);
+    
+    if (aportesEnRevision.value.length > 0) {
+      aporteSeleccionado.value = aportesEnRevision.value[0];
+    } else {
+      aporteSeleccionado.value = null;
+    }
+    
+    // Modal que debemos modificar con elementos sisdai
+    const accion = nuevoEstado === 'APROBADO' ? 'aprobado' : nuevoEstado === 'RECHAZADO' ? 'rechazado' : 'movido a revisión';
+    mensajeConfirmacion.value = `El aporte ha sido ${accion} correctamente.`;
+    modalConfirmacionVisible.value = true;
+    
+  } catch (error) {
+    console.error('Error al intentar actualizar el estado en DB:', error);
+    
+    // Mostramos el modal de error
+    mensajeConfirmacion.value = 'Ocurrió un error al conectar con el servidor. El estado no pudo actualizarse.';
+    modalConfirmacionVisible.value = true;
+  }
+}
+
+function cerrarModalConfirmacion() {
+  modalConfirmacionVisible.value = false;
+}
+
+// Búsqueda y paginación
 const busqueda = ref('');
 
 const aportesFiltrados = computed(() => {
   if (!busqueda.value) return aportesEnRevision.value;
   return aportesEnRevision.value.filter(aporte => 
-    aporte.titulo.toLowerCase().includes(busqueda.value.toLowerCase())
+    aporte.titulo?.toLowerCase().includes(busqueda.value.toLowerCase())
   );
 });
 
@@ -71,13 +152,13 @@ function irAPagina(pagina) {
   }
 }
 
-const aporteSeleccionado = ref(aportesEnRevision.value[0]);
+const aporteSeleccionado = ref(null);
 
 function verFichaAporte(aporte) {
   aporteSeleccionado.value = aporte;
 }
 
-// === Lógica para el visor de imágenes ===
+// Visor de imágenes
 const imagenAmpliada = ref(null);
 
 function abrirImagen(url) {
@@ -90,7 +171,7 @@ function cerrarImagen() {
   imagenAmpliada.value = null;
 }
 
-// === NUEVO: Lógica para el modal de mensajes ===
+// Modal de imágenes
 const modalMensajesAbierto = ref(false);
 
 function abrirMensajes() {
@@ -126,7 +207,7 @@ function cerrarMensajes() {
 
         <div class="grid">
           
-          <!-- COLUMNA IZQUIERDA -->
+          <!-- Columna Izquierda -->
           <div class="columna-5 flex flex-columna">
             <div class="m-b-3">
               <input 
@@ -140,7 +221,12 @@ function cerrarMensajes() {
 
             <!-- Lista de tarjetas iteradas -->
             <div class="flex flex-columna" style="gap: 12px; flex-grow: 1;">
+              <div v-if="cargandoAportes" class="texto-centrado p-3" style="color: #888;">
+                Cargando datos del servidor...
+              </div>
+
               <div 
+                v-else
                 v-for="aporte in aportesPaginados" 
                 :key="aporte.id"
                 class="tarjeta-aporte cursor-pointer p-2 borde borde-redondeado-8"
@@ -157,7 +243,6 @@ function cerrarMensajes() {
                   </div>
                 </div>
                 
-                <!-- Barra de progreso -->
                 <div class="contenedor-progreso m-t-2">
                   <div class="flex" style="justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span class="text-chico texto-porcentaje">Progreso del aporte</span>
@@ -169,9 +254,8 @@ function cerrarMensajes() {
                 </div>
               </div>
 
-              <!-- Mensaje sin resultados -->
-              <div v-if="aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
-                No se encontraron aportes.
+              <div v-if="!cargandoAportes && aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
+                No se encontraron aportes pendientes de revisión.
               </div>
             </div>
 
@@ -191,7 +275,7 @@ function cerrarMensajes() {
             </div>
           </div>
 
-          <!-- COLUMNA DERECHA: FICHA DEL PROYECTO -->
+          <!-- Columna derecha, con fichas de proyectos -->
           <div class="columna-11">
             <div class="tarjeta-ficha p-4 borde borde-redondeado-8" v-if="aporteSeleccionado">
               <div class="flex m-b-3" style="justify-content: space-between; align-items: center;">
@@ -200,35 +284,46 @@ function cerrarMensajes() {
                   <button class="boton-secundario boton-chico">GeoJson</button>
                   <button class="boton-secundario boton-chico">KML</button>
                   <button class="boton-secundario boton-chico">Shapefile</button>
-                  <!-- NUEVO: Botón adaptado para abrir el modal -->
                   <button class="boton-secundario boton-chico" @click="abrirMensajes">Mensajes</button>
                 </div>
               </div>
 
-              <!-- Placeholder del Mapa -->
-              <div class="mapa-placeholder m-b-3">
-                <p>Mapa Satelital aquí</p>
+              <!-- Mapa satelital -->
+              <div class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden;">
+                <iframe 
+                  v-if="aporteSeleccionado.latitud && aporteSeleccionado.longitud"
+                  width="100%" 
+                  height="100%" 
+                  frameborder="0" 
+                  scrolling="no" 
+                  marginheight="0" 
+                  marginwidth="0" 
+                  :src="`https://maps.google.com/maps?q=${aporteSeleccionado.latitud},${aporteSeleccionado.longitud}&t=k&z=17&ie=UTF8&iwloc=&output=embed`"
+                >
+                </iframe>
+                <div v-else class="flex flex-contenido-centrado flex-vertical-centrado" style="height: 100%; color: #94a3b8;">
+                  <p>Coordenadas no disponibles para este aporte</p>
+                </div>
               </div>
 
-              <!-- Metadatos del Registrante -->
               <div class="m-b-3 flex" style="gap: 8px; align-items: center;">
                 <span class="form-label" style="margin-bottom: 0;">NOMBRE DEL REGISTRANTE:</span>
                 <span style="color: #334155; font-size: 0.9rem; font-weight: 500;">{{ aporteSeleccionado.registrante }}</span>
               </div>
 
-              <!-- Galería de Fotografías (Máximo 3) -->
               <div class="flex m-b-4" style="gap: 16px; justify-content: center;">
-                <template v-for="(foto, index) in aporteSeleccionado.fotos.slice(0, 3)" :key="index">
+                <template v-if="aporteSeleccionado.fotos && aporteSeleccionado.fotos.length > 0">
                   <div 
-                    v-if="foto" 
+                    v-for="(foto, index) in aporteSeleccionado.fotos.slice(0, 3)" 
+                    :key="index"
                     class="imagen-miniatura bg-imagen miniatura-interactiva" 
                     :style="{ backgroundImage: `url(${foto})` }"
                     @click="abrirImagen(foto)"
                   ></div>
-                  <div v-else class="imagen-miniatura bg-placeholder">
-                    <span style="color: #94a3b8; font-size: 0.75rem;">Sin imagen</span>
-                  </div>
                 </template>
+                <div v-else class="imagen-miniatura bg-placeholder" style="width: 100%;">
+                  <span style="color: #94a3b8; font-size: 0.85rem;">Este aporte no contiene fotografías</span>
+                </div>
               </div>
 
               <!-- Formulario de revisión -->
@@ -267,20 +362,41 @@ function cerrarMensajes() {
                 </div>
               </div>
 
-              <!-- Botones de aceptación y rechazo -->
+              <!-- Botones de rechazo y aceptación -->
               <div class="flex" style="justify-content: center; gap: 24px; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
-                <button class="btn-moderno btn-aprobar">
+                <button class="btn-moderno btn-aprobar" @click="cambiarEstadoAporte(aporteSeleccionado.id, 'APROBADO')">
                   <span class="icono">✓</span> APROBAR APORTE
                 </button>
-                <button class="btn-moderno btn-rechazar">
+                <button class="btn-moderno btn-rechazar" @click="cambiarEstadoAporte(aporteSeleccionado.id, 'RECHAZADO')">
                   <span class="icono">✕</span> RECHAZAR APORTE
                 </button>
               </div>
 
             </div>
+            
+            <div v-else class="flex flex-vertical-centrado flex-contenido-centrado" style="height: 100%; min-height: 400px; color: #94a3b8;">
+              <p>Selecciona un aporte de la lista para evaluarlo.</p>
+            </div>
           </div>
         </div>
       </main>
+
+      <!-- Modal de confirmación (debemos modificarlo)-->
+      <Teleport to="body">
+        <div v-if="modalConfirmacionVisible" class="modal-overlay" @click="cerrarModalConfirmacion">
+          <div class="modal-confirmacion-contenido" @click.stop>
+            <div class="modal-confirmacion-header fondo-guinda">
+              <h3 class="m-0" style="color: white; font-weight: 500;">¡Estado Actualizado!</h3>
+            </div>
+            <div class="p-4 texto-centrado">
+              <p class="m-b-3" style="color: #334155; font-size: 1.05rem;">{{ mensajeConfirmacion }}</p>
+              <button class="btn-moderno btn-guinda" @click="cerrarModalConfirmacion">
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- Modal de Mensajes-->
       <Teleport to="body">
@@ -337,7 +453,6 @@ function cerrarMensajes() {
 
 /* TARJETAS LATERALES*/
 .tarjeta-aporte {
-  /* ESTADO NORMAL / NO SELECCIONADO */
   background-color: #715B62;
   border: 1px solid #715B62;
   transition: all 0.25s ease;
@@ -365,7 +480,6 @@ function cerrarMensajes() {
     filter: brightness(1.05);
   }
 
-  /* ESTADO SELECCIONADO */
   &.seleccionada {
     background-color: #D48D95;
     border-color: #D48D95;
@@ -417,13 +531,11 @@ function cerrarMensajes() {
 .mapa-placeholder {
   height: 250px; 
   background-color: #f8fafc; 
-  border: 1px dashed #cbd5e1;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   display: flex; 
   align-items: center; 
   justify-content: center;
-  color: #94a3b8;
-  font-weight: 500;
 }
 
 .form-label {
@@ -466,14 +578,14 @@ function cerrarMensajes() {
   }
 }
 
-/* MODAL DE IMÁGENES */
-.modal-imagen-overlay {
+/* MODAL DE IMÁGENES Y GLOBALES */
+.modal-imagen-overlay, .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(30, 41, 59, 0.9); 
+  background-color: rgba(15, 23, 42, 0.6); 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -533,16 +645,29 @@ function cerrarMensajes() {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* === NUEVO: ESTILOS MODAL DE MENSAJES === */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 9998;
-  backdrop-filter: blur(2px);
+/* Modal de confirmación */
+.modal-confirmacion-contenido {
+  background: #ffffff;
+  width: 100%; 
+  max-width: 400px; 
+  border-radius: 12px; 
+  display: flex; 
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: fadeInZoom 0.2s ease-out;
+  overflow: hidden;
 }
 
+.modal-confirmacion-header {
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.fondo-guinda {
+  background-color: #715B62;
+}
+
+/* Modal de mensajes */
 .modal-mensajes-contenido {
   background: #ffffff;
   width: 100%; max-width: 450px; height: 70vh;
@@ -601,7 +726,7 @@ function cerrarMensajes() {
   &:hover { background-color: #059669; }
 }
 
-/* Inputs form originales */
+/* Inputs form */
 .form-input {
   background-color: #ffffff;
   border: 1px solid #cbd5e1;
@@ -612,7 +737,7 @@ function cerrarMensajes() {
   transition: all 0.3s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   
-  /* Lógica para textos largos */
+  /* Textos largos */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -627,7 +752,7 @@ function cerrarMensajes() {
   }
 }
 
-/*BOTONES */
+/*Botones control */
 .btn-moderno {
   display: inline-flex;
   align-items: center;
@@ -660,4 +785,6 @@ function cerrarMensajes() {
 
 .btn-aprobar { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 .btn-rechazar { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+.btn-guinda { background-color: #715B62; width: 100%; padding: 10px; border-radius: 6px; }
+.btn-guinda:hover { background-color: #5c4a50; }
 </style>

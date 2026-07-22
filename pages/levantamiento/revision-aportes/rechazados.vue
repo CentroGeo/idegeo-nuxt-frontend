@@ -1,49 +1,118 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, shallowRef } from 'vue';
 
 definePageMeta({
   middleware: 'auth',
 });
 
 const storeLevantamiento = useLevantamientoStore();
+const { data } = useAuth(); 
 
-// MOCK DATA: Aportes Rechazados
-const aportesRechazados = ref(Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  titulo: `un planton calle x ponce y ${i + 1}`,
-  fecha: `07/11/2025 07:${40 + i} PM`,
-  folio: `F-85${i} RECHAZADO`,
-  proyecto: `Proyecto diario`,
-  estado: 'RECHAZADO',
-  registrante: 'Irving Sanchez',
-  atendidoPor: 'Saul Morgado',
-  fotos: [ 
-    'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg',
-    i % 2 === 0 ? 'https://cdn.conahcyt.mx/sisdai/sisdai-css/documentacion/kale-1.jpg' : '',
-    ''
-  ],
-  mensajes: [
-    { id: 1, autor: 'Revisor', texto: 'La fotografía no es clara y no coincide con la ubicación reportada.', fecha: '10:00 AM' },
-    { id: 2, autor: 'Tú', texto: 'Entendido, pediré que se vuelva a tomar la evidencia.', fecha: '10:15 AM' }
-  ],
-  detalle: {
-    preguntaAbierta: `esto es una prueba ${i + 1}. Un texto lo suficientemente largo para demostrar que nuestro hover moderno sigue funcionando a la perfección...`,
-    preguntaOpcion: `opción ${ (i % 3) + 1 }`,
-    seleccionMultiple: `Opción 1, Opción 3, Opción 5`
+
+const aportesRechazados = shallowRef([]);
+const cargandoAportes = ref(false);
+
+
+const modalConfirmacionVisible = ref(false);
+const mensajeConfirmacion = ref('');
+
+onMounted(async () => {
+  const email = data.value?.user?.email;
+  if (!email) return;
+
+  cargandoAportes.value = true;
+  try {
+    console.log('[BACKEND] Solicitando aportes RECHAZADOS...');
+
+    const aportes = await storeLevantamiento.obtenerAportesPorEstado(email, 'RECHAZADO');
+    
+    console.log('[BACKEND] Datos crudos obtenidos de Rechazados:', aportes);
+    if(aportes.length > 0) {
+      console.log('Estructura del primer aporte rechazado:', aportes[0]);
+    }
+    
+    aportesRechazados.value = aportes.map(aporte => {
+      let fotosArray = [];
+      try {
+        fotosArray = aporte.media_array ? JSON.parse(aporte.media_array) : [];
+      } catch(e) { console.warn('Error al parsear media_array', e); }
+
+      const fechaObj = new Date(aporte.fecha_guardado);
+      const fechaFormateada = isNaN(fechaObj) ? 'Fecha inválida' : fechaObj.toLocaleString('es-MX');
+
+      return {
+        ...aporte,
+        id: aporte.id,
+        titulo: aporte.title || 'Aporte sin título',
+        fecha: fechaFormateada,
+        folio: `F-${aporte.id} RECHAZADO`,
+        proyecto: aporte.nombre || 'Proyecto sin nombre',
+        estado: aporte.status || 'RECHAZADO',
+        registrante: aporte.usuario_id || 'Desconocido',
+        atendidoPor: aporte.id_curador || 'Curador no asignado',
+        latitud: aporte.latitud,
+        longitud: aporte.longitud,
+        fotos: fotosArray,
+        detalle: {
+          preguntaAbierta: 'Información pendiente de mapear desde respuestas_ficha',
+          preguntaOpcion: 'N/A',
+          seleccionMultiple: 'N/A'
+        }
+      };
+    });
+
+    if (aportesRechazados.value.length > 0) {
+      aporteSeleccionado.value = aportesRechazados.value[0];
+    }
+  } catch (error) {
+    console.error('Error al cargar aportes rechazados:', error);
+  } finally {
+    cargandoAportes.value = false;
   }
-})));
+});
 
-// Lógica de búsqueda
+
+async function eliminarAporteRechazado(idAporte) {
+  try {
+    const email = data.value?.user?.email;
+    if (!email) return;
+
+    await storeLevantamiento.eliminarAporte(idAporte);
+    console.log(`[DB] El aporte ${idAporte} fue eliminado correctamente`);
+    
+    aportesRechazados.value = aportesRechazados.value.filter(a => a.id !== idAporte);
+    
+    if (aportesRechazados.value.length > 0) {
+      aporteSeleccionado.value = aportesRechazados.value[0];
+    } else {
+      aporteSeleccionado.value = null;
+    }
+    
+    mensajeConfirmacion.value = 'El aporte rechazado fue eliminado permanentemente del sistema.';
+    modalConfirmacionVisible.value = true;
+    
+  } catch (error) {
+    console.error('Error al eliminar el aporte:', error);
+    mensajeConfirmacion.value = 'Ocurrió un error de conexión al intentar eliminar el aporte.';
+    modalConfirmacionVisible.value = true;
+  }
+}
+
+function cerrarModalConfirmacion() {
+  modalConfirmacionVisible.value = false;
+}
+
+
 const busqueda = ref('');
 
 const aportesFiltrados = computed(() => {
   if (!busqueda.value) return aportesRechazados.value;
   return aportesRechazados.value.filter(aporte => 
-    aporte.titulo.toLowerCase().includes(busqueda.value.toLowerCase())
+    aporte.titulo?.toLowerCase().includes(busqueda.value.toLowerCase())
   );
 });
 
-// Paginación
+
 const paginaActual = ref(1);
 const itemsPorPagina = 8; 
 
@@ -67,14 +136,14 @@ function irAPagina(pagina) {
   }
 }
 
-// Selección de tarjeta
-const aporteSeleccionado = ref(aportesRechazados.value[0]);
+
+const aporteSeleccionado = ref(null);
 
 function verFichaAporte(aporte) {
   aporteSeleccionado.value = aporte;
 }
 
-// LÓGICA DEL VISOR DE IMÁGENES 
+
 const imagenAmpliada = ref(null);
 
 function abrirImagen(url) {
@@ -85,17 +154,6 @@ function abrirImagen(url) {
 
 function cerrarImagen() {
   imagenAmpliada.value = null;
-}
-
-// LÓGICA DEL MODAL DE MENSAJES
-const modalMensajesAbierto = ref(false);
-
-function abrirMensajes() {
-  modalMensajesAbierto.value = true;
-}
-
-function cerrarMensajes() {
-  modalMensajesAbierto.value = false;
 }
 </script>
 
@@ -146,7 +204,14 @@ function cerrarMensajes() {
 
             <!-- Lista de tarjetas iteradas -->
             <div class="flex flex-columna" style="gap: 12px; flex-grow: 1;">
+              
+              <!-- Loader -->
+              <div v-if="cargandoAportes" class="texto-centrado p-3" style="color: #888;">
+                Cargando aportes rechazados...
+              </div>
+
               <div 
+                v-else
                 v-for="aporte in aportesPaginados" 
                 :key="aporte.id"
                 class="tarjeta-aporte cursor-pointer p-2 borde borde-redondeado-8"
@@ -165,7 +230,7 @@ function cerrarMensajes() {
               </div>
 
               <!-- Mensaje sin resultados -->
-              <div v-if="aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
+              <div v-if="!cargandoAportes && aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
                 No se encontraron aportes rechazados.
               </div>
             </div>
@@ -188,118 +253,120 @@ function cerrarMensajes() {
 
           <!--Ficha de proyecto rechazado-->
           <div class="columna-11">
-            <div class="flex m-b-2" style="justify-content: space-between; align-items: center;">
-              <h3 class="m-0">Ficha de proyecto</h3>
-              
-              <!-- Botones de Acción (Modificados según tu petición) -->
-              <div class="flex botones-exportacion" style="gap: 8px;">
-                <button class="btn-outline">GeoJson</button>
-                <button class="btn-outline">KML</button>
-                <button class="btn-outline">Shapefile (zip)</button>
-                <!-- Botón de Mensajes posicionado arriba -->
-                <button class="btn-outline" @click="abrirMensajes">Mensajes</button>
-                <!-- Botón Eliminar en vez de Desaprobar -->
-                <button class="btn-moderno-chico btn-eliminar">Eliminar</button>
-              </div>
-            </div>
-
-            <!-- Mapa panorámico arriba -->
-            <div class="mapa-placeholder m-b-3">
-              <p>Mapa Satelital</p>
-            </div>
-
-            <!-- Panel de Detalles del Aporte -->
-            <div class="tarjeta-detalle p-4 borde borde-redondeado-8" v-if="aporteSeleccionado">
-              
-              <!-- Cabecera del panel interno -->
-              <div class="flex m-b-4" style="justify-content: space-between; align-items: center;">
-                <div class="flex" style="gap: 12px; align-items: center;">
-                  <span class="badge-estado badge-rechazado">{{ aporteSeleccionado.folio }}</span>
-                  <button class="btn-outline" style="border-color: #10b981;">Ver proyecto</button>
+            <div v-if="aporteSeleccionado">
+              <div class="flex m-b-2" style="justify-content: space-between; align-items: center;">
+                <h3 class="m-0">Ficha de proyecto</h3>
+                <div class="flex botones-exportacion" style="gap: 8px;">
+                  <button class="boton-secundario boton-chico">GeoJson</button>
+                  <button class="boton-secundario boton-chico">KML</button>
+                  <button class="boton-secundario boton-chico">Shapefile</button>
+                  
+                  <button 
+                    class="btn-moderno-chico btn-eliminar"
+                    @click="eliminarAporteRechazado(aporteSeleccionado.id)"
+                  >
+                    Eliminar
+                  </button>
                 </div>
-                <span class="text-chico" style="color: #64748b; font-weight: 500;">{{ aporteSeleccionado.fecha }}</span>
               </div>
 
-              <!-- Metadatos -->
-              <div class="grid-metadatos m-b-4">
-                <div class="meta-label">TÍTULO:</div>
-                <div class="meta-value">{{ aporteSeleccionado.titulo }}</div>
-                
-                <div class="meta-label">NOMBRE DEL REGISTRANTE:</div>
-                <div class="meta-value">{{ aporteSeleccionado.registrante }}</div>
-                
-                <div class="meta-label">ATENDIDO POR:</div>
-                <div class="meta-value">{{ aporteSeleccionado.atendidoPor }}</div>
+              <div class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden;">
+                <iframe 
+                  v-if="aporteSeleccionado.latitud && aporteSeleccionado.longitud"
+                  width="100%" 
+                  height="100%" 
+                  frameborder="0" 
+                  scrolling="no" 
+                  marginheight="0" 
+                  marginwidth="0" 
+                  :src="`https://maps.google.com/maps?q=${aporteSeleccionado.latitud},${aporteSeleccionado.longitud}&t=k&z=17&ie=UTF8&iwloc=&output=embed`"
+                >
+                </iframe>
+                <div v-else class="flex flex-contenido-centrado flex-vertical-centrado" style="height: 100%; color: #94a3b8;">
+                  <p>Coordenadas no disponibles para este aporte</p>
+                </div>
               </div>
 
-              <!-- Galería de Fotografías Interactivas (Máximo 3) -->
-              <div class="flex m-b-4" style="gap: 16px; justify-content: center;">
-                <template v-for="(foto, index) in aporteSeleccionado.fotos.slice(0, 3)" :key="index">
-                  <div 
-                    v-if="foto" 
-                    class="imagen-miniatura bg-imagen miniatura-interactiva" 
-                    :style="{ backgroundImage: `url(${foto})` }"
-                    @click="abrirImagen(foto)"
-                  ></div>
-                  <div v-else class="imagen-miniatura bg-placeholder">
-                    <span style="color: #94a3b8; font-size: 0.75rem;">Sin imagen</span>
+              <!-- Panel de Detalles del Aporte -->
+              <div class="tarjeta-detalle p-4 borde borde-redondeado-8">
+                
+                <!-- Cabecera del panel interno -->
+                <div class="flex m-b-4" style="justify-content: space-between; align-items: center;">
+                  <div class="flex" style="gap: 12px; align-items: center;">
+                    <span class="badge-estado badge-rechazado">{{ aporteSeleccionado.folio }}</span>
                   </div>
-                </template>
-              </div>
+                  <span class="text-chico" style="color: #64748b; font-weight: 500;">{{ aporteSeleccionado.fecha }}</span>
+                </div>
 
-              <!--Ficha de Información-->
-              <h4 class="form-titulo m-b-2">Ficha de información:</h4>
-              <div class="grid" style="gap: 16px;">
-                <div class="columna-16">
-                  <label class="form-label">1.- PREGUNTA ABIERTA</label>
-                  <input type="text" class="ancho-completo form-input" readonly :value="aporteSeleccionado.detalle.preguntaAbierta" :title="aporteSeleccionado.detalle.preguntaAbierta" />
+                <!-- Metadatos -->
+                <div class="grid-metadatos m-b-4">
+                  <div class="meta-label">TÍTULO:</div>
+                  <div class="meta-value">{{ aporteSeleccionado.titulo }}</div>
+                  
+                  <div class="meta-label">NOMBRE DEL REGISTRANTE:</div>
+                  <div class="meta-value">{{ aporteSeleccionado.registrante }}</div>
+                  
+                  <div class="meta-label">ATENDIDO POR:</div>
+                  <div class="meta-value">{{ aporteSeleccionado.atendidoPor }}</div>
                 </div>
-                <div class="columna-16">
-                  <label class="form-label">2.- PREGUNTA DE OPCIÓN</label>
-                  <input type="text" class="ancho-completo form-input" readonly :value="aporteSeleccionado.detalle.preguntaOpcion" :title="aporteSeleccionado.detalle.preguntaOpcion" />
-                </div>
-                <div class="columna-16">
-                  <label class="form-label">5.- PREGUNTA DE SELECCIÓN MÚLTIPLE</label>
-                  <div class="flex flex-columna" style="gap: 8px;">
-                    <input type="text" class="ancho-completo form-input" readonly value="Opción 1" title="Opción 1" />
-                    <input type="text" class="ancho-completo form-input" readonly value="Opción 3" title="Opción 3" />
-                    <input type="text" class="ancho-completo form-input" readonly value="Opción 5" title="Opción 5" />
+
+                <div class="flex m-b-4" style="gap: 16px; justify-content: center;">
+                  <template v-if="aporteSeleccionado.fotos && aporteSeleccionado.fotos.length > 0">
+                    <div 
+                      v-for="(foto, index) in aporteSeleccionado.fotos.slice(0, 3)" 
+                      :key="index"
+                      class="imagen-miniatura bg-imagen miniatura-interactiva" 
+                      :style="{ backgroundImage: `url(${foto})` }"
+                      @click="abrirImagen(foto)"
+                    ></div>
+                  </template>
+                  <div v-else class="imagen-miniatura bg-placeholder" style="width: 100%;">
+                    <span style="color: #94a3b8; font-size: 0.85rem;">Este aporte no contiene fotografías</span>
                   </div>
                 </div>
-              </div>
 
+                <!--Ficha de Información-->
+                <h4 class="form-titulo m-b-2">Ficha de información:</h4>
+                <div class="grid" style="gap: 16px;">
+                  <div class="columna-16">
+                    <label class="form-label">1.- PREGUNTA ABIERTA</label>
+                    <input type="text" class="ancho-completo form-input" readonly :value="aporteSeleccionado.detalle.preguntaAbierta" :title="aporteSeleccionado.detalle.preguntaAbierta" />
+                  </div>
+                  <div class="columna-16">
+                    <label class="form-label">2.- PREGUNTA DE OPCIÓN</label>
+                    <input type="text" class="ancho-completo form-input" readonly :value="aporteSeleccionado.detalle.preguntaOpcion" :title="aporteSeleccionado.detalle.preguntaOpcion" />
+                  </div>
+                  <div class="columna-16">
+                    <label class="form-label">5.- PREGUNTA DE SELECCIÓN MÚLTIPLE</label>
+                    <div class="flex flex-columna" style="gap: 8px;">
+                      <input type="text" class="ancho-completo form-input" readonly value="Opción 1" title="Opción 1" />
+                      <input type="text" class="ancho-completo form-input" readonly value="Opción 3" title="Opción 3" />
+                      <input type="text" class="ancho-completo form-input" readonly value="Opción 5" title="Opción 5" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            <!-- Estado vacío de la columna derecha -->
+            <div v-else class="flex flex-vertical-centrado flex-contenido-centrado" style="height: 100%; min-height: 400px; color: #94a3b8;">
+              <p>Selecciona un aporte para ver sus detalles.</p>
             </div>
           </div>
         </div>
       </main>
 
-      <!-- Modal de Mensajes -->
       <Teleport to="body">
-        <div v-if="modalMensajesAbierto" class="modal-overlay" @click="cerrarMensajes">
-          <div class="modal-mensajes-contenido" @click.stop>
-            <div class="modal-mensajes-header">
-              <h4 class="m-0" style="color: #334155;">Mensajes de Rechazo</h4>
-              <button class="btn-cerrar-sutil" @click="cerrarMensajes">✕</button>
+        <div v-if="modalConfirmacionVisible" class="modal-overlay" @click="cerrarModalConfirmacion">
+          <div class="modal-confirmacion-contenido" @click.stop>
+            <div class="modal-confirmacion-header fondo-guinda">
+              <h3 class="m-0" style="color: white; font-weight: 500;">¡Acción Completada!</h3>
             </div>
-            
-            <div class="chat-area">
-              <div 
-                v-for="msj in aporteSeleccionado.mensajes" 
-                :key="msj.id" 
-                :class="['burbuja', msj.autor === 'Tú' ? 'propia' : 'ajena']"
-              >
-                <div style="font-weight: bold; font-size: 0.7rem; margin-bottom: 4px;">{{ msj.autor }}</div>
-                <p class="m-0">{{ msj.texto }}</p>
-                <span class="fecha-msj">{{ msj.fecha }}</span>
-              </div>
-              <div v-if="aporteSeleccionado.mensajes.length === 0" class="texto-centrado" style="color: #94a3b8; font-size: 0.85rem; margin-top: 2rem;">
-                No hay mensajes para este aporte.
-              </div>
-            </div>
-            
-            <div class="chat-input-area">
-              <input type="text" placeholder="Escribe un mensaje..." class="input-chat" />
-              <button class="btn-enviar-chat">Enviar</button>
+            <div class="p-4 texto-centrado">
+              <p class="m-b-3" style="color: #334155; font-size: 1.05rem;">{{ mensajeConfirmacion }}</p>
+              <button class="btn-moderno btn-guinda" @click="cerrarModalConfirmacion">
+                Entendido
+              </button>
             </div>
           </div>
         </div>
@@ -325,12 +392,13 @@ function cerrarMensajes() {
   gap: 8px; 
 }
 
+
 .cursor-pointer { cursor: pointer; }
 .text-chico { font-size: 0.75rem; }
 .ancho-completo { width: 100%; box-sizing: border-box; }
 .flex-columna { flex-direction: column; }
 
-/* TARJETAS LATERALES*/
+
 .tarjeta-aporte {
   background-color: #715B62;
   border: 1px solid #715B62;
@@ -356,41 +424,7 @@ function cerrarMensajes() {
   }
 }
 
-/*PANEL DE ESTADÍSTICAS*/
-.contenedor-stats {
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  overflow: hidden;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: center;
-  background: white;
 
-  .stat-header {
-    padding: 6px;
-    border-bottom: 1px solid #cbd5e1;
-    color: #334155;
-  }
-
-  .stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .stat-item {
-    padding: 6px;
-    border: 1px solid #e2e8f0;
-    color: #64748b;
-    
-    &.activo {
-      background-color: #ef4444; /* Rojo para indicar que estamos en la vista de rechazados */
-      color: white;
-      border-color: #ef4444;
-    }
-  }
-}
-
-/* Paginación */
 .paginacion {
   justify-content: center;
   gap: 8px;
@@ -415,17 +449,15 @@ function cerrarMensajes() {
   }
 }
 
-/*MAPA Y CONTENEDOR DERECHO*/
+
 .mapa-placeholder {
-  height: 220px; 
+  height: 250px; 
   background-color: #f1f5f9; 
-  border: 1px dashed #cbd5e1;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   display: flex; 
   align-items: center; 
   justify-content: center;
-  color: #94a3b8;
-  font-weight: 500;
 }
 
 .tarjeta-detalle {
@@ -433,18 +465,17 @@ function cerrarMensajes() {
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
 }
 
+
 .badge-estado {
-  background-color: #10b981;
-  color: white;
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 0.75rem;
   font-weight: bold;
   letter-spacing: 0.5px;
-
-  &.badge-rechazado {
-    background-color: #ef4444; /* Badge en rojo para rechazados */
-  }
+}
+.badge-rechazado {
+  background-color: #ef4444; 
+  color: #ffffff; 
 }
 
 .grid-metadatos {
@@ -463,7 +494,7 @@ function cerrarMensajes() {
   }
 }
 
-/* FOTOGRAFÍAS */
+
 .imagen-miniatura {
   width: 140px;
   height: 200px;
@@ -494,8 +525,8 @@ function cerrarMensajes() {
   }
 }
 
-/* VISOR DE IMÁGENES */
-.modal-imagen-overlay {
+
+.modal-imagen-overlay, .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -530,7 +561,7 @@ function cerrarMensajes() {
   background-color: #ef4444;
   color: white;
   border: none;
-  border-radius: 25%;
+  border-radius: 50%;
   width: 32px;
   height: 32px;
   font-size: 14px;
@@ -559,6 +590,28 @@ function cerrarMensajes() {
 @keyframes fadeInZoom {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
+}
+
+
+.modal-confirmacion-contenido {
+  background: #ffffff;
+  width: 100%; 
+  max-width: 400px; 
+  border-radius: 12px; 
+  display: flex; 
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: fadeInZoom 0.2s ease-out;
+  overflow: hidden;
+}
+
+.modal-confirmacion-header {
+  padding: 16px 20px;
+  text-align: center;
+}
+
+.fondo-guinda {
+  background-color: #715B62;
 }
 
 .form-titulo {
@@ -600,22 +653,25 @@ function cerrarMensajes() {
   }
 }
 
-/* --- BOTONES DE LA CABECERA --- */
-.btn-outline {
-  background: white;
-  border: 1px solid #10b981;
-  color: #10b981;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
 
-  &:hover {
-    background: #10b981;
-    color: #FFFFFF;
-  }
+// .boton-secundario {
+//   background: white;
+//   border: 1px solid #10b981;
+//   color: #10b981;
+//   border-radius: 6px;
+//   font-size: 0.8rem;
+//   font-weight: 600;
+//   cursor: pointer;
+//   transition: all 0.2s ease;
+
+//   &:hover {
+//     background: #10b981;
+//     color: #FFFFFF;
+//   }
+// }
+
+.boton-chico {
+  padding: 6px 14px;
 }
 
 .btn-moderno-chico {
@@ -639,76 +695,37 @@ function cerrarMensajes() {
   }
 }
 
-/* Botón Eliminar modificado */
+.btn-moderno {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+
 .btn-eliminar {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background-color: #d48d95;
+  color: #391821;
+}
+.btn-eliminar:hover {
+  background-color: #c47c84;
 }
 
-/* --- ESTILOS DEL MODAL DE MENSAJES --- */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 9998;
-  backdrop-filter: blur(2px);
+.btn-guinda { 
+  background-color: #391821; 
+  width: 100%; 
+  padding: 10px; 
+  border-radius: 6px; 
 }
-
-.modal-mensajes-contenido {
-  background: #ffffff;
-  width: 100%; max-width: 450px; height: 70vh;
-  border-radius: 12px; display: flex; flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  animation: fadeInZoom 0.2s ease-out;
-  overflow: hidden;
-}
-
-.modal-mensajes-header {
-  padding: 16px 20px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex; justify-content: space-between; align-items: center;
-}
-
-.btn-cerrar-sutil {
-  background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
-  &:hover { color: #ef4444; }
-}
-
-.chat-area {
-  flex: 1; padding: 20px; overflow-y: auto; background-color: #f1f5f9; display: flex; flex-direction: column; gap: 12px;
-}
-
-.burbuja {
-  padding: 12px 16px; border-radius: 12px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; position: relative;
-}
-
-.ajena {
-  background-color: #ffffff; color: #334155; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 4px;
-}
-
-.propia {
-  background-color: #715B62; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px;
-}
-
-.fecha-msj {
-  display: block; font-size: 0.65rem; margin-top: 6px; text-align: right;
-}
-
-.ajena .fecha-msj { color: #94a3b8; }
-.propia .fecha-msj { color: rgba(255,255,255,0.7); }
-
-.chat-input-area {
-  padding: 16px; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 12px;
-}
-
-.input-chat {
-  flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.9rem; transition: border-color 0.2s;
-  &:focus { outline: none; border-color: #715B62; }
-}
-
-.btn-enviar-chat {
-  background-color: #10b981; color: white; border: none; padding: 0 20px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: background 0.2s;
-  &:hover { background-color: #059669; }
-}
+.btn-guinda:hover { background-color: #271016; }
 </style>

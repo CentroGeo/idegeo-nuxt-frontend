@@ -185,6 +185,7 @@ const formatearFecha = (fechaISO) => {
   return fecha;
 };
 
+
 const modalCambiarPermiso = ref(null);
 const participanteSeleccionado = ref(null);
 const permisoSeleccionado = ref('');

@@ -30,7 +30,7 @@ onMounted(async () => {
         ? formatDate(new Date(aporte.fecha_guardado))
         : '',
     }));
-  } catch (error) {
+  } catch {
     errorAportes.value = 'No fue posible cargar los aportes por enviar.';
   } finally {
     cargandoAportes.value = false;

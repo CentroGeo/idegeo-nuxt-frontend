@@ -490,4 +490,43 @@ footer {
     }
   }
 }
+
+/* Centrado del contenido principal de la portada */
+.portada.portada-secundaria {
+  position: relative;
+}
+
+.portada.portada-secundaria .portada-degradado {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portada.portada-secundaria .portada-cuerpo {
+  width: min(900px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 24px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+}
+
+.portada.portada-secundaria .portada-titulo,
+.portada.portada-secundaria .portada-subtitulo {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+
+.portada.portada-secundaria .portada-subtitulo {
+  display: block;
+}
 </style>

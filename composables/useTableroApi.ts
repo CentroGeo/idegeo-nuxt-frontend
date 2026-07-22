@@ -135,6 +135,9 @@ export function useTableroApi() {
     // ---------- Logos ----------
     fetchLogosDeSitio: (siteId: number) => fetchJson(`${baseUrl}/sites/${siteId}/logos/`),
 
+    sincronizarLogosSitio: (siteId: number, form: FormData, token?: string | null) =>
+      formRequest(`${baseUrl}/sites/${siteId}/sync-logos/`, 'POST', form, token),
+
     crearLogo: (form: FormData, token?: string | null) =>
       formRequest(`${baseUrl}/site-logos/`, 'POST', form, token),
 
@@ -152,6 +155,9 @@ export function useTableroApi() {
 
     actualizarTopBar: (siteId: number, datos: unknown, token?: string | null) =>
       jsonRequest(`${baseUrl}/top-bars/${siteId}/`, 'PATCH', datos, token),
+
+    sincronizarConfiguracionTopBar: (siteId: number, form: FormData, token?: string | null) =>
+      formRequest(`${baseUrl}/top-bars/${siteId}/sync-configuration/`, 'POST', form, token),
 
     crearLogoTopBar: (form: FormData, token?: string | null) =>
       formRequest(`${baseUrl}/top-bar-logos/`, 'POST', form, token),
