@@ -296,14 +296,53 @@ async function guardar() {
 
           <!-- ── Opciones ── -->
           <div class="seccion-titulo m-t-4">Opciones</div>
-          <div class="checks-col">
-            <label class="check-inline">
-              <input v-model="formulario.use_single_field" type="checkbox" />
-              Usar campo único para gráfica
+          <div class="opciones-configuracion">
+            <label
+              class="opcion-toggle"
+              :class="{ 'opcion-toggle--activa': formulario.use_single_field }"
+            >
+              <input
+                v-model="formulario.use_single_field"
+                class="opcion-toggle__input"
+                type="checkbox"
+                role="switch"
+              />
+
+              <span class="opcion-toggle__contenido">
+                <strong>Usar campo único para gráfica</strong>
+                <span>
+                  Usa solamente el campo principal. Desactívalo para agrupar por el campo
+                  principal y sumar los valores del campo secundario.
+                </span>
+              </span>
+
+              <span class="opcion-toggle__estado" aria-hidden="true">
+                {{ formulario.use_single_field ? 'Activado' : 'Desactivado' }}
+              </span>
             </label>
-            <label class="check-inline">
-              <input v-model="formulario.show_general_values" type="checkbox" />
-              Mostrar valores generales
+
+            <label
+              class="opcion-toggle"
+              :class="{ 'opcion-toggle--activa': formulario.show_general_values }"
+            >
+              <input
+                v-model="formulario.show_general_values"
+                class="opcion-toggle__input"
+                type="checkbox"
+                role="switch"
+              />
+
+              <span class="opcion-toggle__contenido">
+                <strong>Mostrar valores generales</strong>
+                <span>
+                  Calcula cifras resumidas que pueden utilizar los cuadros de datos del
+                  indicador.
+                </span>
+              </span>
+
+              <span class="opcion-toggle__estado" aria-hidden="true">
+                {{ formulario.show_general_values ? 'Activado' : 'Desactivado' }}
+              </span>
             </label>
           </div>
 
@@ -410,6 +449,115 @@ form {
 
 .check-inline input[type='checkbox'] {
   accent-color: var(--color-primario-2, #cc7a88);
+}
+
+
+.opciones-configuracion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.opcion-toggle {
+  position: relative;
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--tableros-modal-control-borde, #cccccc);
+  border-radius: 8px;
+  background: var(--tableros-modal-superficie-suave, #f7f7f7);
+  color: var(--tableros-modal-texto, inherit);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    background: var(--tableros-modal-hover-fondo, #fcf3f5);
+    border-color: var(--tableros-modal-acento, #991f47);
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--tableros-modal-acento, #991f47);
+    outline-offset: 2px;
+  }
+
+  &--activa {
+    background: var(--tableros-modal-acento-suave, #f8e1e8);
+    border-color: var(--tableros-modal-acento, #991f47);
+    box-shadow: inset 4px 0 0 var(--tableros-modal-acento, #991f47);
+
+    .opcion-toggle__estado {
+      background: var(--tableros-modal-acento, #991f47);
+      border-color: var(--tableros-modal-acento, #991f47);
+      color: var(--tableros-modal-fondo, #ffffff);
+    }
+  }
+
+  &__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &__contenido {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    pointer-events: none;
+
+    strong {
+      color: var(--tableros-modal-texto, inherit);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    span {
+      color: var(--tableros-modal-texto-secundario, #666666);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+  }
+
+  &__estado {
+    min-width: 92px;
+    display: inline-flex;
+    justify-content: center;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--tableros-modal-control-borde, #cccccc);
+    border-radius: 999px;
+    background: var(--tableros-modal-fondo, #ffffff);
+    color: var(--tableros-modal-texto-secundario, #666666);
+    font-size: 0.75rem;
+    font-weight: 700;
+    pointer-events: none;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+}
+
+@media (max-width: 640px) {
+  .opcion-toggle {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+
+    &__estado {
+      min-width: 0;
+      justify-self: start;
+    }
+  }
 }
 
 .requerido {
