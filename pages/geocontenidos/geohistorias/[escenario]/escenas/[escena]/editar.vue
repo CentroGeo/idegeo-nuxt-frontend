@@ -1,20 +1,14 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
-import {
-  // SisdaiCapaArcgis,
-  // SisdaiCapaWms,
-  SisdaiCapaXyz,
-  // SisdaiLeyendaArcgis,
-  // SisdaiLeyendaWms,
-  SisdaiMapa,
-} from '@centrogeomx/sisdai-mapas';
 
 definePageMeta({ middleware: 'auth' });
 
+const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
 const { data: userData } = useAuth();
-const { gnoxyFetch } = useGnoxyUrl();
-const { escenario, escena } = useRoute().params;
+const { escenario: escenarioId, escena: escenaId } = useRoute().params;
+
+const ESTILOS_POR_DEFECTO = { text_panel: 40, map_panel: 60 };
 
 const modalStatus = ref(null);
 const estatusAlGuardar = reactive({
@@ -23,88 +17,87 @@ const estatusAlGuardar = reactive({
   mensaje: '',
   textoCargando: '',
 });
-const formulario = reactive({
+
+const escena = reactive({
   name: '',
-  text_content: '<h2>Título</h2><p>Contenido HTML...</p>',
-  scenario: escenario,
-  text_position: '',
+  text_content: '',
+  scenario: escenarioId,
+  text_position: 'left',
   map_center_lat: null,
   map_center_long: null,
   zoom: null,
+  base_layer: 'satellite',
+  styles: { ...ESTILOS_POR_DEFECTO },
+  layers: [],
+  markers: [],
 });
 
-async function cargarDatosEscenario() {
-  if (escenario === 'nuevo') return;
+async function cargarDatosEscena() {
+  if (escenaId === 'nuevo') return;
 
-  const url = `${config.public.geonodeApi}/scenes/${escena}`;
-  // console.log('consultar', url);
-
+  const url = `${config.public.geonodeApi}/scenes/${escenaId}`;
   const respuesta = await gnoxyFetch(url);
   const data = await respuesta.json();
-  Object.assign(formulario, data);
-  // console.log(data);
+
+  Object.assign(escena, data);
+  escena.styles = { ...ESTILOS_POR_DEFECTO, ...data.styles };
+  escena.base_layer = escena.styles.base_layer || 'satellite';
 }
-cargarDatosEscenario();
+cargarDatosEscena();
 
 async function guardarCambios() {
-  // Aquí iría la lógica para guardar los cambios realizados en el escenario
-  formulario.zoom = ~~Number(formulario.zoom);
-  // console.log('Cambios guardados:', toRaw(formulario));
   modalStatus.value?.abrirModal();
   estatusAlGuardar.cargando = true;
   estatusAlGuardar.textoCargando = 'Guardando...';
 
-  const url = `${config.public.geonodeApi}/scenes/${escena !== 'nuevo' ? `${escena}/` : ''}/`;
-  // console.log(url);
+  escena.zoom = escena.zoom !== null ? Number(Number(escena.zoom).toFixed(1)) : null;
+
+  const url = `${config.public.geonodeApi}/scenes/${escenaId !== 'nuevo' ? `${escenaId}/` : ''}/`;
+  const { base_layer, ...cuerpo } = escena;
+  cuerpo.styles = { ...escena.styles, base_layer };
+
   const respuesta = await gnoxyFetch(url, {
-    method: escena === 'nuevo' ? 'POST' : 'PUT',
+    method: escenaId === 'nuevo' ? 'POST' : 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${userData.value?.accessToken}`,
     },
-    body: JSON.stringify(formulario),
+    body: JSON.stringify(cuerpo),
   });
 
-  if (escena === 'nuevo') {
-    if (!respuesta.ok || respuesta.status !== 201 || respuesta.statusText !== 'Created') {
-      console.error('Error al guardar la escena:', respuesta.statusText);
-    }
-  } else if (!respuesta.ok || respuesta.status !== 200) {
-    console.error('Error al guardar la escena:', respuesta.statusText);
-  }
-
   const data = await respuesta.json();
-  // console.log(data);
 
-  // if (Object.hasOwn(data, 'success') && data.success === false) {
   if (data?.success === false) {
     estatusAlGuardar.cargando = false;
-    estatusAlGuardar.mensaje = data.errors.join(` `);
-    estatusAlGuardar.estado = data.success;
-  } else {
-    estatusAlGuardar.cargando = false;
-    estatusAlGuardar.estado = true;
-    setTimeout(() => {
-      modalStatus.value?.cerrarModal();
-
-      if (escena === 'nuevo') {
-        navigateTo(`/geocontenidos/geohistorias/${escenario}/escenas/${data.id}/editar`);
-      }
-    }, 1500);
+    estatusAlGuardar.mensaje = data.errors.join(' ');
+    estatusAlGuardar.estado = false;
+    return;
   }
+
+  estatusAlGuardar.cargando = false;
+  estatusAlGuardar.estado = true;
+  setTimeout(() => {
+    modalStatus.value?.cerrarModal();
+
+    if (escenaId === 'nuevo') {
+      navigateTo(`/geocontenidos/geohistorias/${escenarioId}/escenas/`);
+    } else {
+      reloadNuxtApp();
+    }
+  }, 1500);
 }
 
 function alMoverVista({ acercamiento, centro }) {
-  // console.log(acercamiento, centro);
-  formulario.map_center_long = centro[0];
-  formulario.map_center_lat = centro[1];
-  formulario.zoom = acercamiento;
+  escena.map_center_long = centro[0];
+  escena.map_center_lat = centro[1];
+  escena.zoom = Number(Number(acercamiento).toFixed(1));
 }
 const vistaDelMapa = computed(() => {
-  const vista = { acercamiento: formulario.zoom || 2 };
+  // La API serializa los decimales como cadenas; sisdai-mapas exige números.
+  const vista = { acercamiento: Number(escena.zoom) || 2 };
 
-  if (formulario.map_center_long && formulario.map_center_lat) {
-    vista.centro = [formulario.map_center_long, formulario.map_center_lat];
+  if (escena.map_center_long && escena.map_center_lat) {
+    vista.centro = [Number(escena.map_center_long), Number(escena.map_center_lat)];
   } else {
     vista.extension = '-118.3651,14.5321,-86.7104,32.7187';
   }
@@ -117,7 +110,7 @@ const vistaDelMapa = computed(() => {
   <form @submit.prevent="guardarCambios">
     <section class="flex p-y-3">
       <NuxtLink
-        :to="`/geocontenidos/geohistorias/${escenario}/escenas`"
+        :to="`/geocontenidos/geohistorias/${escenarioId}/escenas`"
         class="boton boton-secundario boton-chico"
       >
         <span class="pictograma-flecha-izquierda m-r-1" />
@@ -131,7 +124,7 @@ const vistaDelMapa = computed(() => {
         <label for="nombre">Nombre de la escena</label>
         <input
           id="nombre"
-          v-model="formulario.name"
+          v-model="escena.name"
           type="text"
           placeholder="Ej: Vista general del área de estudio"
           required
@@ -139,18 +132,13 @@ const vistaDelMapa = computed(() => {
       </div>
 
       <div class="m-b-4">
-        <label for="descripcion">Contenido de la escena</label>
-        <textarea
-          id="descripcion"
-          v-model="formulario.text_content"
-          placeholder="Escribe el contenido narrativo de la escena"
-          required
-        />
+        <label>Contenido de la escena</label>
+        <UiEditorTexto v-model="escena.text_content" />
       </div>
 
       <div class="m-b-4">
         <label for="posicion">Posición del texto</label>
-        <select id="posicion" v-model="formulario.text_position">
+        <select id="posicion" v-model="escena.text_position">
           <option value="left">Izquierda</option>
           <option value="right">Derecha</option>
         </select>
@@ -160,21 +148,70 @@ const vistaDelMapa = computed(() => {
     <section class="m-b-4">
       <h2>Vista previa interactiva</h2>
 
-      <p>Arrastra el mapa y zoom para ajustar la vista</p>
+      <div class="grid">
+        <div class="columna-8-mov columna-6-esc">
+          <p class="m-t-0">Ajusta el mapa y zoom para ajustar la vista</p>
 
-      <ClientOnly>
-        <SisdaiMapa :vista="vistaDelMapa" @al-mover-vista="alMoverVista">
-          <template #panel-encabezado-vis>
-            <ul class="lista-sin-estilo">
-              <li>Latitud: {{ formulario.map_center_lat }}</li>
-              <li>Longitud: {{ formulario.map_center_long }}</li>
-              <li>Nivel de acercamiento: {{ formulario.zoom }}</li>
-            </ul>
-          </template>
+          <fieldset>
+            <label for="lng">Longitud</label>
+            <input
+              id="lng"
+              v-model="escena.map_center_long"
+              type="number"
+              step="any"
+              max="180"
+              min="-180"
+              required
+            />
+          </fieldset>
 
-          <SisdaiCapaXyz :posicion="0" />
-        </SisdaiMapa>
-      </ClientOnly>
+          <fieldset>
+            <label for="lat">Latitud</label>
+            <input
+              id="lat"
+              v-model="escena.map_center_lat"
+              type="number"
+              step="any"
+              max="90"
+              min="-90"
+              required
+            />
+          </fieldset>
+
+          <fieldset>
+            <label for="zoom">Nivel de acercamiento</label>
+            <input
+              id="zoom"
+              v-model="escena.zoom"
+              type="number"
+              step="0.1"
+              max="90"
+              min="-90"
+              required
+            />
+          </fieldset>
+
+          <fieldset>
+            <label for="capa-base">Capa base</label>
+            <select id="capa-base" v-model="escena.base_layer">
+              <option value="osm">OpenStreetMap</option>
+              <option value="carto">Carto Light</option>
+              <option value="carto_dark">Carto Dark</option>
+              <option value="satellite">Satélite</option>
+            </select>
+          </fieldset>
+        </div>
+
+        <MapasVisor
+          :vista="vistaDelMapa"
+          class="columna-8-mov columna-10-esc"
+          :capas="escena.layers"
+          :marcadores="escena.markers"
+          :base-layer="escena.base_layer"
+          :opciones="{ titulo: escena.name }"
+          @vista="alMoverVista"
+        />
+      </div>
     </section>
 
     <section class="flex flex-contenido-final">
