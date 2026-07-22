@@ -123,11 +123,11 @@ async function recalcular(ind) {
         <div class="repo-indicadores__nombre">
           <strong>{{ ind.name }}</strong>
           <span
-            v-if="ind.plot_values || ind.map_values"
+            v-if="ind.is_configured"
             class="repo-indicadores__estado repo-indicadores__estado--ok"
-            >configurado</span
+            >Configurado</span
           >
-          <span v-else class="repo-indicadores__estado">sin datos</span>
+          <span v-else class="repo-indicadores__estado">Sin datos</span>
         </div>
         <div class="repo-indicadores__acciones">
           <button
@@ -239,13 +239,15 @@ async function recalcular(ind) {
 
   &__estado {
     font-size: 0.75rem;
+    font-weight: 600;
     padding: 0.1rem 0.4rem;
     border-radius: 3px;
-    background: var(--color-neutro-2, #e0e0e0);
+    background: var(--color-neutro-4, #666666);
+    color: #ffffff;
 
     &--ok {
       background: #2e7d32;
-      color: white;
+      color: #ffffff;
     }
   }
 
