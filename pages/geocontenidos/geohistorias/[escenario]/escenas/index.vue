@@ -1,4 +1,7 @@
 <script setup>
+import { useEscenasCapasAdapter } from '~/composables/capas/useEscenasCapasAdapter';
+import { categoriesNamesInSpanish } from '~/utils/consulta';
+
 definePageMeta({ middleware: 'auth' });
 
 const { gnoxyFetch } = useGnoxyUrl();
@@ -11,6 +14,20 @@ const { escenario } = useRoute().params;
 const escenas = ref([]);
 const estaCargando = ref(false);
 
+const modalMarcadores = ref(null);
+function abrirModalMarcadores(id) {
+  modalMarcadores.value?.abrir(id);
+}
+
+// Modal de capas (componente compartido components/capas/CapasModalAgregar).
+const escenaCapasId = ref(null);
+const abiertoCapas = ref(false);
+const adaptadorCapas = useEscenasCapasAdapter(escenaCapasId);
+function abrirModalCapas(id) {
+  escenaCapasId.value = id;
+  abiertoCapas.value = true;
+}
+
 async function cargarEscenas() {
   estaCargando.value = true;
   const respuesta = await gnoxyFetch(`${config.public.geonodeApi}/scenarios/${escenario}/scenes/`);
@@ -18,8 +35,6 @@ async function cargarEscenas() {
   const data = await respuesta.json();
   escenas.value = Object.fromEntries(data.map((escena) => [escena.id, escena]));
   estaCargando.value = false;
-
-  // console.log(data);
 }
 cargarEscenas();
 
@@ -44,7 +59,6 @@ async function guardarCambios() {
     id,
     stack_order,
   }));
-  // console.log(formulario);
 
   const respuesta = await gnoxyFetch(`${config.public.geonodeApi}/scenes/bulk-reorder//`, {
     method: 'POST',
@@ -56,11 +70,49 @@ async function guardarCambios() {
   });
 
   const data = await respuesta.json();
-  console.log(data);
+  if (data?.success === false) {
+    console.error('Error al reordenar escenas:', data.errors);
+  }
 }
 
-function Eliminar(id) {
-  console.log('Eliminar', id);
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const escenaAEliminar = ref(null);
+const tituloAEliminar = computed(() => escenaAEliminar.value?.name ?? '');
+const eliminando = ref(false);
+const eliminacionExitosa = ref(null);
+
+function abrirModalEliminar(escena) {
+  escenaAEliminar.value = escena;
+  eliminacionExitosa.value = null;
+  modalEliminar.value?.abrir();
+}
+
+function cancelarEliminar() {
+  escenaAEliminar.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!escenaAEliminar.value) return;
+  eliminando.value = true;
+
+  const respuesta = await gnoxyFetch(
+    `${config.public.geonodeApi}/scenes/${escenaAEliminar.value.id}/`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${userData.value?.accessToken}` },
+    }
+  );
+
+  eliminando.value = false;
+  if (respuesta.ok) {
+    eliminacionExitosa.value = true;
+    delete escenas.value[escenaAEliminar.value.id];
+    setTimeout(() => modalEliminar.value?.cerrar(), 1200);
+  } else {
+    eliminacionExitosa.value = false;
+  }
 }
 </script>
 
@@ -73,7 +125,6 @@ function Eliminar(id) {
         </NuxtLink>
 
         <h2 class="m-0">Escenas</h2>
-        <!-- / Agregar capas / Agregar marcadores / Edición de Escenas -->
       </div>
     </div>
 
@@ -131,23 +182,25 @@ function Eliminar(id) {
                 Editar escena
               </NuxtLink>
 
-              <NuxtLink
+              <button
+                type="button"
                 class="boton boton-chico boton-secundario"
-                :to="`/geocontenidos/geohistorias/${escenario}/escenas/${escena.id}/capas`"
+                @click="abrirModalCapas(escena.id)"
               >
                 <span :class="`pictograma-${escena.layers.length ? 'editar' : 'agregar'} m-r-1`" />
                 {{ escena.layers.length ? 'Editar' : 'Agregar' }} capas
-              </NuxtLink>
+              </button>
 
-              <NuxtLink
+              <button
+                type="button"
                 class="boton boton-chico boton-secundario"
-                :to="`/geocontenidos/geohistorias/${escenario}/escenas/${escena.id}/marcadores`"
+                @click="abrirModalMarcadores(escena.id)"
               >
                 <span :class="`pictograma-${escena.markers.length ? 'editar' : 'agregar'} m-r-1`" />
                 {{ escena.markers.length ? 'Editar' : 'Agregar' }} marcadores
-              </NuxtLink>
+              </button>
 
-              <button class="boton boton-chico boton-primario" @click="Eliminar(escena.id)">
+              <button class="boton boton-chico boton-primario" @click="abrirModalEliminar(escena)">
                 <span class="pictograma-eliminar m-r-1" />
                 Eliminar
               </button>
@@ -160,10 +213,70 @@ function Eliminar(id) {
         <button class="boton-primario" @click="guardarCambios">Guardar orden</button>
       </section>
     </template>
+
+    <CapasModalAgregar
+      v-model:abierto="abiertoCapas"
+      :adaptador="adaptadorCapas"
+      :opciones="{
+        contexto: 'escena',
+        titulo: 'Agregar/Editar capas',
+        mostrarOpacidad: true,
+        mostrarEstilo: true,
+        permitirDuplicados: true,
+        nombreCategoria: (c) => categoriesNamesInSpanish[c.identifier] ?? c.identifier,
+      }"
+      @guardado="cargarEscenas"
+    />
+
+    <ClientOnly>
+      <GeocontenidosModalAgregarMarcadores ref="modalMarcadores" @guardado="cargarEscenas" />
+
+      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!eliminando">
+        <template #encabezado>
+          <h2 class="m-t-0">Eliminar escena</h2>
+        </template>
+
+        <p v-if="eliminacionExitosa === null || eliminando" class="alerta-advertencia-modal">
+          La escena <strong style="font-weight: bold">{{ tituloAEliminar }}</strong> será eliminada
+          permanentemente y no será posible recuperarla.
+        </p>
+
+        <p v-else-if="eliminacionExitosa === true" class="texto-color-exito">
+          <span class="pictograma-aprobado m-r-1" />
+          La escena fue eliminada correctamente.
+        </p>
+
+        <p v-else class="texto-color-error">No se pudo eliminar la escena. Intenta de nuevo.</p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button class="boton boton-secundario" :disabled="eliminando" @click="cancelarEliminar">
+              Cancelar
+            </button>
+            <button
+              v-if="eliminacionExitosa === null"
+              class="boton boton-primario"
+              :disabled="eliminando"
+              @click="confirmarEliminar"
+            >
+              <span v-if="eliminando" class="cargador cargador-chico m-r-1" />
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
+
 .modulo-geocontenidos .contenedor {
   .grid.reticula-12 {
     grid-template-columns: repeat(12, 1fr);

@@ -23,7 +23,7 @@ function alternar() {
       title="Información del mapa"
       @click="alternar"
     >
-      <i class="fas fa-info-circle" aria-hidden="true"></i>
+      <span class="pictograma-informacion" aria-hidden="true" />
     </button>
 
     <div v-if="abierto" class="info-panel">

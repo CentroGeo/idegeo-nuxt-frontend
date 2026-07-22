@@ -44,7 +44,7 @@ function alternar() {
       <div class="leyenda-encabezado flex flex-contenido-separado">
         <strong>Leyenda</strong>
         <button class="leyenda-cerrar" type="button" aria-label="Cerrar leyenda" @click="alternar">
-          <span class="pictograma-tache" aria-hidden="true" />
+          <span class="pictograma-cerrar" aria-hidden="true" />
         </button>
       </div>
       <p v-if="!capasConLeyenda.length" class="leyenda-vacia">Este mapa no tiene capas.</p>
@@ -68,7 +68,7 @@ function alternar() {
       title="Leyenda"
       @click="alternar"
     >
-      <i class="fas fa-list" aria-hidden="true"></i>
+      <span class="pictograma-vista-simplificada" aria-hidden="true" />
     </button>
   </div>
 </template>

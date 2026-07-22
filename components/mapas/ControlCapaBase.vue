@@ -55,7 +55,7 @@ function alternar() {
       title="Capa base"
       @click="alternar"
     >
-      <i class="fas fa-layer-group" aria-hidden="true"></i>
+      <span class="pictograma-capas" aria-hidden="true" />
     </button>
   </div>
 </template>
