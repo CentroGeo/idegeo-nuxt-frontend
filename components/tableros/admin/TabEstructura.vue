@@ -158,8 +158,8 @@ onMounted(recargarTodo);
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 8px;
     padding: 1rem;
-    background: var(--color-fondo-2, #fafafa);
-    color: #111;
+    background: transparent;
+    color: inherit;
   }
 
   &__header {
@@ -176,7 +176,7 @@ onMounted(recargarTodo);
   &__form {
     padding: 1rem;
     margin-bottom: 1rem;
-    background: var(--color-fondo-1, #ffffff);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 6px;
   }

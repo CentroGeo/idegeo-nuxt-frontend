@@ -377,11 +377,11 @@ onMounted(cargarDetalle);
 
 <style lang="scss" scoped>
 .arbol-grupo {
-  background: var(--color-fondo-1, #ffffff);
+  background: transparent;
   border: 1px solid var(--color-neutro-2, #e0e0e0);
   border-radius: 6px;
   margin-bottom: 0.75rem;
-  color: #111;
+  color: inherit;
 
   &__header {
     display: flex;
@@ -437,7 +437,7 @@ onMounted(cargarDetalle);
   &__edit-form {
     padding: 0.5rem 0.75rem;
     border-top: 1px dashed var(--color-neutro-2, #e0e0e0);
-    background: var(--color-fondo-2, #fafafa);
+    background: transparent;
 
     form {
       display: flex;
@@ -455,10 +455,10 @@ onMounted(cargarDetalle);
   &__subgrupo {
     margin-top: 0.5rem;
     padding: 0.5rem;
-    background: var(--color-fondo-2, #fafafa);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 4px;
-    color: #111;
+    color: inherit;
 
     &-cab {
       display: flex;

@@ -205,11 +205,11 @@ async function recalcular(ind) {
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.4rem;
-    background: var(--color-fondo-1, #ffffff);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 6px;
     cursor: grab;
-    color: #111;
+    color: inherit;
 
     &:hover {
       border-color: var(--color-primario, #691c32);
@@ -254,7 +254,7 @@ async function recalcular(ind) {
     font-size: 0.85rem;
     padding: 0.4rem 0.75rem;
     border-radius: 4px;
-    background: var(--color-fondo-2, #f5f5f5);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
   }
 
