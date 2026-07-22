@@ -1,5 +1,9 @@
 <script setup>
 const props = defineProps({
+  indicadorId: {
+    type: [Number, String],
+    default: null,
+  },
   nombre: {
     type: String,
     default: '',
@@ -55,6 +59,7 @@ watch(
       <div class="tablero-indicador__visual">
         <div class="tablero-indicador__mapa">
           <TablerosMapaIndicador
+            :indicador-id="indicadorId"
             :map-values="datos.map_values"
             :plot-config="datos.plot_config"
             :layer-id-field="datos.layer_id_field"
