@@ -1,11 +1,39 @@
 <script setup>
 const emit = defineEmits(['cerrar']);
 
-defineProps({
+const props = defineProps({
   ancho: { type: String, default: '900px' },
+  adaptarTema: { type: Boolean, default: false },
 });
 
 const dialogRef = ref(null);
+const temaOscuro = ref(false);
+
+let observadorTema = null;
+let filePickerOpened = false;
+
+function handleFileInputClick(event) {
+  if (event.target?.tagName === 'INPUT' && event.target.type === 'file') {
+    filePickerOpened = true;
+  }
+}
+
+function handleWindowFocus() {
+  setTimeout(() => {
+    filePickerOpened = false;
+  }, 300);
+}
+
+function sincronizarTemaModal() {
+  if (!props.adaptarTema || !document?.body) {
+    temaOscuro.value = false;
+    return;
+  }
+
+  temaOscuro.value =
+    document.body.dataset.tema === 'oscuro' ||
+    document.body.classList.contains('a11y-oscura');
+}
 
 function abrir() {
   document.body.classList.add('overflow-hidden');
@@ -19,43 +47,47 @@ function cerrar() {
 }
 
 onMounted(() => {
-  let filePickerOpened = false;
-
-  const handleFileInputClick = (e) => {
-    if (e.target?.tagName === 'INPUT' && e.target.type === 'file') {
-      filePickerOpened = true;
-    }
-  };
-
-  const handleWindowFocus = () => {
-    setTimeout(() => {
-      filePickerOpened = false;
-    }, 300);
-  };
-
   window.addEventListener('click', handleFileInputClick, true);
   window.addEventListener('focus', handleWindowFocus);
 
   // Escape nativo: prevenimos el cierre automático del <dialog> y emitimos nosotros
-  dialogRef.value?.addEventListener('cancel', (e) => {
-    e.preventDefault();
+  dialogRef.value?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+
     if (filePickerOpened) {
       return;
     }
+
     cerrar();
   });
 
-  onUnmounted(() => {
-    window.removeEventListener('click', handleFileInputClick, true);
-    window.removeEventListener('focus', handleWindowFocus);
-  });
+  if (props.adaptarTema) {
+    sincronizarTemaModal();
+
+    observadorTema = new MutationObserver(sincronizarTemaModal);
+    observadorTema.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-tema', 'class'],
+    });
+  }
+});
+
+onUnmounted(() => {
+  observadorTema?.disconnect();
+  window.removeEventListener('click', handleFileInputClick, true);
+  window.removeEventListener('focus', handleWindowFocus);
 });
 
 defineExpose({ abrir, cerrar });
 </script>
 
 <template>
-  <dialog ref="dialogRef" class="modal-base" :style="`--modal-ancho: ${ancho}`">
+  <dialog
+    ref="dialogRef"
+    class="modal-base"
+    :class="{ 'modal-base--oscuro': temaOscuro }"
+    :style="`--modal-ancho: ${props.ancho}`"
+  >
     <div class="modal-base__contenedor">
       <div class="modal-base__cabecera">
         <slot name="encabezado" />
@@ -74,6 +106,17 @@ defineExpose({ abrir, cerrar });
 <style lang="scss" scoped>
 .modal-base {
   --modal-ancho: 900px;
+  --tableros-modal-fondo: var(--color-fondo-1, #fff);
+  --tableros-modal-cabecera: var(--color-fondo-1, #fff);
+  --tableros-modal-texto: inherit;
+  --tableros-modal-titulo: var(--color-primario-4, #991f47);
+  --tableros-modal-control-fondo: #ffffff;
+  --tableros-modal-control-borde: var(--color-borde, #cccccc);
+  --tableros-modal-texto-secundario: var(--color-texto-secundario, #777777);
+  --tableros-modal-placeholder: #777777;
+  --tableros-modal-cerrar-hover-fondo: var(--color-secundario-3, #f8e1e8);
+  --tableros-modal-cerrar-hover-texto: var(--color-primario-4, #991f47);
+
   width: min(var(--modal-ancho), 96vw);
   max-height: 90vh;
   padding: 0;
@@ -81,7 +124,23 @@ defineExpose({ abrir, cerrar });
   border-radius: 10px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.22);
   overflow: hidden;
-  background: var(--color-fondo-1, #fff);
+  background: var(--tableros-modal-fondo);
+  color: var(--tableros-modal-texto);
+
+  &--oscuro {
+    --tableros-modal-fondo: var(--color-secundario-11, #3f1d26);
+    --tableros-modal-cabecera: var(--color-secundario-11, #3f1d26);
+    --tableros-modal-texto: #ffffff;
+    --tableros-modal-titulo: #ffffff;
+    --tableros-modal-control-fondo: var(--color-secundario-12, #391821);
+    --tableros-modal-control-borde: var(--color-secundario-7, #876670);
+    --tableros-modal-texto-secundario: var(--color-secundario-4, #f5d4dd);
+    --tableros-modal-placeholder: var(--color-secundario-5, #dab9c2);
+    --tableros-modal-cerrar-hover-fondo: var(--color-secundario-9, #53323c);
+    --tableros-modal-cerrar-hover-texto: var(--color-secundario-3, #f8e1e8);
+
+    color-scheme: dark;
+  }
 
   &::backdrop {
     background: rgba(0, 0, 0, 0.45);
@@ -91,6 +150,8 @@ defineExpose({ abrir, cerrar });
     display: flex;
     flex-direction: column;
     max-height: 90vh;
+    background: var(--tableros-modal-fondo);
+    color: var(--tableros-modal-texto);
   }
 
   &__cabecera {
@@ -102,7 +163,7 @@ defineExpose({ abrir, cerrar });
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    background: var(--color-fondo-1, #fff);
+    background: var(--tableros-modal-cabecera);
     border-bottom: 2px solid var(--color-primario-4, #991f47);
 
     :deep(h2),
@@ -110,7 +171,7 @@ defineExpose({ abrir, cerrar });
       margin: 0;
       font-size: 1.05rem;
       font-weight: 700;
-      color: var(--color-primario-4, #991f47);
+      color: var(--tableros-modal-titulo);
     }
   }
 
@@ -126,14 +187,14 @@ defineExpose({ abrir, cerrar });
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    color: var(--color-texto-secundario, #666);
+    color: var(--tableros-modal-texto-secundario);
     transition:
       background 0.15s,
       color 0.15s;
 
     &:hover {
-      background: var(--color-secundario-3, #f8e1e8);
-      color: var(--color-primario-4, #991f47);
+      background: var(--tableros-modal-cerrar-hover-fondo);
+      color: var(--tableros-modal-cerrar-hover-texto);
     }
 
     .pictograma-cerrar {
@@ -145,6 +206,8 @@ defineExpose({ abrir, cerrar });
     overflow-y: auto;
     padding: 1.5rem;
     flex: 1;
+    background: var(--tableros-modal-fondo);
+    color: var(--tableros-modal-texto);
   }
 }
 </style>

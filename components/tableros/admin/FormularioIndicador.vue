@@ -206,7 +206,12 @@ async function guardar() {
 
 <template>
   <ClientOnly>
-    <TablerosAdminModalBase ref="modal" ancho="720px" @cerrar="emit('cerrar')">
+    <TablerosAdminModalBase
+      ref="modal"
+      ancho="720px"
+      adaptar-tema
+      @cerrar="emit('cerrar')"
+    >
       <template #encabezado>
         <h2>Editar indicador</h2>
       </template>
@@ -327,8 +332,12 @@ async function guardar() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-texto-secundario, #777);
-  border-bottom: 1px solid var(--color-borde, #e8e8e8);
+  color: var(
+    --tableros-modal-texto-secundario,
+    var(--color-texto-secundario, #777)
+  );
+  border-bottom: 1px solid
+    var(--tableros-modal-control-borde, var(--color-borde, #e8e8e8));
   padding-bottom: 4px;
   margin-bottom: 1rem;
 }
@@ -365,7 +374,42 @@ async function guardar() {
   gap: 0.75rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--color-borde, #e8e8e8);
+  border-top: 1px solid
+    var(--tableros-modal-control-borde, var(--color-borde, #e8e8e8));
+}
+
+
+form {
+  color: var(--tableros-modal-texto, inherit);
+}
+
+.campo input:not([type='checkbox']),
+.campo textarea,
+.campo select {
+  background: var(--tableros-modal-control-fondo, #ffffff);
+  border-color: var(--tableros-modal-control-borde, #cccccc);
+  color: var(--tableros-modal-texto, inherit);
+}
+
+.campo input::placeholder,
+.campo textarea::placeholder {
+  color: var(--tableros-modal-placeholder, #777777);
+  opacity: 1;
+}
+
+.campo select option,
+.campo select optgroup {
+  background: var(--tableros-modal-control-fondo, #ffffff);
+  color: var(--tableros-modal-texto, inherit);
+}
+
+.check-inline,
+.checks-col {
+  color: var(--tableros-modal-texto, inherit);
+}
+
+.check-inline input[type='checkbox'] {
+  accent-color: var(--color-primario-2, #cc7a88);
 }
 
 .requerido {
