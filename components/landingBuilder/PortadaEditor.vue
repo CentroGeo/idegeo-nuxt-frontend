@@ -10,8 +10,9 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const datosInicialesPortada = {
-  titulo: '',
-  subtitulo: '',
+  titulo: 'Constructor de landing page',
+  subtitulo:
+    'Personaliza los textos, el logotipo y la información principal que se mostrará en la página de inicio.',
   colorTitulo: '#FFFFFF',
   colorSubtitulo: '#FFFFFF',
   fondo: {

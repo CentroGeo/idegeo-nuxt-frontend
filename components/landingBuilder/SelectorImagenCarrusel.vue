@@ -1,27 +1,20 @@
 <script setup>
 const store = useLandingBuilderStore();
 
-const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-const TIPOS_VIDEO_PERMITIDOS = ['video/mp4', 'video/webm'];
-const TAMANO_MAXIMO_IMAGEN_BYTES = 5 * 1024 * 1024; // 5 MB
-const TAMANO_MAXIMO_VIDEO_BYTES = 15 * 1024 * 1024; // 15 MB
+const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
 
 defineProps({
   imagenUrl: {
     type: String,
     default: null,
   },
-  imagenTipo: {
-    type: String,
-    default: 'imagen',
-  },
 });
 
-const emit = defineEmits(['seleccionar-imagen', 'seleccionar-enlace']);
+const emit = defineEmits(['seleccionar-imagen']);
 
 const inputArchivo = ref(null);
 const arrastrandoArchivo = ref(false);
-const urlEnlace = ref('');
 const error = ref('');
 
 function abrirSelectorArchivos() {
@@ -39,19 +32,13 @@ function desactivarArrastre() {
 function procesarArchivo(archivo) {
   if (!archivo) return;
 
-  const esVideo = TIPOS_VIDEO_PERMITIDOS.includes(archivo.type);
-  const esImagen = TIPOS_IMAGEN_PERMITIDOS.includes(archivo.type);
-
-  if (!esVideo && !esImagen) {
-    error.value = 'Selecciona una imagen JPG, PNG, WEBP, SVG o un video MP4/WEBM.';
+  if (!TIPOS_PERMITIDOS.includes(archivo.type)) {
+    error.value = 'Selecciona una imagen JPG, PNG, WEBP o SVG.';
     return;
   }
 
-  const limite = esVideo ? TAMANO_MAXIMO_VIDEO_BYTES : TAMANO_MAXIMO_IMAGEN_BYTES;
-  if (archivo.size > limite) {
-    error.value = esVideo
-      ? 'El video no puede pesar más de 15 MB.'
-      : 'La imagen no puede pesar más de 5 MB.';
+  if (archivo.size > TAMANO_MAXIMO_BYTES) {
+    error.value = 'La imagen no puede pesar más de 5 MB.';
     return;
   }
 
@@ -71,30 +58,6 @@ function soltarArchivo(event) {
   arrastrandoArchivo.value = false;
   procesarArchivo(event.dataTransfer?.files?.[0]);
 }
-
-function aplicarEnlace() {
-  const enlace = urlEnlace.value.trim();
-
-  if (!enlace) {
-    error.value = 'Ingresa el enlace de una imagen o un video.';
-    return;
-  }
-
-  try {
-    const url = new URL(enlace);
-
-    if (!['http:', 'https:'].includes(url.protocol)) {
-      throw new Error('Protocolo no permitido');
-    }
-  } catch {
-    error.value = 'Ingresa un enlace válido que comience con http:// o https://.';
-    return;
-  }
-
-  error.value = '';
-  emit('seleccionar-enlace', enlace);
-  urlEnlace.value = '';
-}
 </script>
 
 <template>
@@ -104,8 +67,8 @@ function aplicarEnlace() {
       class="selector-imagen-carrusel__previsualizacion"
       role="button"
       tabindex="0"
-      aria-label="Cambiar imagen o video de la diapositiva"
-      title="Cambiar imagen o video"
+      aria-label="Cambiar imagen de la diapositiva"
+      title="Cambiar imagen"
       @click="abrirSelectorArchivos"
       @keydown.enter.prevent="abrirSelectorArchivos"
       @keydown.space.prevent="abrirSelectorArchivos"
@@ -114,23 +77,15 @@ function aplicarEnlace() {
         ref="inputArchivo"
         class="selector-imagen-carrusel__input"
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/svg+xml,video/mp4,video/webm"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml"
         @change="seleccionarArchivo"
       />
 
-      <video
-        v-if="imagenTipo === 'video'"
-        :src="store.resolverUrlImagen(imagenUrl)"
-        muted
-        loop
-        autoplay
-        playsinline
-      />
-      <img v-else :src="store.resolverUrlImagen(imagenUrl)" alt="Imagen de la diapositiva" />
+      <img :src="store.resolverUrlImagen(imagenUrl)" alt="Imagen de la diapositiva" />
 
       <span class="selector-imagen-carrusel__superponer" aria-hidden="true">
         <span class="pictograma-archivo-subir pictograma-chico" />
-        Cambiar imagen o video
+        Cambiar imagen
       </span>
     </div>
 
@@ -140,7 +95,7 @@ function aplicarEnlace() {
       :class="{ 'selector-imagen-carrusel__zona--activa': arrastrandoArchivo }"
       role="button"
       tabindex="0"
-      aria-label="Arrastra o selecciona una imagen o video para la diapositiva"
+      aria-label="Arrastra o selecciona una imagen para la diapositiva"
       @click="abrirSelectorArchivos"
       @keydown.enter.prevent="abrirSelectorArchivos"
       @keydown.space.prevent="abrirSelectorArchivos"
@@ -153,24 +108,12 @@ function aplicarEnlace() {
         ref="inputArchivo"
         class="selector-imagen-carrusel__input"
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/svg+xml,video/mp4,video/webm"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml"
         @change="seleccionarArchivo"
       />
 
       <span class="pictograma-archivo-subir pictograma-mediano" aria-hidden="true" />
-      <p class="selector-imagen-carrusel__indicacion">Arrastra o elige una imagen o video</p>
-    </div>
-
-    <div class="selector-imagen-carrusel__enlace">
-      <input
-        v-model.trim="urlEnlace"
-        type="url"
-        placeholder="O pega un enlace (imagen o video)"
-        @keyup.enter="aplicarEnlace"
-      />
-      <button type="button" class="selector-imagen-carrusel__boton-enlace" @click="aplicarEnlace">
-        Usar enlace
-      </button>
+      <p class="selector-imagen-carrusel__indicacion">Arrastra o elige una imagen</p>
     </div>
 
     <p v-if="error" class="texto-color-error">{{ error }}</p>
@@ -185,8 +128,7 @@ function aplicarEnlace() {
     border-radius: 10px;
     cursor: pointer;
 
-    img,
-    video {
+    img {
       display: block;
       width: 100%;
       height: 140px;
@@ -266,44 +208,6 @@ function aplicarEnlace() {
     margin: 8px 0 0;
     color: var(--texto-secundario);
     font-size: 0.875rem;
-  }
-
-  &__enlace {
-    display: flex;
-    gap: 6px;
-    margin-top: 8px;
-
-    input {
-      min-width: 0;
-      flex: 1;
-    }
-  }
-
-  &__boton-enlace {
-    flex-shrink: 0;
-    padding: 0 12px;
-    border: 1px solid rgb(255 255 255 / 40%);
-    border-radius: 6px;
-    background: rgb(255 255 255 / 6%);
-    color: inherit;
-    font: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      border-color 0.2s ease;
-
-    &:hover,
-    &:focus-visible {
-      border-color: rgb(255 255 255 / 75%);
-      background: rgb(255 255 255 / 8%);
-    }
-
-    &:focus-visible {
-      outline: 2px solid white;
-      outline-offset: 2px;
-    }
   }
 }
 </style>

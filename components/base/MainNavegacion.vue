@@ -45,11 +45,6 @@ const IDENTIDAD_PUBLICA_VACIA = {
 // de esa página y por eso independiente del borrador del constructor.
 const identidadPublica = ref({ ...IDENTIDAD_PUBLICA_VACIA });
 
-// Si "/" está mostrando una página del constructor como inicio (en vez del
-// contenido por defecto), esta ref guarda esa página para que el nav muestre
-// su identidad propia igual que en /paginas/slug.
-const paginaInicioActiva = ref(null);
-
 function alternarMenuPaginas() {
   mostrarMenuPaginas.value = !mostrarMenuPaginas.value;
 }
@@ -78,21 +73,6 @@ watch(
     }
 
     store.cargarPaginas();
-
-    if (route.path === '/') {
-      try {
-        const pagina = await $fetch('/api/landing-builder/pagina-inicio');
-        identidadPublica.value = pagina?.identidad || IDENTIDAD_PUBLICA_VACIA;
-        paginaInicioActiva.value = pagina;
-      } catch (err) {
-        console.error('Error al cargar la identidad de la página de inicio:', err);
-        identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
-        paginaInicioActiva.value = null;
-      }
-      return;
-    }
-
-    paginaInicioActiva.value = null;
 
     if (!esPaginaPublica.value) {
       identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
@@ -230,7 +210,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(store.logoUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               alt="Logo principal"
               height="36"
             />
@@ -276,7 +256,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(store.logoSecundarioUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               :alt="store.nombrePlataforma || 'SIGIC'"
               height="36"
             />
@@ -318,7 +298,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(store.logoTerceroUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               alt="Logo tercero"
               height="36"
             />
@@ -360,7 +340,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(store.logoCuartoUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               alt="Logo cuarto"
               height="36"
             />
@@ -401,7 +381,7 @@ function eliminarLogo4() {
 
       <!-- Páginas publicadas del constructor: logos y nombre de la plataforma, en modo solo lectura -->
       <div
-        v-else-if="esPaginaPublica || paginaInicioActiva"
+        v-else-if="esPaginaPublica"
         class="contenedor-identidades-nav constructor-identidades-nav"
       >
         <div v-if="identidadPublica.logoUrl" class="contenedor-logo-nav">
@@ -413,7 +393,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(identidadPublica.logoUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               alt="Logo principal"
               height="36"
             />
@@ -429,7 +409,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(identidadPublica.logoSecundarioUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               :alt="identidadPublica.nombrePlataforma || 'Logo secundario'"
               height="36"
             />
@@ -445,7 +425,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(identidadPublica.logoTerceroUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               alt="Logo tercero"
               height="36"
             />
@@ -461,7 +441,7 @@ function eliminarLogo4() {
           >
             <img
               :src="store.resolverUrlImagen(identidadPublica.logoCuartoUrl)"
-              class="nav-logo nav-logo--chip"
+              class="nav-logo color-invertir"
               alt="Logo cuarto"
               height="36"
             />
@@ -642,13 +622,6 @@ body[data-tema='oscuro'] {
     max-width: 140px;
     object-fit: contain;
     display: block;
-  }
-
-  .nav-logo--chip {
-    box-sizing: border-box;
-    padding: 3px 6px;
-    border-radius: 6px;
-    background: var(--color-neutro-0, #ffffff);
   }
 
   .editando-logo {

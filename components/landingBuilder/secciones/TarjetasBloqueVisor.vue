@@ -37,17 +37,7 @@ const tamanosParrafo = {
           :class="'visor-tarjeta-orientacion-' + (tarjeta.orientacion || 'vertical-abajo')"
         >
           <div class="visor-tarjeta-imagen-wrapper">
-            <video
-              v-if="tarjeta.imagenTipo === 'video'"
-              class="visor-tarjeta-imagen"
-              :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
-              muted
-              loop
-              autoplay
-              playsinline
-            />
             <img
-              v-else
               :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
               class="visor-tarjeta-imagen"
               alt=""
@@ -100,9 +90,8 @@ const tamanosParrafo = {
 .visor-tarjeta {
   display: flex;
   height: 100%;
+  min-height: 180px;
   overflow: hidden;
-  background: transparent;
-  border-radius: 0;
 }
 
 .visor-tarjeta-imagen-wrapper {
@@ -116,7 +105,7 @@ const tamanosParrafo = {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .visor-tarjeta-cuerpo {
@@ -173,11 +162,7 @@ const tamanosParrafo = {
 
   .visor-tarjeta-imagen-wrapper {
     width: 100%;
-    border-radius: 8px;
-  }
-
-  .visor-tarjeta-imagen {
-    height: auto;
+    height: 160px;
   }
 }
 
@@ -186,11 +171,7 @@ const tamanosParrafo = {
 
   .visor-tarjeta-imagen-wrapper {
     width: 100%;
-    border-radius: 8px;
-  }
-
-  .visor-tarjeta-imagen {
-    height: auto;
+    height: 160px;
   }
 }
 
@@ -202,7 +183,6 @@ const tamanosParrafo = {
     width: 200px;
     min-width: 200px;
     height: auto;
-    border-radius: 8px;
   }
 }
 
@@ -214,7 +194,6 @@ const tamanosParrafo = {
     width: 200px;
     min-width: 200px;
     height: auto;
-    border-radius: 8px;
   }
 }
 </style>

@@ -164,8 +164,9 @@ function estaDeshabilitado() {
 
 function crearDatosPortada() {
   return {
-    titulo: '',
-    subtitulo: '',
+    titulo: 'Constructor de landing page',
+    subtitulo:
+      'Personaliza los textos, el logotipo y la información principal que se mostrará en la página de inicio.',
     colorTitulo: '#FFFFFF',
     colorSubtitulo: '#FFFFFF',
     fondo: {
@@ -238,7 +239,6 @@ function crearDatosTarjetas() {
         titulo: '',
         descripcion: '',
         imagenUrl: '/inicio/tarjeta_visualiza.png',
-        imagenTipo: 'imagen',
         tituloTipo: 'h2',
         tituloAlineacion: 'left',
         descripcionTipo: 'p',
