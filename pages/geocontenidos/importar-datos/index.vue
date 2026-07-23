@@ -46,6 +46,10 @@ const metaKeywords = ref('');
 const metaLicencia = ref('');
 const metaCategoria = ref('');
 const metaAtribucion = ref('');
+const metaFecha = ref('');
+const metaTipoFecha = ref('');
+const metaCategoriaSigic = ref('');
+const metaIdioma = ref('');
 const styleSpecs = ref([]);
 const defaultStyleCol = ref('');
 
@@ -251,28 +255,31 @@ async function esperarTablero() {
   throw new Error('La generación del tablero está tardando más de lo esperado. Intenta de nuevo.');
 }
 
+const metadatosCompletos = ref(true);
+
 async function crearGeocont() {
   if (!job.value) return;
   error.value = '';
 
-  if (tipoGeocont.value === 'capa') {
-    if (!metaNombre.value.trim()) {
-      error.value = 'El nombre de la capa es requerido.';
-      return;
-    }
-    if (!metaDescripcion.value.trim()) {
-      error.value = 'El resumen / descripción es requerido.';
-      return;
-    }
-    if (!metaCategoria.value) {
-      error.value = 'La categoría temática es requerida.';
-      return;
-    }
-    if (!metaLicencia.value) {
-      error.value = 'La licencia es requerida.';
-      return;
-    }
+  if (!metaNombre.value.trim()) {
+    error.value = 'El nombre de la capa es requerido.';
+    return;
   }
+
+  // Evaluar si se completaron los metadatos mínimos del catálogo
+  const fieldsFilled = !!(
+    metaNombre.value.trim() &&
+    metaDescripcion.value.trim() &&
+    metaTipoFecha.value &&
+    metaFecha.value &&
+    metaCategoria.value &&
+    metaCategoriaSigic.value &&
+    metaIdioma.value &&
+    metaLicencia.value &&
+    metaAtribucion.value.trim() &&
+    metaKeywords.value.trim()
+  );
+  metadatosCompletos.value = fieldsFilled;
 
   cargando.value = true;
   mensajeCarga.value = 'Creando geocontenido…';
@@ -288,6 +295,10 @@ async function crearGeocont() {
           layer_license: metaLicencia.value,
           layer_category: metaCategoria.value,
           layer_attribution: metaAtribucion.value,
+          layer_date: metaFecha.value,
+          layer_date_type: metaTipoFecha.value,
+          layer_language: metaIdioma.value,
+          layer_category_sigic: metaCategoriaSigic.value,
           style_specs: styleSpecs.value,
           default_style_col: defaultStyleCol.value || undefined,
         },
@@ -309,6 +320,10 @@ async function crearGeocont() {
           layer_license: metaLicencia.value,
           layer_category: metaCategoria.value,
           layer_attribution: metaAtribucion.value,
+          layer_date: metaFecha.value,
+          layer_date_type: metaTipoFecha.value,
+          layer_language: metaIdioma.value,
+          layer_category_sigic: metaCategoriaSigic.value,
           style_specs: styleSpecs.value,
           default_style_col: defaultStyleCol.value || undefined,
         },
@@ -591,15 +606,23 @@ onErrorCaptured((err) => {
             :keywords="metaKeywords"
             :licencia="metaLicencia"
             :categoria="metaCategoria"
+            :categoria-sigic="metaCategoriaSigic"
             :atribucion="metaAtribucion"
+            :fecha="metaFecha"
+            :tipo-fecha="metaTipoFecha"
+            :idioma="metaIdioma"
             :categorias="categorias"
-            :requeridos="tipoGeocont === 'capa'"
+            :requeridos="true"
             @update:nombre="metaNombre = $event"
             @update:descripcion="metaDescripcion = $event"
             @update:keywords="metaKeywords = $event"
             @update:licencia="metaLicencia = $event"
             @update:categoria="metaCategoria = $event"
+            @update:categoria-sigic="metaCategoriaSigic = $event"
             @update:atribucion="metaAtribucion = $event"
+            @update:fecha="metaFecha = $event"
+            @update:tipo-fecha="metaTipoFecha = $event"
+            @update:idioma="metaIdioma = $event"
           />
 
           <!-- Estilos de visualización -->
@@ -660,9 +683,15 @@ onErrorCaptured((err) => {
         <div v-else-if="siteIdCreado" class="texto-centrado p-4">
           <span class="pictograma-exito pictograma-grande texto-color-exito" />
           <h3 class="m-t-2">¡Tablero creado!</h3>
-          <p class="texto-color-secundario m-b-4">
-            Tu tablero fue generado con los indicadores y estilos configurados. Puedes
-            personalizarlo en el editor.
+          <p v-if="metadatosCompletos" class="texto-color-secundario m-b-4">
+            <strong>¡Registro completado!</strong><br />
+            Tu archivo ya está disponible en <strong>Mis archivos</strong>, en la sección
+            <strong>Disponibles</strong>.
+          </p>
+          <p v-else class="texto-color-secundario m-b-4">
+            <strong>Faltan algunos metadatos mínimos obligatorios.</strong><br />
+            Tu recurso se guardó en la sección <strong>Metadatos pendientes</strong>, donde podrás
+            completar la información requerida.
           </p>
           <NuxtLink :to="`/geocontenidos/tableros/${siteIdCreado}`" class="boton boton-primario">
             Ir al editor del tablero
@@ -672,9 +701,16 @@ onErrorCaptured((err) => {
         <!-- Capa publicada exitosamente -->
         <div v-else-if="datasetCreado" class="texto-centrado p-4">
           <span class="pictograma-exito pictograma-grande texto-color-exito" />
-          <h3 class="m-t-2">¡Capa publicada!</h3>
-          <p class="texto-color-secundario m-b-4">
-            La capa fue publicada en el catálogo con los metadatos y estilos configurados.
+          <h3 class="m-t-2">¡Capa configurada!</h3>
+          <p v-if="metadatosCompletos" class="texto-color-secundario m-b-4">
+            <strong>¡Registro completado!</strong><br />
+            Tu archivo ya está disponible en <strong>Mis archivos</strong>, en la sección
+            <strong>Disponibles</strong>.
+          </p>
+          <p v-else class="texto-color-secundario m-b-4">
+            <strong>Faltan algunos metadatos mínimos obligatorios.</strong><br />
+            Tu recurso se guardó en la sección <strong>Metadatos pendientes</strong>, donde podrás
+            completar la información requerida.
           </p>
           <NuxtLink
             :to="`/consulta/capas?capas=${datasetCreado.dataset_id}`"

@@ -1,12 +1,18 @@
 <script setup>
+import { dictIdiomas } from '~/utils/catalogo';
+
 const props = defineProps({
   nombre: { type: String, default: '' },
   descripcion: { type: String, default: '' },
   keywords: { type: String, default: '' },
   licencia: { type: String, default: '' },
-  categoria: { type: String, default: '' },
+  categoria: { type: String, default: '' }, // OGC Category
+  categoriaSigic: { type: String, default: '' },
   atribucion: { type: String, default: '' },
-  categorias: { type: Array, default: () => [] },
+  fecha: { type: String, default: '' },
+  tipoFecha: { type: String, default: '' },
+  idioma: { type: String, default: '' },
+  categorias: { type: Array, default: () => [] }, // OGC Category list
   requeridos: { type: Boolean, default: false },
 });
 
@@ -16,7 +22,11 @@ const emit = defineEmits([
   'update:keywords',
   'update:licencia',
   'update:categoria',
+  'update:categoriaSigic',
   'update:atribucion',
+  'update:fecha',
+  'update:tipoFecha',
+  'update:idioma',
 ]);
 
 const LICENCIAS = [
@@ -28,6 +38,14 @@ const LICENCIAS = [
   { value: 'public_domain_usg', label: 'Dominio público / Gobierno de EUA' },
   { value: 'odbl', label: 'Licencia abierta de bases de datos (ODbL)' },
   { value: 'nextview', label: 'NextView' },
+];
+
+const dictCategoriaSIGIC = [
+  { medioAmbienteRecursosNaturales: 'Medio ambiente y recursos naturales' },
+  { infraestructuraServiciosUrbanosRegionales: 'Infraestructura y servicios urbanos regionales' },
+  { territorioLimitesCatastro: 'Territorio, límites y catastro' },
+  { sociedadDemografiaEconomia: 'Sociedad, demografía y economía' },
+  { sensoresRemotosMapasBase: 'Sensores remotos y mapas base' },
 ];
 </script>
 
@@ -52,7 +70,7 @@ const LICENCIAS = [
 
     <div class="campo m-b-3">
       <label class="etiqueta" for="meta-desc"
-        >Resumen / Descripción <span v-if="props.requeridos" class="texto-error">*</span></label
+        >Resumen / Descripción <span class="texto-error">*</span></label
       >
       <textarea
         id="meta-desc"
@@ -66,16 +84,46 @@ const LICENCIAS = [
 
     <div class="meta-fila m-b-3">
       <div class="campo">
-        <label class="etiqueta" for="meta-cat"
-          >Categoría temática <span v-if="props.requeridos" class="texto-error">*</span></label
+        <label class="etiqueta" for="meta-tipo-fecha"
+          >Tipo de fecha <span class="texto-error">*</span></label
         >
         <select
-          id="meta-cat"
+          id="meta-tipo-fecha"
+          :value="props.tipoFecha"
+          class="campo-texto"
+          @change="emit('update:tipoFecha', $event.target.value)"
+        >
+          <option value="">— seleccionar tipo —</option>
+          <option value="creation">Creación</option>
+          <option value="publication">Publicación</option>
+          <option value="revision">Revisión</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="meta-fecha">Fecha <span class="texto-error">*</span></label>
+        <input
+          id="meta-fecha"
+          :value="props.fecha"
+          type="date"
+          class="campo-texto"
+          @input="emit('update:fecha', $event.target.value)"
+        />
+      </div>
+    </div>
+
+    <div class="meta-fila m-b-3">
+      <div class="campo">
+        <label class="etiqueta" for="meta-cat-ogc"
+          >Categoría OGC <span class="texto-error">*</span></label
+        >
+        <select
+          id="meta-cat-ogc"
           :value="props.categoria"
           class="campo-texto"
           @change="emit('update:categoria', $event.target.value)"
         >
-          <option value="">Sin categoría</option>
+          <option value="">Selecciona una categoría OGC</option>
           <option v-for="cat in props.categorias" :key="cat.identifier" :value="cat.identifier">
             {{ cat.gn_description }}
           </option>
@@ -83,9 +131,49 @@ const LICENCIAS = [
       </div>
 
       <div class="campo">
-        <label class="etiqueta" for="meta-lic"
-          >Licencia <span v-if="props.requeridos" class="texto-error">*</span></label
+        <label class="etiqueta" for="meta-cat-sigic"
+          >Categoría SIGIC <span class="texto-error">*</span></label
         >
+        <select
+          id="meta-cat-sigic"
+          :value="props.categoriaSigic"
+          class="campo-texto"
+          @change="emit('update:categoriaSigic', $event.target.value)"
+        >
+          <option value="">Selecciona una categoría SIGIC</option>
+          <option
+            v-for="value in dictCategoriaSIGIC"
+            :key="Object.keys(value)[0]"
+            :value="Object.keys(value)[0]"
+          >
+            {{ value[Object.keys(value)[0]] }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="meta-fila m-b-3">
+      <div class="campo">
+        <label class="etiqueta" for="meta-idioma">Idioma <span class="texto-error">*</span></label>
+        <select
+          id="meta-idioma"
+          :value="props.idioma"
+          class="campo-texto"
+          @change="emit('update:idioma', $event.target.value)"
+        >
+          <option value="">Selecciona un idioma</option>
+          <option
+            v-for="value in dictIdiomas"
+            :key="Object.keys(value)[0]"
+            :value="Object.keys(value)[0]"
+          >
+            {{ value[Object.keys(value)[0]] }}
+          </option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label class="etiqueta" for="meta-lic">Licencia <span class="texto-error">*</span></label>
         <select
           id="meta-lic"
           :value="props.licencia"
@@ -101,7 +189,9 @@ const LICENCIAS = [
 
     <div class="meta-fila">
       <div class="campo">
-        <label class="etiqueta" for="meta-attr">Fuente / Atribución</label>
+        <label class="etiqueta" for="meta-attr"
+          >Autores o Institución <span class="texto-error">*</span></label
+        >
         <input
           id="meta-attr"
           :value="props.atribucion"
@@ -114,7 +204,9 @@ const LICENCIAS = [
       </div>
 
       <div class="campo">
-        <label class="etiqueta" for="meta-kw">Palabras clave</label>
+        <label class="etiqueta" for="meta-kw"
+          >Palabras clave <span class="texto-error">*</span></label
+        >
         <input
           id="meta-kw"
           :value="props.keywords"
