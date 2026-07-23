@@ -292,13 +292,6 @@ onBeforeUnmount(() => {
               >
                 Configurar proyecto
               </NuxtLink>
-              <button
-                class="boton-secundario boton-chico boton-accion-proyecto m-b-3 fondo-color-primario"
-                disabled
-                type="button"
-              >
-                Aportar
-              </button>
               <div class="flex flex-contenido-final proyecto-acciones">
                 <button
                   class="boton-pictograma boton-sin-contenedor-primario"
@@ -416,9 +409,7 @@ onBeforeUnmount(() => {
                   }"
                 />
                 <div class="campo-imagen" :class="{ 'campo-imagen-error': errorImagen }">
-                  <label>
-                    Imagen de identificación del proyecto
-                  </label>
+                  <label> Imagen de identificación del proyecto </label>
                   <p class="formulario-ayuda m-t-0">
                     Selecciona una imagen JPG o PNG de máximo 5 MB.
                   </p>
@@ -602,7 +593,6 @@ onBeforeUnmount(() => {
 .formulario-creacion :deep(.formulario-obligatoriedad) {
   display: none;
 }
-
 </style>
 
 <style lang="scss">

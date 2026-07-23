@@ -1,6 +1,10 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 import SisdaiCampoBase from '@centrogeomx/sisdai-componentes/src/componentes/campo-base/SisdaiCampoBase.vue';
+import SisdaiAreaTexto from '@centrogeomx/sisdai-componentes/src/componentes/area-texto/SisdaiAreaTexto.vue';
+import SisdaiBotonesRadioGrupo from '@centrogeomx/sisdai-componentes/src/componentes/boton-radio-grupo/SisdaiBotonesRadioGrupo.vue';
+import SisdaiBotonRadio from '@centrogeomx/sisdai-componentes/src/componentes/boton-radio/SisdaiBotonRadio.vue';
+import SisdaiCasilla from '@centrogeomx/sisdai-componentes/src/componentes/casilla-verificacion/SisdaiCasillaVerificacion.vue';
 import { SisdaiCapaVectorial, SisdaiCapaXyz, SisdaiMapa } from '@centrogeomx/sisdai-mapas';
 
 definePageMeta({
@@ -16,11 +20,14 @@ const route = useRoute();
 const title = computed(() => route.query.title);
 const previous_path = computed(() => route.query.previous_path);
 const projectId = computed(() => String(route.query.project_id || route.params.id));
-const aporteId = computed(() => route.query.aporte_id || (route.query.mode === 'edit' ? route.params.id : null));
+const aporteId = computed(
+  () => route.query.aporte_id || (route.query.mode === 'edit' ? route.params.id : null)
+);
 const esEdicionAporte = computed(() => Boolean(aporteId.value));
 const proyecto = ref(null);
 const preguntasDetalle = ref([]);
 const respuestas = reactive({});
+const respuestasCondicionales = reactive({});
 const archivos = reactive({});
 const latitud = ref(null);
 const longitud = ref(null);
@@ -29,11 +36,15 @@ const errorFormulario = ref('');
 const enviando = ref(false);
 const modalAporteEnviado = ref(null);
 
-const preguntas = computed(() =>
-  Array.isArray(proyecto.value?.ficha_proyecto) && proyecto.value.ficha_proyecto.length
-    ? proyecto.value.ficha_proyecto
-    : preguntasDetalle.value
-);
+const preguntas = computed(() => {
+  // En edición se conserva la ficha almacenada con el aporte para mantener cada respuesta
+  // asociada a la pregunta original, aunque el formulario del proyecto haya cambiado.
+  if (esEdicionAporte.value && preguntasDetalle.value.length) {
+    return preguntasDetalle.value;
+  }
+
+  return Array.isArray(proyecto.value?.ficha_proyecto) ? proyecto.value.ficha_proyecto : [];
+});
 const coordenadasValidas = computed(() => {
   if (
     latitud.value === null ||
@@ -46,7 +57,14 @@ const coordenadasValidas = computed(() => {
 
   const lat = Number(latitud.value);
   const lng = Number(longitud.value);
-  return Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lng) && lng >= -180 && lng <= 180;
+  return (
+    Number.isFinite(lat) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    Number.isFinite(lng) &&
+    lng >= -180 &&
+    lng <= 180
+  );
 });
 const vistaMapa = computed(() =>
   coordenadasValidas.value
@@ -95,7 +113,17 @@ onMounted(async () => {
     latitud.value = detalle.latitud;
     longitud.value = detalle.longitud;
     (detalle.answers || []).forEach((pregunta, indice) => {
-      respuestas[indice] = pregunta.respuesta;
+      // Recupera tanto respuestas simples como el formato compuesto de preguntas condicionales.
+      if (
+        pregunta.tipo === 'condicional' &&
+        pregunta.respuesta &&
+        typeof pregunta.respuesta === 'object'
+      ) {
+        respuestas[indice] = pregunta.respuesta.opcion;
+        respuestasCondicionales[indice] = pregunta.respuesta.subrespuesta;
+      } else {
+        respuestas[indice] = pregunta.respuesta;
+      }
     });
   }
 });
@@ -129,8 +157,7 @@ function usarUbicacionActual() {
 
 function continuarAlFormulario() {
   if (!coordenadasValidas.value) {
-    errorUbicacion.value =
-      'Ingresa una latitud entre -90 y 90 y una longitud entre -180 y 180.';
+    errorUbicacion.value = 'Ingresa una latitud entre -90 y 90 y una longitud entre -180 y 180.';
     return;
   }
   editarUbicaAporte.value = false;
@@ -141,6 +168,14 @@ function actualizarMultiple(indice, opcion, seleccionado) {
   respuestas[indice] = seleccionado
     ? [...actuales, opcion]
     : actuales.filter((valor) => valor !== opcion);
+}
+
+function valorOpcion(opcion) {
+  return opcion?.opcion ?? opcion;
+}
+
+function obtenerOpcionCondicional(pregunta, indice) {
+  return pregunta.opciones?.find((opcion) => valorOpcion(opcion) === respuestas[indice]);
 }
 
 function guardarArchivos(indice, evento) {
@@ -176,7 +211,12 @@ async function guardarAporte(status, validarObligatorios = true) {
             ...(Array.isArray(respuestas[indice]) ? respuestas[indice] : []),
             ...(archivos[indice]?.map((archivo) => archivo.name) || []),
           ]
-        : respuestas[indice],
+        : pregunta.tipo === 'condicional'
+          ? {
+              opcion: respuestas[indice],
+              subrespuesta: respuestasCondicionales[indice] ?? null,
+            }
+          : respuestas[indice],
   }));
 
   const formData = new FormData();
@@ -208,8 +248,7 @@ async function guardarAporte(status, validarObligatorios = true) {
       modalAporteEnviado.value?.abrirModal();
     }
   } catch (error) {
-    errorFormulario.value =
-      error?.data?.message || 'No pudimos enviar el aporte a revisión.';
+    errorFormulario.value = error?.data?.message || 'No pudimos enviar el aporte a revisión.';
   } finally {
     enviando.value = false;
   }
@@ -282,7 +321,11 @@ const modalRegresar = ref(null);
                 Usa tu ubicación actual, escribe un lugar en el buscador o selecciona un punto en el
                 mapa.
               </p>
-              <button class="boton-secundario boton-chico m-b-2" type="button" @click="usarUbicacionActual">
+              <button
+                class="boton-secundario boton-chico m-b-2"
+                type="button"
+                @click="usarUbicacionActual"
+              >
                 Usar mi ubicación actual
               </button>
               <ClientOnly>
@@ -363,42 +406,77 @@ const modalRegresar = ref(null);
                   </label>
                   <hr class="m-b-3" />
 
-                  <textarea
+                  <SisdaiAreaTexto
                     v-if="pregunta.tipo === 'abierta'"
                     v-model="respuestas[indice]"
-                    class="campo-respuesta"
-                    rows="4"
+                    etiqueta="Respuesta"
+                    ejemplo="Escribe tu respuesta"
+                    :es_etiqueta_visible="false"
+                    :es_obligatorio="pregunta.obligatorio"
                   />
 
-                  <div v-else-if="pregunta.tipo === 'unica' || pregunta.tipo === 'condicional'">
-                    <label
+                  <SisdaiBotonesRadioGrupo
+                    v-else-if="pregunta.tipo === 'unica' || pregunta.tipo === 'condicional'"
+                    leyenda=""
+                    :es_vertical="true"
+                  >
+                    <SisdaiBotonRadio
                       v-for="opcion in pregunta.opciones"
-                      :key="opcion.opcion || opcion"
-                      class="opcion-respuesta"
+                      :key="valorOpcion(opcion)"
+                      v-model="respuestas[indice]"
+                      :etiqueta="valorOpcion(opcion)"
+                      :value="valorOpcion(opcion)"
+                      :name="`pregunta-${indice}`"
+                    />
+                  </SisdaiBotonesRadioGrupo>
+
+                  <template v-if="pregunta.tipo === 'condicional'">
+                    <div
+                      v-if="obtenerOpcionCondicional(pregunta, indice)?.tipoCondicion === 'abierta'"
+                      class="m-t-2"
                     >
-                      <input
-                        v-model="respuestas[indice]"
-                        type="radio"
-                        :name="`pregunta-${indice}`"
-                        :value="opcion.opcion || opcion"
+                      <p>
+                        {{ obtenerOpcionCondicional(pregunta, indice).subpregunta?.pregunta }}
+                      </p>
+                      <SisdaiAreaTexto
+                        v-model="respuestasCondicionales[indice]"
+                        etiqueta="Respuesta"
+                        ejemplo="Escribe tu respuesta"
+                        :es_etiqueta_visible="false"
                       />
-                      {{ opcion.opcion || opcion }}
-                    </label>
-                  </div>
+                    </div>
+                    <SisdaiBotonesRadioGrupo
+                      v-else-if="
+                        obtenerOpcionCondicional(pregunta, indice)?.tipoCondicion === 'opcion'
+                      "
+                      class="m-t-2"
+                      leyenda=""
+                      :es_vertical="true"
+                    >
+                      <SisdaiBotonRadio
+                        v-for="subopcion in obtenerOpcionCondicional(pregunta, indice).subpregunta
+                          ?.opciones || []"
+                        :key="subopcion"
+                        v-model="respuestasCondicionales[indice]"
+                        :etiqueta="subopcion"
+                        :value="subopcion"
+                        :name="`subpregunta-${indice}`"
+                      />
+                    </SisdaiBotonesRadioGrupo>
+                  </template>
 
                   <div v-else-if="pregunta.tipo === 'multiple'">
-                    <label
+                    <SisdaiCasilla
                       v-for="opcion in pregunta.opciones"
                       :key="opcion"
-                      class="opcion-respuesta"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="opcion"
-                        @change="actualizarMultiple(indice, opcion, $event.target.checked)"
-                      />
-                      {{ opcion }}
-                    </label>
+                      :etiqueta="opcion"
+                      :model-value="
+                        Array.isArray(respuestas[indice]) && respuestas[indice].includes(opcion)
+                      "
+                      @update:model-value="
+                        (seleccionado) => actualizarMultiple(indice, opcion, seleccionado)
+                      "
+                    />
                   </div>
 
                   <input
@@ -461,11 +539,7 @@ const modalRegresar = ref(null);
             <p>Tu aporte fue enviado correctamente y ahora se encuentra en revisión.</p>
           </template>
           <template #pie>
-            <button
-              class="boton-primario boton-chico"
-              type="button"
-              @click="irAEnRevision"
-            >
+            <button class="boton-primario boton-chico" type="button" @click="irAEnRevision">
               Ir a En revisión
             </button>
           </template>
@@ -474,13 +548,3 @@ const modalRegresar = ref(null);
     </template>
   </UiLayoutPaneles>
 </template>
-<style lang="scss" scoped>
-.campo-respuesta {
-  width: 100%;
-}
-
-.opcion-respuesta {
-  display: block;
-  margin-bottom: 1rem;
-}
-</style>
