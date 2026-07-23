@@ -203,14 +203,6 @@ const puntoSeleccionado = computed(() => ({
     : [],
 }));
 const modalMensajes = ref(null);
-
-function abrirMensajes() {
-  modalMensajes.value?.abrirModal();
-}
-
-function cerrarMensajes() {
-  modalMensajes.value?.cerrarModal();
-}
 </script>
 
 <template>
