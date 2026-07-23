@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, shallowRef } from 'vue';
+import { SisdaiCapaVectorial, SisdaiCapaXyz, SisdaiMapa } from '@centrogeomx/sisdai-mapas';
+import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
 definePageMeta({
   middleware: 'auth',
@@ -13,7 +15,7 @@ const { data } = useAuth();
 const aportesEnRevision = shallowRef([]);
 const cargandoAportes = ref(false);
 
-const modalConfirmacionVisible = ref(false);
+const modalConfirmacion = ref(null);
 const mensajeConfirmacion = ref('');
 
 // Conexión de backend
@@ -48,7 +50,7 @@ onMounted(async () => {
         registrante: aporte.usuario_id || 'Usuario Desconocido', 
         latitud: aporte.latitud,
         longitud: aporte.longitud,
-        fotos: fotosArray.length > 0 ? fotosArray : [ '', '', '' ],
+        fotos: fotosArray.length > 0 ? fotosArray : [],
         mensajes: aporte.mensajes || [],
         detalle: aporte.detalle || {
           preguntaAbierta: 'Pendiente de enlazar a BD',
@@ -101,22 +103,21 @@ async function cambiarEstadoAporte(idAporte, nuevoEstado) {
       aporteSeleccionado.value = null;
     }
     
-    // Modal que debemos modificar con elementos sisdai
     const accion = nuevoEstado === 'APROBADO' ? 'aprobado' : nuevoEstado === 'RECHAZADO' ? 'rechazado' : 'movido a revisión';
     mensajeConfirmacion.value = `El aporte ha sido ${accion} correctamente.`;
-    modalConfirmacionVisible.value = true;
+    modalConfirmacion.value?.abrirModal();
     
   } catch (error) {
     console.error('Error al intentar actualizar el estado en DB:', error);
     
     // Mostramos el modal de error
     mensajeConfirmacion.value = 'Ocurrió un error al conectar con el servidor. El estado no pudo actualizarse.';
-    modalConfirmacionVisible.value = true;
+    modalConfirmacion.value?.abrirModal();
   }
 }
 
 function cerrarModalConfirmacion() {
-  modalConfirmacionVisible.value = false;
+  modalConfirmacion.value?.cerrarModal();
 }
 
 // Búsqueda y paginación
@@ -171,16 +172,49 @@ function cerrarImagen() {
   imagenAmpliada.value = null;
 }
 
-// Modal de imágenes
-const modalMensajesAbierto = ref(false);
+const modalMensajes = ref(null);
 
 function abrirMensajes() {
-  modalMensajesAbierto.value = true;
+  modalMensajes.value?.abrirModal();
 }
 
 function cerrarMensajes() {
-  modalMensajesAbierto.value = false;
+  modalMensajes.value?.cerrarModal();
 }
+//Lógica de los mapas Sisdai
+const coordenadasValidas = computed(() => {
+  // Evitamos errores si aporteSeleccionado es null (al cargar la página)
+  if (!aporteSeleccionado.value) return false; 
+  
+  const lat = Number(aporteSeleccionado.value.latitud);
+  const lng = Number(aporteSeleccionado.value.longitud);
+  return Number.isFinite(lat) && Number.isFinite(lng);
+});
+
+const vistaMapa = computed(() =>
+  coordenadasValidas.value
+    ? { 
+        centro: [Number(aporteSeleccionado.value.longitud), Number(aporteSeleccionado.value.latitud)], 
+        acercamiento: 17 
+      }
+    : { extension: '-118.3651,14.5321,-86.7104,32.7187' }
+);
+
+const puntoSeleccionado = computed(() => ({
+  type: 'FeatureCollection',
+  features: coordenadasValidas.value
+    ? [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Point',
+            coordinates: [Number(aporteSeleccionado.value.longitud), Number(aporteSeleccionado.value.latitud)],
+          },
+        },
+      ]
+    : [],
+}));
 </script>
 
 <template>
@@ -234,7 +268,9 @@ function cerrarMensajes() {
                 @click="verFichaAporte(aporte)"
               >
                 <div class="flex m-b-1">
-                  <div class="icono-doc m-r-2">📄</div>
+                  <div class="icono-doc m-r-2" style="font-size: 2rem; display: flex; align-items: center; justify-content: center; min-width: 40px;">
+                    <span class="pictograma-documento" aria-hidden="true"></span>
+                  </div>
                   <div style="flex-grow: 1; overflow: hidden;">
                     <p class="titulo m-0"><strong>{{ aporte.titulo }}</strong></p>
                     <p class="texto-secundario m-0 text-chico">{{ aporte.fecha }}</p>
@@ -243,7 +279,8 @@ function cerrarMensajes() {
                   </div>
                 </div>
                 
-                <div class="contenedor-progreso m-t-2">
+                <!-- La sección del porcentaje será activada en otro apetito (según el descubrimiento) -->
+                <!-- <div class="contenedor-progreso m-t-2">
                   <div class="flex" style="justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span class="text-chico texto-porcentaje">Progreso del aporte</span>
                     <span class="text-chico texto-porcentaje"><strong>{{ aporte.progreso }}%</strong></span>
@@ -251,7 +288,7 @@ function cerrarMensajes() {
                   <div class="barra-fondo">
                     <div class="barra-relleno" :style="{ width: aporte.progreso + '%' }"></div>
                   </div>
-                </div>
+                </div> -->
               </div>
 
               <div v-if="!cargandoAportes && aportesFiltrados.length === 0" class="texto-centrado p-3" style="color: #888;">
@@ -288,22 +325,30 @@ function cerrarMensajes() {
                 </div>
               </div>
 
-              <!-- Mapa satelital -->
-              <div class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden;">
-                <iframe 
-                  v-if="aporteSeleccionado.latitud && aporteSeleccionado.longitud"
-                  width="100%" 
-                  height="100%" 
-                  frameborder="0" 
-                  scrolling="no" 
-                  marginheight="0" 
-                  marginwidth="0" 
-                  :src="`https://maps.google.com/maps?q=${aporteSeleccionado.latitud},${aporteSeleccionado.longitud}&t=k&z=17&ie=UTF8&iwloc=&output=embed`"
-                >
-                </iframe>
-                <div v-else class="flex flex-contenido-centrado flex-vertical-centrado" style="height: 100%; color: #94a3b8;">
-                  <p>Coordenadas no disponibles para este aporte</p>
-                </div>
+              <!-- Mapa nativo con sisdai-mapas -->
+              <div v-if="aporteSeleccionado" class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden; height: 300px;">
+                <ClientOnly>
+                  <SisdaiMapa
+                    id="aportesmapa"
+                    class="gema"
+                    style="height: 100%; width: 100%" 
+                    descripcion="Ubicación del aporte"
+                    :vista="vistaMapa"
+                  >
+                  <SisdaiCapaXyz/>
+                  <SisdaiCapaVectorial
+                      :key="`punto-${aporteSeleccionado.latitud}-${aporteSeleccionado.longitud}`"
+                      :fuente="puntoSeleccionado"
+                      :posicion="1"
+                      :estilo="{
+                        'circulo-relleno-color': '#d26c89',
+                        'circulo-borde-color': '#ffffff',
+                        'circulo-borde-grosor': 3,
+                        'circulo-radio': 9,
+                      }"
+                    />
+                  </SisdaiMapa>
+                </ClientOnly>
               </div>
 
               <div class="m-b-3 flex" style="gap: 8px; align-items: center;">
@@ -365,10 +410,10 @@ function cerrarMensajes() {
               <!-- Botones de rechazo y aceptación -->
               <div class="flex" style="justify-content: center; gap: 24px; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
                 <button class="btn-moderno btn-aprobar" @click="cambiarEstadoAporte(aporteSeleccionado.id, 'APROBADO')">
-                  <span class="icono">✓</span> APROBAR APORTE
+                  <span></span> APROBAR APORTE
                 </button>
                 <button class="btn-moderno btn-rechazar" @click="cambiarEstadoAporte(aporteSeleccionado.id, 'RECHAZADO')">
-                  <span class="icono">✕</span> RECHAZAR APORTE
+                  <span></span> RECHAZAR APORTE
                 </button>
               </div>
 
@@ -381,54 +426,67 @@ function cerrarMensajes() {
         </div>
       </main>
 
-      <!-- Modal de confirmación (debemos modificarlo)-->
-      <Teleport to="body">
-        <div v-if="modalConfirmacionVisible" class="modal-overlay" @click="cerrarModalConfirmacion">
-          <div class="modal-confirmacion-contenido" @click.stop>
-            <div class="modal-confirmacion-header fondo-guinda">
-              <h3 class="m-0" style="color: white; font-weight: 500;">¡Estado Actualizado!</h3>
-            </div>
-            <div class="p-4 texto-centrado">
-              <p class="m-b-3" style="color: #334155; font-size: 1.05rem;">{{ mensajeConfirmacion }}</p>
-              <button class="btn-moderno btn-guinda" @click="cerrarModalConfirmacion">
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
+      <!-- Modal de confirmación-->
+      <ClientOnly>
+              <SisdaiModal ref="modalConfirmacion">
+                <template #encabezado>
+                  <h3 class="m-0" style="color: #d48d95; font-weight: 600;">¡Aporte Actualizado!</h3>
+                </template>
+                
+                <template #cuerpo>
+                  <div class="p-y-3 texto-centrado">
+                    <p class="m-b-3" style="color: #d48d95; font-size: 1.05rem;">
+                      {{ mensajeConfirmacion }}
+                    </p>
+                  </div>
+                </template>
+                
+                <template #pie>
+                  <button class="btn-moderno btn-guinda-sisdai" type="button" @click="cerrarModalConfirmacion">
+                    Entendido
+                  </button>
+                </template>
+              </SisdaiModal>
+            </ClientOnly>
 
       <!-- Modal de Mensajes-->
-      <Teleport to="body">
-        <div v-if="modalMensajesAbierto" class="modal-overlay" @click="cerrarMensajes">
-          <div class="modal-mensajes-contenido" @click.stop>
-            <div class="modal-mensajes-header">
-              <h4 class="m-0" style="color: #334155;">Mensajes del Aporte</h4>
-              <button class="btn-cerrar-sutil" @click="cerrarMensajes">✕</button>
-            </div>
-            
-            <div class="chat-area">
-              <div 
-                v-for="msj in aporteSeleccionado.mensajes" 
-                :key="msj.id" 
-                :class="['burbuja', msj.autor === 'Tú' ? 'propia' : 'ajena']"
-              >
-                <div style="font-weight: bold; font-size: 0.7rem; margin-bottom: 4px;">{{ msj.autor }}</div>
-                <p class="m-0">{{ msj.texto }}</p>
-                <span class="fecha-msj">{{ msj.fecha }}</span>
-              </div>
-              <div v-if="aporteSeleccionado.mensajes.length === 0" class="texto-centrado" style="color: #94a3b8; font-size: 0.85rem; margin-top: 2rem;">
-                No hay mensajes para este aporte.
-              </div>
-            </div>
-            
-            <div class="chat-input-area">
-              <input type="text" placeholder="Escribe un mensaje..." class="input-chat" />
-              <button class="btn-enviar-chat">Enviar</button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
+        <Teleport to="body">
+                <ClientOnly>
+                  <SisdaiModal ref="modalMensajes">
+                    <template #encabezado>
+                      <h4 class="m-0" style="color: #d48d95;">Mensajes del Aporte</h4>
+                    </template>
+                    
+                    <template #cuerpo>
+                      <div class="chat-area-lectura p-3 m-t-2">
+                        <template v-if="aporteSeleccionado?.mensajes && aporteSeleccionado.mensajes.length > 0">
+                          <div 
+                            v-for="msj in aporteSeleccionado.mensajes" 
+                            :key="msj.id" 
+                            class="mensaje-lectura m-b-2"
+                          >
+                            <div class="mensaje-header">
+                              <span class="autor">{{ msj.autor }}</span>
+                              <span class="fecha">{{ msj.fecha }}</span>
+                            </div>
+                            <p class="m-0 texto-msj">{{ msj.texto }}</p>
+                          </div>
+                        </template>
+                        
+                        <div v-else class="texto-centrado p-y-4" style="color: #d48d95; font-weight: 500;">
+                          No hay mensajes para este aporte.
+                        </div>
+                      </div>
+                    </template>
+                    
+                    <template #pie>
+                      <button class="boton-secundario boton-chico" type="button" @click="cerrarMensajes">
+                        Cerrar
+                      </button>
+                    </template>
+                  </SisdaiModal>
+                </ClientOnly>
+              </Teleport>
 
       <!--Modal de Imagen Ampliada-->
       <Teleport to="body">
@@ -684,75 +742,77 @@ function cerrarMensajes() {
   display: flex; justify-content: space-between; align-items: center;
 }
 
-.btn-cerrar-sutil {
-  background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
-  &:hover { color: #ef4444; }
-}
+// .btn-cerrar-sutil {
+//   background: transparent; border: none; color: #94a3b8; font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
+//   &:hover { color: #ef4444; }
+// }
 
-.chat-area {
-  flex: 1; padding: 20px; overflow-y: auto; background-color: #f1f5f9; display: flex; flex-direction: column; gap: 12px;
-}
+// .chat-area {
+//   flex: 1; padding: 20px; overflow-y: auto; background-color: #f1f5f9; display: flex; flex-direction: column; gap: 12px;
+// }
 
-.burbuja {
-  padding: 12px 16px; border-radius: 12px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; position: relative;
-}
+// .burbuja {
+//   padding: 12px 16px; border-radius: 12px; max-width: 85%; font-size: 0.9rem; line-height: 1.4; position: relative;
+// }
 
-.ajena {
-  background-color: #ffffff; color: #334155; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 4px;
-}
+// .ajena {
+//   background-color: #ffffff; color: #334155; border: 1px solid #e2e8f0; align-self: flex-start; border-bottom-left-radius: 4px;
+// }
 
-.propia {
-  background-color: #715B62; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px;
-}
+// .propia {
+//   background-color: #715B62; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px;
+// }
 
-.fecha-msj {
-  display: block; font-size: 0.65rem; margin-top: 6px; text-align: right;
-}
+// .fecha-msj {
+//   display: block; font-size: 0.65rem; margin-top: 6px; text-align: right;
+// }
 
-.ajena .fecha-msj { color: #94a3b8; }
-.propia .fecha-msj { color: rgba(255,255,255,0.7); }
+// .ajena .fecha-msj { color: #94a3b8; }
+// .propia .fecha-msj { color: rgba(255,255,255,0.7); }
 
-.chat-input-area {
-  padding: 16px; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 12px;
-}
+// .chat-input-area {
+//   padding: 16px; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 12px;
+// }
 
-.input-chat {
-  flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.9rem; transition: border-color 0.2s;
-  &:focus { outline: none; border-color: #715B62; }
-}
+// .input-chat {
+//   flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 0.9rem; transition: border-color 0.2s;
+//   &:focus { outline: none; border-color: #715B62; }
+// }
 
-.btn-enviar-chat {
-  background-color: #10b981; color: white; border: none; padding: 0 20px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: background 0.2s;
-  &:hover { background-color: #059669; }
-}
+// .btn-enviar-chat {
+//   background-color: #10b981; color: white; border: none; padding: 0 20px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+//   &:hover { background-color: #059669; }
+// }
 
 /* Inputs form */
+
 .form-input {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
   border-radius: 8px;
   padding: 10px 14px;
-  color: #334155;
+  
+  color: #334155 !important;
+  -webkit-text-fill-color: #334155 !important;
+  opacity: 1 !important;
+  
   font-size: 0.9rem;
   transition: all 0.3s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   
-  /* Textos largos */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-
-  &:hover, &:focus {
-    outline: none;
-    background-color: #715B62; 
-    color: #FFFFFF; 
-    border-color: #715B62;
-    box-shadow: 0 4px 6px rgba(113, 91, 98, 0.2);
-    cursor: pointer;
-  }
 }
 
-/*Botones control */
+.form-input:hover, 
+.form-input:focus {
+  outline: none !important;
+  border-color: #715B62 !important;
+  background-color: #ffffff !important; 
+}
+
+
 .btn-moderno {
   display: inline-flex;
   align-items: center;
@@ -768,23 +828,10 @@ function cerrarMensajes() {
   color: white;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-
-  .icono { font-size: 1.1rem; font-weight: bold; }
-
-  &:hover {
-    transform: translateY(-2px); 
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); 
-    filter: brightness(1.05);
-  }
-
-  &:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
 }
 
-.btn-aprobar { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-.btn-rechazar { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-.btn-guinda { background-color: #715B62; width: 100%; padding: 10px; border-radius: 6px; }
-.btn-guinda:hover { background-color: #5c4a50; }
+
+.btn-aprobar { background: linear-gradient(135deg, #d48d95 0%, #d47782 100%); }
+.btn-rechazar { background: linear-gradient(135deg, #46252e 0%, #361d24 100%); }
+.btn-guinda-sisdai { background-color: #715B62; width: 100%; padding: 10px; border-radius: 6px; }
 </style>
