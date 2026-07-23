@@ -28,9 +28,8 @@ export function useTableroApi() {
     try {
       return JSON.parse(text);
     } catch {
-      throw new Error(
-        `Respuesta inesperada del servidor (${respuesta.status}): ${text.slice(0, 100)}`
-      );
+      console.error(`[useTableroApi] Error de respuesta (status: ${respuesta.status}):`, text);
+      throw new Error(`Respuesta inesperada del servidor (${respuesta.status})`);
     }
   }
 
@@ -45,9 +44,8 @@ export function useTableroApi() {
     try {
       return JSON.parse(text);
     } catch {
-      throw new Error(
-        `Respuesta inesperada del servidor (${respuesta.status}): ${text.slice(0, 100)}`
-      );
+      console.error(`[useTableroApi] Error de respuesta (status: ${respuesta.status}):`, text);
+      throw new Error(`Respuesta inesperada del servidor (${respuesta.status})`);
     }
   }
 

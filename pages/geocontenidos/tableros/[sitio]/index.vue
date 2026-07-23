@@ -157,8 +157,21 @@ const pestanias = computed(() => [
   { id: 'identidad', titulo: 'Identidad del sitio' },
   { id: 'banda', titulo: 'Banda institucional', deshabilitada: esNuevo.value },
   { id: 'estructura', titulo: 'Estructura', deshabilitada: esNuevo.value },
-  { id: 'datos', titulo: 'Datos estáticos', deshabilitada: esNuevo.value },
+  { id: 'datos', titulo: 'Cuadros de datos', deshabilitada: esNuevo.value },
 ]);
+
+const activeTab = ref(route.query.tab?.toString() || 'identidad');
+
+function cambiarPestania(tabId) {
+  activeTab.value = tabId;
+  navigateTo(
+    {
+      path: route.path,
+      query: { ...route.query, tab: tabId },
+    },
+    { replace: true }
+  );
+}
 
 cargarSitio();
 </script>
@@ -195,7 +208,7 @@ cargarSitio();
 
         <button
           type="button"
-          class="boton boton-chico"
+          class="boton"
           :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
           :disabled="togglandoPublico"
           @click="togglearPublico"
@@ -216,9 +229,15 @@ cargarSitio();
 
       <GeocontenidosLoader v-if="cargandoSitio" mensaje="Cargando tablero..." />
 
-      <GeocontenidosPestanias v-else :pestanias="pestanias" id-seleccion="identidad">
+      <GeocontenidosPestanias
+        v-else
+        :pestanias="pestanias"
+        :id-seleccion="activeTab"
+        @cambiar="cambiarPestania"
+      >
         <template #contenido-identidad>
           <TablerosAdminTabIdentidad
+            v-if="activeTab === 'identidad'"
             ref="tabIdentidad"
             :sitio="sitio"
             @actualizar="aplicarCambios"
@@ -227,15 +246,21 @@ cargarSitio();
         </template>
 
         <template #contenido-banda>
-          <TablerosAdminTabBandaInstitucional v-if="sitio.id" :site-id="sitio.id" />
+          <TablerosAdminTabBandaInstitucional
+            v-if="sitio.id && activeTab === 'banda'"
+            :site-id="sitio.id"
+          />
         </template>
 
         <template #contenido-estructura>
-          <TablerosAdminTabEstructura v-if="sitio.id" :site-id="sitio.id" />
+          <TablerosAdminTabEstructura
+            v-if="sitio.id && activeTab === 'estructura'"
+            :site-id="sitio.id"
+          />
         </template>
 
         <template #contenido-datos>
-          <TablerosAdminTabDatos v-if="sitio.id" :site-id="sitio.id" />
+          <TablerosAdminTabDatos v-if="sitio.id && activeTab === 'datos'" :site-id="sitio.id" />
         </template>
       </GeocontenidosPestanias>
 

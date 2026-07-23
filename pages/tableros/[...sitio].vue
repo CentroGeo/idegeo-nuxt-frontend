@@ -212,6 +212,7 @@ cargarSitio();
       </nav>
 
       <TablerosIndicador
+        :indicador-id="indicadorActivoId"
         :nombre="indicadorActivoNombre"
         :datos="indicador.datos"
         :cargando="indicador.cargando"

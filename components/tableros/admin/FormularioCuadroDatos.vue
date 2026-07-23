@@ -13,7 +13,8 @@ const props = defineProps({
 const emit = defineEmits(['guardado', 'cerrar']);
 
 const { data: userData } = useAuth();
-const { crearCuadroDatos, actualizarCuadroDatos } = useTableroApi();
+const { crearCuadroDatos, actualizarCuadroDatos, fetchIndicador, fetchDatasetAttributes } =
+  useTableroApi();
 
 const modal = ref(null);
 const guardando = ref(false);
@@ -21,6 +22,28 @@ const error = ref('');
 const previewIcono = ref(null);
 
 const esEdicion = computed(() => !!props.cuadro);
+
+// Atributos reales del dataset del indicador, sólo como sugerencia (datalist): el
+// campo sigue siendo texto libre porque también se usan campos "virtuales" que sólo
+// existen en general_values y no son una columna real del dataset.
+const GEO_ATTRS = new Set(['the_geom', 'geometry', 'geom', 'wkb_geometry', 'shape']);
+const atributosDataset = ref([]);
+
+async function cargarAtributosDataset() {
+  atributosDataset.value = [];
+  try {
+    const indicador = await fetchIndicador(props.indicadorId);
+    const layerId = indicador?.layer;
+    if (!layerId) return;
+    const data = await fetchDatasetAttributes(layerId);
+    const attrs = data?.dataset?.attribute_set ?? data?.attribute_set ?? [];
+    atributosDataset.value = attrs
+      .map((a) => a.attribute)
+      .filter((name) => name && !GEO_ATTRS.has(name));
+  } catch {
+    atributosDataset.value = [];
+  }
+}
 
 const formulario = reactive({
   field: '',
@@ -67,13 +90,30 @@ function cargarDesdeCuadro() {
   formulario.size = props.cuadro.size || '1';
   formulario.icon = props.cuadro.icon || '';
   formulario.stack_order = props.cuadro.stack_order || 1;
+  previewIcono.value = props.cuadro.icon_custom || null;
 }
+
+const inputArchivo = ref(null);
+
+watch(
+  () => formulario.icon,
+  (newIcon) => {
+    if (newIcon) {
+      formulario.icon_custom_file = null;
+      previewIcono.value = null;
+      if (inputArchivo.value) {
+        inputArchivo.value.value = '';
+      }
+    }
+  }
+);
 
 function onArchivoIcono(event) {
   const archivo = event.target.files?.[0];
   if (!archivo) return;
   formulario.icon_custom_file = archivo;
   previewIcono.value = URL.createObjectURL(archivo);
+  formulario.icon = '';
 }
 
 async function guardar() {
@@ -92,9 +132,20 @@ async function guardar() {
   form.append('edge_color', formulario.edge_color);
   form.append('edge_style', formulario.edge_style);
   form.append('size', formulario.size);
-  if (formulario.icon) form.append('icon', formulario.icon);
-  if (formulario.icon_custom_file) form.append('icon_custom', formulario.icon_custom_file);
   form.append('stack_order', String(formulario.stack_order));
+
+  if (formulario.icon) {
+    form.append('icon', formulario.icon);
+    form.append('icon_custom', '');
+  } else if (formulario.icon_custom_file) {
+    form.append('icon', '');
+    form.append('icon_custom', formulario.icon_custom_file);
+  } else {
+    form.append('icon', '');
+    if (esEdicion.value && props.cuadro.icon_custom && !previewIcono.value) {
+      form.append('icon_custom', '');
+    }
+  }
 
   try {
     const token = userData.value?.accessToken;
@@ -120,6 +171,7 @@ watch(
   (m) => {
     if (m) {
       cargarDesdeCuadro();
+      cargarAtributosDataset();
       m.abrir();
     }
   },
@@ -145,9 +197,17 @@ watch(
                 id="cd-field"
                 v-model="formulario.field"
                 type="text"
+                list="cd-field-sugerencias"
                 placeholder="Ej: poblacion_total"
                 required
               />
+              <datalist id="cd-field-sugerencias">
+                <option v-for="attr in atributosDataset" :key="attr" :value="attr" />
+              </datalist>
+              <p v-if="atributosDataset.length" class="formulario-ayuda">
+                Sugerencias tomadas de las columnas reales del dataset del indicador. También puedes
+                escribir un campo que sólo exista en los valores generales del indicador.
+              </p>
             </div>
             <div class="campo">
               <label for="cd-name">Nombre personalizado <span class="requerido">*</span></label>
@@ -155,11 +215,14 @@ watch(
             </div>
           </div>
 
-          <div class="check-row m-t-2">
-            <label class="check-inline">
-              <input id="cd-percentage" v-model="formulario.is_percentage" type="checkbox" />
-              ¿Es porcentual?
-            </label>
+          <div class="check-container m-t-2">
+            <input
+              id="cd-percentage"
+              v-model="formulario.is_percentage"
+              type="checkbox"
+              class="checkbox-custom"
+            />
+            <label for="cd-percentage" class="label-custom">¿Es porcentual?</label>
           </div>
 
           <div v-if="formulario.is_percentage" class="campo m-t-2">
@@ -223,12 +286,28 @@ watch(
           </div>
           <div class="campo m-t-2">
             <label for="cd-icon-custom">O subir ícono personalizado</label>
-            <input id="cd-icon-custom" type="file" accept="image/*" @change="onArchivoIcono" />
+            <div class="input-archivo-simple">
+              <label for="cd-icon-custom" class="input-archivo-simple__gatillo"> Subir </label>
+              <span class="input-archivo-simple__nombre">
+                {{
+                  formulario.icon_custom_file?.name ||
+                  (previewIcono ? 'Archivo cargado' : 'Ningún archivo seleccionado')
+                }}
+              </span>
+              <input
+                id="cd-icon-custom"
+                ref="inputArchivo"
+                type="file"
+                accept="image/*"
+                class="input-archivo-simple__oculto"
+                @change="onArchivoIcono"
+              />
+            </div>
             <img
               v-if="previewIcono"
               :src="previewIcono"
               alt="Preview del ícono"
-              class="icono-preview"
+              class="icono-preview m-t-2"
             />
           </div>
 
@@ -242,13 +321,21 @@ watch(
               borderColor: formulario.edge_color,
             }"
           >
-            <div class="cuadro-preview__titulo">
-              <span v-if="formulario.icon" :class="formulario.icon" class="cuadro-preview__icono" />
-              <strong>{{ formulario.name || 'Nombre del cuadro' }}</strong>
+            <div class="cuadro-preview__icono">
+              <img
+                v-if="previewIcono"
+                :src="previewIcono"
+                alt="Vista previa del icono"
+                class="cuadro-preview__icono-img"
+              />
+              <span v-else-if="formulario.icon" :class="formulario.icon" />
             </div>
-            <p class="cuadro-preview__campo">
-              {{ formulario.field || 'campo' }}{{ formulario.is_percentage ? ' (%)' : '' }}
-            </p>
+            <div class="cuadro-preview__contenido">
+              <p class="cuadro-preview__nombre">{{ formulario.name || 'Nombre del cuadro' }}</p>
+              <p class="cuadro-preview__valor">
+                123<span v-if="formulario.is_percentage" class="cuadro-preview__porcentaje">%</span>
+              </p>
+            </div>
           </div>
 
           <p v-if="error" class="color-error m-t-2">{{ error }}</p>
@@ -349,30 +436,44 @@ watch(
 }
 
 .cuadro-preview {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.25rem;
   border-radius: 8px;
   border-width: 2px;
   border-style: solid;
-  min-width: 200px;
-  max-width: 280px;
+  max-width: 320px;
+  gap: 1rem;
 
-  &__titulo {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+  &__nombre {
+    margin: 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    opacity: 0.85;
+    letter-spacing: 0.03em;
+  }
+
+  &__valor {
+    margin: 0.25rem 0 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  &__porcentaje {
+    font-size: 0.75em;
   }
 
   &__icono {
-    font-size: 1.4rem;
+    flex-shrink: 0;
+    font-size: 1.5rem;
+    opacity: 0.7;
   }
 
-  &__campo {
-    margin: 0;
-    font-size: 0.82rem;
-    opacity: 0.85;
+  &__icono-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
   }
 }
 
@@ -387,5 +488,58 @@ watch(
 
 .requerido {
   color: var(--color-primario-4, #991f47);
+}
+
+.input-archivo-simple {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0.25rem;
+}
+
+.input-archivo-simple__gatillo {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #333;
+  user-select: none;
+}
+
+.input-archivo-simple__gatillo:hover {
+  background: #e8e8e8;
+  border-color: #bbb;
+}
+
+.input-archivo-simple__nombre {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.input-archivo-simple__oculto {
+  display: none;
+}
+
+.check-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-custom {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primario, #691c32);
+}
+
+.label-custom {
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
 }
 </style>

@@ -24,12 +24,13 @@ const formulario = reactive({
   field_one: '',
   field_two: '',
   plot_type: 'bar',
-  category_method: 'quantile',
+  category_method: 'quantil',
   field_category: 5,
   colors: 'azules_3',
   reverse_colors: false,
   use_single_field: true,
   is_histogram: false,
+  show_general_values: true,
 });
 
 const CATEGORIAS_CAPAS = Object.entries(categoriesNamesInSpanish).map(([id, label]) => ({
@@ -208,6 +209,7 @@ async function guardar() {
       colors: colorsValue,
       use_single_field: formulario.use_single_field,
       is_histogram: formulario.is_histogram,
+      show_general_values: formulario.show_general_values,
       stack_order: 1,
     };
     const data = await crearIndicador(payload, userData.value?.accessToken);
@@ -248,7 +250,14 @@ onMounted(async () => {
 
 <template>
   <ClientOnly>
-    <TablerosAdminModalBase ref="modal" ancho="960px" @cerrar="emit('cerrar')">
+    <TablerosAdminModalBase
+      ref="modal"
+      ancho="960px"
+      alto-maximo="94dvh"
+      centrar-vertical
+      adaptar-tema
+      @cerrar="emit('cerrar')"
+    >
       <template #encabezado>
         <h2>Nuevo indicador</h2>
         <ol class="pasos-mini" aria-label="Pasos">
@@ -259,7 +268,7 @@ onMounted(async () => {
       </template>
 
       <template #cuerpo>
-        <form @submit.prevent="siguiente">
+        <form class="modal-nuevo-indicador" @submit.prevent="siguiente">
           <!-- ── Paso 1: Datos del indicador y capa ── -->
           <div v-show="paso === 1">
             <div class="seccion-titulo">Información general</div>
@@ -317,23 +326,38 @@ onMounted(async () => {
                 <ul
                   v-show="!buscandoDataset && resultadosDataset.length > 0"
                   class="dataset-resultados"
+                  aria-label="Datasets encontrados"
                 >
-                  <li
-                    v-for="ds in resultadosDataset"
-                    :key="ds.pk"
-                    @mousedown.prevent="seleccionarDataset(ds)"
-                  >
-                    <span class="fw-500">{{ ds.title }}</span>
-                    <span v-if="ds.alternate" class="formulario-ayuda monospace">{{
-                      ds.alternate
-                    }}</span>
+                  <li v-for="ds in resultadosDataset" :key="ds.pk">
+                    <button
+                      type="button"
+                      class="dataset-resultados__opcion"
+                      :aria-label="`Seleccionar dataset ${ds.title}`"
+                      @mousedown.prevent
+                      @click="seleccionarDataset(ds)"
+                    >
+                      <span class="dataset-resultados__contenido">
+                        <span class="fw-500">{{ ds.title }}</span>
+                        <span v-if="ds.alternate" class="formulario-ayuda monospace">
+                          {{ ds.alternate }}
+                        </span>
+                      </span>
+
+                      <span class="dataset-resultados__accion" aria-hidden="true">
+                        Seleccionar <span>→</span>
+                      </span>
+                    </button>
                   </li>
-                  <li
-                    v-if="hayMasPaginas"
-                    class="dataset-resultados__mas"
-                    @mousedown.prevent="cargarMasDatasets"
-                  >
-                    {{ cargandoMas ? 'Cargando...' : 'Mostrar más capas...' }}
+
+                  <li v-if="hayMasPaginas" class="dataset-resultados__mas">
+                    <button
+                      type="button"
+                      class="dataset-resultados__mas-boton"
+                      :disabled="cargandoMas"
+                      @click="cargarMasDatasets"
+                    >
+                      {{ cargandoMas ? 'Cargando...' : 'Mostrar más capas...' }}
+                    </button>
                   </li>
                 </ul>
                 <p
@@ -447,9 +471,9 @@ onMounted(async () => {
               <div class="campo">
                 <label for="ind-method">Método</label>
                 <select id="ind-method" v-model="formulario.category_method">
-                  <option value="quantile">Cuantiles</option>
-                  <option value="jenks">Jenks (natural breaks)</option>
-                  <option value="equal">Intervalos iguales</option>
+                  <option value="quantil">Cuantiles</option>
+                  <option value="naturalb">Jenks (natural breaks)</option>
+                  <option value="sameintervals">Intervalos iguales</option>
                   <option value="manual">Manual</option>
                 </select>
               </div>
@@ -470,19 +494,75 @@ onMounted(async () => {
               <div class="campo">
                 <label for="ind-colors">Rampa de color</label>
                 <select id="ind-colors" v-model="formulario.colors">
-                  <option value="azules_3">Azules</option>
-                  <option value="cafes">Cafés</option>
-                  <option value="morados">Morados</option>
-                  <option value="verdes_2">Verdes</option>
-                  <option value="naranjas">Naranjas</option>
-                  <option value="rosas">Rosas</option>
-                  <option value="varios">Multicolor</option>
-                  <option value="semaforo">Semáforo</option>
-                  <option value="semaforo_3">Semáforo 3 tonos</option>
+                  <optgroup label="Azules">
+                    <option value="azules">Azules</option>
+                    <option value="azules_2">Azules 2</option>
+                    <option value="azules_3">Azules 3</option>
+                    <option value="azules_4">Azules 4</option>
+                    <option value="azules_5">Azules 5</option>
+                  </optgroup>
+                  <optgroup label="Verdes">
+                    <option value="verdes">Verdes</option>
+                    <option value="verdes_2">Verdes 2</option>
+                    <option value="verdes_3">Verdes 3</option>
+                    <option value="verdes_4">Verdes 4</option>
+                    <option value="verdes_5">Verdes 5</option>
+                    <option value="verdes_6">Verdes 6</option>
+                  </optgroup>
+                  <optgroup label="Cafés / naranjas">
+                    <option value="cafes">Cafés</option>
+                    <option value="cafes_2">Cafés 2</option>
+                    <option value="cafes_3">Cafés 3</option>
+                    <option value="naranjas">Naranjas</option>
+                  </optgroup>
+                  <optgroup label="Morados / rosas">
+                    <option value="morados">Morados</option>
+                    <option value="morados_2">Morados 2</option>
+                    <option value="rosas">Rosas</option>
+                  </optgroup>
+                  <optgroup label="Divergentes">
+                    <option value="cafes_verdes">Café ↔ Verde</option>
+                    <option value="naranja_azul">Naranja ↔ Azul</option>
+                    <option value="rosa_verde">Rosa ↔ Verde</option>
+                  </optgroup>
+                  <optgroup label="Semáforo">
+                    <option value="semaforo">Semáforo</option>
+                    <option value="semaforo_2">Semáforo 2</option>
+                    <option value="semaforo_3">Semáforo 3 tonos</option>
+                    <option value="semaforo_4">Semáforo 4 (invertido)</option>
+                    <option value="semaforo_5">Semáforo 5 (intenso, invertido)</option>
+                    <option value="semaforo_6">Semáforo 6 (3 colores)</option>
+                    <option value="semaforo_7">Semáforo 7 (5 pasos)</option>
+                    <option value="semaforo_8">Semáforo 8 (5 pasos)</option>
+                  </optgroup>
+                  <optgroup label="Otras">
+                    <option value="grises">Grises</option>
+                    <option value="varios">Multicolor</option>
+                    <option value="varios_2">Multicolor 2</option>
+                    <option value="varios_3">Multicolor 3</option>
+                  </optgroup>
                 </select>
-                <label class="check-inline m-t-1">
-                  <input v-model="formulario.reverse_colors" type="checkbox" />
-                  Invertir paleta
+                <label
+                  class="opcion-toggle m-t-1"
+                  :class="{ 'opcion-toggle--activa': formulario.reverse_colors }"
+                >
+                  <input
+                    v-model="formulario.reverse_colors"
+                    class="opcion-toggle__input"
+                    type="checkbox"
+                    role="switch"
+                  />
+
+                  <span class="opcion-toggle__contenido">
+                    <strong>Invertir paleta</strong>
+                    <span>
+                      Invierte el orden de los colores de la rampa seleccionada.
+                    </span>
+                  </span>
+
+                  <span class="opcion-toggle__estado" aria-hidden="true">
+                    {{ formulario.reverse_colors ? 'Activado' : 'Desactivado' }}
+                  </span>
                 </label>
               </div>
               <div class="campo">
@@ -510,6 +590,29 @@ onMounted(async () => {
                 </select>
               </div>
             </div>
+
+            <label
+              class="opcion-toggle m-t-2"
+              :class="{ 'opcion-toggle--activa': formulario.show_general_values }"
+            >
+              <input
+                v-model="formulario.show_general_values"
+                class="opcion-toggle__input"
+                type="checkbox"
+                role="switch"
+              />
+
+              <span class="opcion-toggle__contenido">
+                <strong>Mostrar valores generales</strong>
+                <span>
+                  Calcula los valores resumidos que utilizan los cuadros de datos del indicador.
+                </span>
+              </span>
+
+              <span class="opcion-toggle__estado" aria-hidden="true">
+                {{ formulario.show_general_values ? 'Activado' : 'Desactivado' }}
+              </span>
+            </label>
           </div>
 
           <!-- ── Paso 3: Confirmar ── -->
@@ -553,6 +656,10 @@ onMounted(async () => {
               <div class="resumen-dl__fila">
                 <dt>Gráfica</dt>
                 <dd>{{ formulario.plot_type }}</dd>
+              </div>
+              <div class="resumen-dl__fila">
+                <dt>Valores generales</dt>
+                <dd>{{ formulario.show_general_values ? 'Sí' : 'No' }}</dd>
               </div>
             </dl>
             <p class="formulario-ayuda m-t-2">
@@ -664,7 +771,7 @@ onMounted(async () => {
   padding: 8px 12px;
   border: 1px solid var(--color-borde, #ccc);
   border-radius: 6px;
-  background: var(--color-secundario-2, #fcf3f5);
+  background: var(--tableros-modal-superficie-suave, #fcf3f5);
   margin-bottom: 0.5rem;
 
   &__info {
@@ -692,42 +799,101 @@ onMounted(async () => {
   z-index: 100;
   left: 0;
   right: 0;
-  top: calc(100% + 2px);
+  top: calc(100% + 4px);
   list-style: none;
   padding: 0;
   margin: 0;
-  background: #fff;
-  border: 1px solid var(--color-borde, #ccc);
-  border-top: none;
-  border-radius: 0 0 6px 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  max-height: 200px;
+  background: var(--tableros-modal-control-fondo, #ffffff);
+  color: var(--tableros-modal-texto, inherit);
+  border: 1px solid var(--tableros-modal-control-borde, #cccccc);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  max-height: 260px;
   overflow-y: auto;
 
   li {
-    padding: 8px 12px;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 0.9rem;
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid var(--tableros-modal-control-borde, #e4e4e4);
 
-    &:hover {
-      background: var(--color-secundario-2, #fcf3f5);
+    &:last-child {
+      border-bottom: none;
     }
   }
 
-  &__mas {
-    justify-content: center;
+  &__opcion {
+    width: 100%;
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--tableros-modal-hover-fondo, #fcf3f5);
+      box-shadow: inset 4px 0 0 var(--tableros-modal-acento, #991f47);
+      outline: none;
+    }
+
+    &:hover .dataset-resultados__accion,
+    &:focus-visible .dataset-resultados__accion {
+      opacity: 1;
+      transform: translateX(2px);
+    }
+  }
+
+  &__contenido {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__accion {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--tableros-modal-acento, #991f47);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    opacity: 0.72;
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  &__mas-boton {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--tableros-modal-acento, #991f47);
     font-size: 0.82rem;
-    color: var(--color-primario-4, #991f47);
-    font-weight: 600;
-    border-top: 1px solid var(--color-borde, #eee);
+    font-weight: 700;
+    text-align: center;
     cursor: pointer;
 
-    &:hover {
-      background: var(--color-fondo-2, #f5f5f5) !important;
+    &:hover,
+    &:focus-visible {
+      background: var(--tableros-modal-hover-fondo, #fcf3f5);
+      outline: 2px solid var(--tableros-modal-acento, #991f47);
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.65;
     }
   }
 }
@@ -803,4 +969,202 @@ onMounted(async () => {
   font-family: monospace;
   font-size: 0.78rem;
 }
+
+
+
+/* Opciones booleanas mostradas como botones de activación */
+.opcion-toggle {
+  position: relative;
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--tableros-modal-control-borde, #cccccc);
+  border-radius: 8px;
+  background: var(--tableros-modal-superficie-suave, #f7f7f7);
+  color: var(--tableros-modal-texto, inherit);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    background: var(--tableros-modal-hover-fondo, #fcf3f5);
+    border-color: var(--tableros-modal-acento, #991f47);
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--tableros-modal-acento, #991f47);
+    outline-offset: 2px;
+  }
+
+  &--activa {
+    background: var(--tableros-modal-acento-suave, #f8e1e8);
+    border-color: var(--tableros-modal-acento, #991f47);
+    box-shadow: inset 4px 0 0 var(--tableros-modal-acento, #991f47);
+
+    .opcion-toggle__estado {
+      background: var(--tableros-modal-acento, #991f47);
+      border-color: var(--tableros-modal-acento, #991f47);
+      color: var(--tableros-modal-fondo, #ffffff);
+    }
+  }
+
+  &__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &__contenido {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    pointer-events: none;
+
+    strong {
+      color: var(--tableros-modal-texto, inherit);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    span {
+      color: var(--tableros-modal-texto-secundario, #666666);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+  }
+
+  &__estado {
+    min-width: 92px;
+    display: inline-flex;
+    justify-content: center;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--tableros-modal-control-borde, #cccccc);
+    border-radius: 999px;
+    background: var(--tableros-modal-fondo, #ffffff);
+    color: var(--tableros-modal-texto-secundario, #666666);
+    font-size: 0.75rem;
+    font-weight: 700;
+    pointer-events: none;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+}
+
+@media (max-width: 640px) {
+  .opcion-toggle {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+
+    &__estado {
+      min-width: 0;
+      justify-self: start;
+    }
+  }
+}
+
+/* Tema local: únicamente modal Nuevo indicador */
+.modal-nuevo-indicador {
+  color: var(--tableros-modal-texto, inherit);
+
+  .campo label,
+  .check-inline,
+  .checks-col {
+    color: var(--tableros-modal-texto, inherit);
+  }
+
+  .formulario-ayuda {
+    color: var(--tableros-modal-texto-secundario, #777777);
+  }
+
+  input:not([type='checkbox']),
+  textarea,
+  select {
+    background: var(--tableros-modal-control-fondo, #ffffff);
+    border-color: var(--tableros-modal-control-borde, #cccccc);
+    color: var(--tableros-modal-texto, inherit);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--tableros-modal-placeholder, #777777);
+    opacity: 1;
+  }
+
+  select option,
+  select optgroup {
+    background: var(--tableros-modal-control-fondo, #ffffff);
+    color: var(--tableros-modal-texto, inherit);
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--tableros-modal-acento, #991f47);
+    outline-offset: 1px;
+  }
+
+  .seccion-titulo {
+    color: var(--tableros-modal-texto-secundario, #777777);
+    border-color: var(--tableros-modal-control-borde, #e8e8e8);
+  }
+
+  .dataset-seleccionado,
+  .sin-atributos-aviso {
+    background: var(--tableros-modal-superficie-suave, #f7f7f7);
+    border-color: var(--tableros-modal-control-borde, #cccccc);
+    color: var(--tableros-modal-texto, inherit);
+  }
+
+  .resumen-dl {
+    border-color: var(--tableros-modal-control-borde, #e0e0e0);
+
+    &__fila {
+      border-color: var(--tableros-modal-control-borde, #e8e8e8);
+
+      dt {
+        background: var(--tableros-modal-superficie-suave, #f5f5f5);
+        color: var(--tableros-modal-texto-secundario, #666666);
+      }
+
+      dd {
+        background: var(--tableros-modal-fondo, #ffffff);
+        color: var(--tableros-modal-texto, inherit);
+      }
+    }
+  }
+
+  .acciones-modal {
+    border-color: var(--tableros-modal-control-borde, #e8e8e8);
+  }
+}
+
+.pasos-mini {
+  li {
+    color: var(--tableros-modal-texto-secundario, #777777);
+  }
+
+  li.activo {
+    color: var(--tableros-modal-texto, inherit);
+  }
+
+  li.actual {
+    background: var(--tableros-modal-acento-suave, #f8e1e8);
+    color: var(--tableros-modal-acento, #991f47);
+  }
+}
+
 </style>

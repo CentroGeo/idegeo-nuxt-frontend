@@ -32,11 +32,11 @@ const detalle = ref(null);
 const cargandoDetalle = ref(false);
 
 const editandoGrupo = ref(false);
-const formularioGrupo = reactive({ name: '', description: '' });
+const formularioGrupo = reactive({ name: '', description: '', info_text: '' });
 const guardandoGrupo = ref(false);
 
 const subgrupoEditandoId = ref(null);
-const formularioSubgrupo = reactive({ name: '', icon: '' });
+const formularioSubgrupo = reactive({ name: '', icon: '', info_text: '' });
 const guardandoSubgrupo = ref(false);
 
 async function cargarDetalle() {
@@ -135,6 +135,8 @@ async function confirmarEliminar() {
 }
 
 async function onDropGrupo(ev) {
+  ev.stopPropagation();
+
   const indicadorId = ev.dataTransfer.getData('indicator-id');
   if (!indicadorId) return;
   await actualizarIndicador(
@@ -147,6 +149,10 @@ async function onDropGrupo(ev) {
 }
 
 async function onDropSubgrupo(ev, subgrupoId) {
+  // Sin esto el 'drop' burbujea al contenedor del grupo (arbol-grupo__drop) y
+  // onDropGrupo también se dispara, sobreescribiendo esta asignación con subgroup: null.
+  ev.stopPropagation();
+
   const indicadorId = ev.dataTransfer.getData('indicator-id');
   if (!indicadorId) return;
   await actualizarIndicador(
@@ -171,6 +177,7 @@ async function desasignar(indicadorId) {
 function abrirEdicionGrupo() {
   formularioGrupo.name = props.grupo.name || '';
   formularioGrupo.description = props.grupo.description || '';
+  formularioGrupo.info_text = props.grupo.info_text || '';
   editandoGrupo.value = true;
 }
 
@@ -191,6 +198,7 @@ async function guardarGrupo() {
 function abrirEdicionSubgrupo(sg) {
   formularioSubgrupo.name = sg.name || '';
   formularioSubgrupo.icon = sg.icon || '';
+  formularioSubgrupo.info_text = sg.info_text || '';
   subgrupoEditandoId.value = sg.id;
 }
 
@@ -200,6 +208,7 @@ async function guardarSubgrupo(sgId) {
   const form = new FormData();
   form.append('name', formularioSubgrupo.name);
   if (formularioSubgrupo.icon) form.append('icon', formularioSubgrupo.icon);
+  form.append('info_text', formularioSubgrupo.info_text || '');
   try {
     await actualizarSubgrupo(sgId, form, userData.value?.accessToken);
     subgrupoEditandoId.value = null;
@@ -259,6 +268,11 @@ onMounted(cargarDetalle);
           type="text"
           placeholder="Descripción (opcional)"
         />
+        <textarea
+          v-model="formularioGrupo.info_text"
+          rows="2"
+          placeholder="Info (texto que aparece como ayuda del grupo, opcional)"
+        />
         <div class="arbol-grupo__edit-acciones">
           <button
             type="button"
@@ -286,6 +300,7 @@ onMounted(cargarDetalle);
             placeholder="Nombre del subgrupo"
             required
           />
+          <input v-model="nuevoSubgrupo.info_text" type="text" placeholder="Info (opcional)" />
           <TablerosAdminPickerIcono v-model="nuevoSubgrupo.icon" />
           <input type="submit" class="boton boton-primario boton-chico" value="Crear" />
         </form>
@@ -325,6 +340,11 @@ onMounted(cargarDetalle);
                     type="text"
                     placeholder="Nombre del subgrupo"
                     required
+                  />
+                  <input
+                    v-model="formularioSubgrupo.info_text"
+                    type="text"
+                    placeholder="Info (opcional)"
                   />
                   <TablerosAdminPickerIcono v-model="formularioSubgrupo.icon" />
                   <input
@@ -440,11 +460,11 @@ onMounted(cargarDetalle);
   margin-bottom: 24px;
 }
 .arbol-grupo {
-  background: var(--color-fondo-1, #ffffff);
+  background: transparent;
   border: 1px solid var(--color-neutro-2, #e0e0e0);
   border-radius: 6px;
   margin-bottom: 0.75rem;
-  color: #111;
+  color: inherit;
 
   &__header {
     display: flex;
@@ -522,7 +542,7 @@ onMounted(cargarDetalle);
   &__edit-form {
     padding: 0.5rem 0.75rem;
     border-top: 1px dashed var(--color-neutro-2, #e0e0e0);
-    background: var(--color-fondo-2, #fafafa);
+    background: transparent;
 
     form {
       display: flex;
@@ -540,10 +560,10 @@ onMounted(cargarDetalle);
   &__subgrupo {
     margin-top: 0.5rem;
     padding: 0.5rem;
-    background: var(--color-fondo-2, #fafafa);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 4px;
-    color: #111;
+    color: inherit;
 
     &-cab {
       display: flex;

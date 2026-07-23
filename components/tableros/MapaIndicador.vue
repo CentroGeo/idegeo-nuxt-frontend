@@ -2,8 +2,13 @@
 import { SisdaiCapaVectorial, SisdaiCapaXyz, SisdaiMapa } from '@centrogeomx/sisdai-mapas';
 
 const config = useRuntimeConfig();
+const { gnoxyUrl } = useGnoxyUrl();
 
 const props = defineProps({
+  indicadorId: {
+    type: [Number, String],
+    default: null,
+  },
   mapValues: {
     type: Object,
     default: null,
@@ -44,7 +49,12 @@ const leyendaMinimizada = ref(false);
 
 const VISTA_DEFAULT = { centro: [-99.1332, 19.4326], acercamiento: 5 };
 
-const mapaKey = computed(() => `${props.layerName || 'sin-capa'}-${(props.bbox || []).join(',')}`);
+const mapaKey = computed(
+  () =>
+    `${props.indicadorId || 'sin-indicador'}-${props.layerName || 'sin-capa'}-${(
+      props.bbox || []
+    ).join(',')}`
+);
 
 const vista = computed(() => {
   if (!props.bbox || props.bbox.length < 4) return VISTA_DEFAULT;
@@ -59,15 +69,14 @@ const vista = computed(() => {
   return { centro, acercamiento };
 });
 
-const wfsUrl = computed(() => {
-  if (!props.layerName) return null;
-  const base = config.public.geoserverUrl;
-  return (
-    `${base}/ows?service=WFS&version=1.0.0&request=GetFeature` +
-    `&typeName=${props.layerName}` +
-    `&outputFormat=application%2Fjson` +
-    `&srsName=EPSG%3A4326`
-  );
+const mapFeaturesUrl = computed(() => {
+  if (!props.indicadorId) return null;
+
+  const endpoint =
+    `${config.public.geonodeApi}/dashboard/indicators/` +
+    `${props.indicadorId}/map-features/`;
+
+  return gnoxyUrl(endpoint);
 });
 
 function hexToRgba(hex, alpha) {
@@ -81,6 +90,13 @@ function hexToRgba(hex, alpha) {
 const estiloVectorial = computed(() => {
   if (!props.mapValues || !props.layerIdField) {
     return {
+      // Símbolo para Point y MultiPoint.
+      'circulo-radio': 6,
+      'circulo-relleno-color': 'rgba(180,180,180,0.75)',
+      'circulo-contorno-color': '#ffffff',
+      'circulo-contorno-grosor': 1,
+
+      // Compatibilidad con Polygon, MultiPolygon y líneas.
       'relleno-color': 'rgba(180,180,180,0.4)',
       'contorno-color': '#888888',
       'contorno-grosor': 1,
@@ -88,19 +104,42 @@ const estiloVectorial = computed(() => {
   }
 
   const estilosCategorias = {};
+
   for (const [featureId, info] of Object.entries(props.mapValues)) {
-    const isActive = !props.rangoActivoColor || info.color === props.rangoActivoColor;
+    const color = info.color || '#cccccc';
+    const isActive = !props.rangoActivoColor || color === props.rangoActivoColor;
+    const thematicColor = isActive ? color : hexToRgba(color, 0.45);
+    const borderColor =
+      isActive && props.rangoActivoColor ? '#333333' : '#ffffff';
+    const borderWidth =
+      isActive && props.rangoActivoColor ? 2 : 0.8;
+
     estilosCategorias[String(featureId)] = {
-      'relleno-color': isActive ? info.color || '#cccccc' : hexToRgba(info.color, 0.45),
-      'contorno-color': isActive && props.rangoActivoColor ? '#333333' : '#ffffff',
-      'contorno-grosor': isActive && props.rangoActivoColor ? 2 : 0.8,
+      // Estilo para geometrías puntuales.
+      'circulo-radio': isActive && props.rangoActivoColor ? 8 : 6,
+      'circulo-relleno-color': thematicColor,
+      'circulo-contorno-color': borderColor,
+      'circulo-contorno-grosor': borderWidth,
+
+      // Conserva el soporte para capas poligonales.
+      'relleno-color': thematicColor,
+      'contorno-color': borderColor,
+      'contorno-grosor': borderWidth,
     };
   }
 
   return {
+    // Estilo general para Point y MultiPoint.
+    'circulo-radio': 6,
+    'circulo-relleno-color': 'rgba(180,180,180,0.75)',
+    'circulo-contorno-color': '#ffffff',
+    'circulo-contorno-grosor': 1,
+
+    // Estilo general para Polygon y MultiPolygon.
     'relleno-color': 'rgba(180,180,180,0.3)',
     'contorno-color': '#aaaaaa',
     'contorno-grosor': 1,
+
     categorias: {
       atributo: props.layerIdField,
       estilo: estilosCategorias,
@@ -127,8 +166,8 @@ const globoInformativo = computed(() => {
         <SisdaiCapaXyz :posicion="0" />
 
         <SisdaiCapaVectorial
-          v-if="wfsUrl"
-          :fuente="wfsUrl"
+          v-if="mapFeaturesUrl"
+          :fuente="mapFeaturesUrl"
           :estilo="estiloVectorial"
           :globo-informativo="globoInformativo"
           :posicion="1"
