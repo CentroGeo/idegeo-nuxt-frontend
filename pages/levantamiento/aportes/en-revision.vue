@@ -9,9 +9,6 @@ definePageMeta({
 const storeLevantamiento = useLevantamientoStore();
 const { data } = useAuth();
 
-const router = useRouter();
-const route = useRoute();
-
 const enRevision = shallowRef([]);
 const cargandoAportes = ref(false);
 
@@ -25,9 +22,7 @@ onMounted(async () => {
     enRevision.value = aportes.map((aporte) => ({
       ...aporte,
       title: aporte.title || aporte.titulo || 'Aporte sin título',
-      fecha_formateada: aporte.fecha_guardado
-        ? formatDate(new Date(aporte.fecha_guardado))
-        : '',
+      fecha_formateada: aporte.fecha_guardado ? formatDate(new Date(aporte.fecha_guardado)) : '',
     }));
   } finally {
     cargandoAportes.value = false;
@@ -35,28 +30,6 @@ onMounted(async () => {
 });
 
 const modalRemoverAporte = ref(null);
-
-const aporteSeleccionado = ref({});
-/**
- * Asigna el aporte seleccionado y navega a la vista de editar
- * @param aporte del que se va a editar
- */
-function editarAporte(aporte) {
-  aporteSeleccionado.value = aporte;
-  irAEditarAporte();
-}
-/**
- * Navega a la vista de editar con los querys de título y ruta previa
- */
-function irAEditarAporte() {
-  router.push({
-    path: `/levantamiento/aportes/editar/${aporteSeleccionado.value.id}`,
-    query: {
-      title: aporteSeleccionado.value.title,
-      previous_path: route.path,
-    },
-  });
-}
 </script>
 <template>
   <UiLayoutPaneles :estado-colapable="storeLevantamiento.catalogoColapsado">
@@ -123,13 +96,6 @@ function irAEditarAporte() {
 
                     <div class="tarjeta-pie" style="display: block">
                       <div class="flex" style="row-gap: 8px">
-                        <button
-                          class="boton-primario boton-chico texto-centrado tarjeta-pie-boton"
-                          type="button"
-                          @click="editarAporte(value)"
-                        >
-                          Editar aporte
-                        </button>
                         <button
                           class="boton-secundario boton-chico texto-centrado tarjeta-pie-boton"
                           type="button"

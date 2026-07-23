@@ -1,4 +1,5 @@
 <script setup>
+import SisdaiCampoBusqueda from '@centrogeomx/sisdai-componentes/src/componentes/campo-busqueda/SisdaiCampoBusqueda.vue';
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 import SisdaiSelector from '@centrogeomx/sisdai-componentes/src/componentes/selector/SisdaiSelector.vue';
 import { formatDate } from '~/utils/levantamiento';
@@ -14,8 +15,20 @@ const router = useRouter();
 const route = useRoute();
 
 const aprobados = shallowRef([]);
+const aprobadosFiltrados = shallowRef([]);
+const ordenAportes = ref('antiguas');
 const cargandoAprobados = ref(false);
 const errorAprobados = ref('');
+
+// Aplica en la vista el filtro y el orden por fecha sin solicitar nuevamente los aportes.
+const aportesOrdenados = computed(() =>
+  [...aprobadosFiltrados.value].sort((aporteA, aporteB) => {
+    const fechaA = new Date(aporteA.fecha_guardado || 0).getTime();
+    const fechaB = new Date(aporteB.fecha_guardado || 0).getTime();
+
+    return ordenAportes.value === 'recientes' ? fechaB - fechaA : fechaA - fechaB;
+  })
+);
 
 onMounted(async () => {
   const email = data.value?.user.email;
@@ -24,13 +37,13 @@ onMounted(async () => {
   cargandoAprobados.value = true;
   try {
     const aportes = await storeLevantamiento.obtenerAportesPorEstado(email, 'APROBADO');
-    aprobados.value = aportes.map((aporte) => ({
+    const aportesFormateados = aportes.map((aporte) => ({
       ...aporte,
       title: aporte.title || aporte.titulo || aporte.nombre || 'Aporte sin título',
-      fecha_formateada: aporte.fecha_guardado
-        ? formatDate(new Date(aporte.fecha_guardado))
-        : '',
+      fecha_formateada: aporte.fecha_guardado ? formatDate(new Date(aporte.fecha_guardado)) : '',
     }));
+    aprobados.value = aportesFormateados;
+    aprobadosFiltrados.value = aportesFormateados;
   } catch {
     errorAprobados.value = 'No fue posible cargar los aportes aprobados.';
   } finally {
@@ -77,7 +90,8 @@ async function eliminarAporte() {
   if (!aporteSeleccionado.value?.id) return;
 
   await storeLevantamiento.eliminarAporte(aporteSeleccionado.value.id);
-  aprobados.value = aprobados.value.filter(
+  aprobados.value = aprobados.value.filter((aporte) => aporte.id !== aporteSeleccionado.value.id);
+  aprobadosFiltrados.value = aprobadosFiltrados.value.filter(
     (aporte) => aporte.id !== aporteSeleccionado.value.id
   );
   modalRemoverAporte.value?.cerrarModal();
@@ -174,6 +188,22 @@ function continuarCrearAporte() {
               <UiNumeroElementos :numero="aprobados.length" etiqueta="Aportes" />
             </div>
           </div>
+          <!-- Conserva disponible la creación aunque la persona ya tenga aportes aprobados. -->
+          <div v-if="aprobados.length" class="columna-16">
+            <div class="grid">
+              <div class="columna-8"></div>
+              <div class="columna-8 flex flex-contenido-final">
+                <button
+                  class="boton-primario boton-pictograma"
+                  type="button"
+                  @click="abrirModalCrearAporte"
+                >
+                  Crear un aporte
+                  <span class="pictograma-agregar" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div>
+          </div>
           <div v-if="cargandoAprobados" class="columna-16">
             <p>Cargando aportes…</p>
           </div>
@@ -202,14 +232,31 @@ function continuarCrearAporte() {
             </div>
           </div>
           <div v-else class="columna-16">
-            <div class="grid">
+            <div class="grid herramientas m-b-3">
               <div class="columna-8">
-                <!-- Buscador -->
+                <ClientOnly>
+                  <label for="busqueda-aportes-aprobados">Buscar aporte</label>
+                  <SisdaiCampoBusqueda
+                    id="busqueda-aportes-aprobados"
+                    etiqueta=""
+                    :catalogo="aprobados"
+                    propiedad-busqueda="title"
+                    @al-filtrar="(resultado) => (aprobadosFiltrados = resultado)"
+                  />
+                </ClientOnly>
               </div>
+              <div class="columna-4">
+                <SisdaiSelector v-model="ordenAportes" etiqueta="Ordenar aportes">
+                  <option value="antiguas">Más antiguos primero</option>
+                  <option value="recientes">Más recientes primero</option>
+                </SisdaiSelector>
+              </div>
+            </div>
+            <div class="grid">
               <div class="columna-16">
                 <div class="contenedor-aprobados">
                   <div class="grid">
-                    <div v-for="value in aprobados" :key="value.id" class="columna-5">
+                    <div v-for="value in aportesOrdenados" :key="value.id" class="columna-5">
                       <div class="tarjeta" style="position: relative">
                         <div
                           class="tarjeta-imagen flex flex-contenido-centrado flex-vertical-centrado fondo-color-acento"

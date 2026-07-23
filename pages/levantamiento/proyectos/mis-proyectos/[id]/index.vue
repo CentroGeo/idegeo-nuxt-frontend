@@ -10,22 +10,27 @@ definePageMeta({
 
 const storeLevantamiento = useLevantamientoStore();
 const route = useRoute();
-const seccionesProyecto = new Set([
-  'informacion-general',
-  'participantes-permisos',
-  'formulario',
-]);
+// El acceso desde Proyectos compartidos limita la administración a permisos y formulario.
+const esAdministradorCompartido = computed(() => route.query.acceso === 'administrador-compartido');
+const seccionesProyecto = esAdministradorCompartido.value
+  ? new Set(['participantes-permisos', 'formulario'])
+  : new Set(['informacion-general', 'participantes-permisos', 'formulario']);
 const subrutaActual = ref(
   seccionesProyecto.has(String(route.query.seccion))
     ? String(route.query.seccion)
-    : 'informacion-general'
+    : esAdministradorCompartido.value
+      ? 'participantes-permisos'
+      : 'informacion-general'
 );
 
-const opcionesMenu = [
-  { texto: 'Información general', key: 'informacion-general' },
+// El propietario conserva el menú completo; el administrador compartido no edita datos generales.
+const opcionesMenu = computed(() => [
+  ...(!esAdministradorCompartido.value
+    ? [{ texto: 'Información general', key: 'informacion-general' }]
+    : []),
   { texto: 'Participantes y permisos', key: 'participantes-permisos' },
   { texto: 'Formulario', key: 'formulario' },
-];
+]);
 
 const router = useRouter();
 
@@ -38,7 +43,7 @@ const componenteActual = computed(() => {
     case 'formulario':
       return Formulario;
     default:
-      return InformacionGeneral;
+      return esAdministradorCompartido.value ? Participantes : InformacionGeneral;
   }
 });
 
@@ -54,7 +59,11 @@ const textoBoton = computed(() => {
 });
 
 function irAMisProyectos() {
-  router.push('/levantamiento/proyectos/mis-proyectos');
+  router.push(
+    esAdministradorCompartido.value
+      ? '/levantamiento/proyectos/proyectos-compartidos'
+      : '/levantamiento/proyectos/mis-proyectos'
+  );
 }
 
 const componentRef = ref(null);
@@ -92,7 +101,7 @@ function guardarCambios() {
               >
                 <span class="pictograma-flecha-izquierda" aria-hidden="true" />
               </button>
-              Mis proyectos
+              {{ esAdministradorCompartido ? 'Proyectos compartidos' : 'Mis proyectos' }}
             </div>
           </div>
         </div>
