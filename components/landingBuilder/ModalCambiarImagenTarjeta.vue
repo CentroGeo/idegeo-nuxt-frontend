@@ -11,9 +11,11 @@ const urlImagen = ref('');
 const error = ref('');
 const arrastrandoArchivo = ref(false);
 
-const TAMANO_MAXIMO_BYTES = 500 * 1024; // 500 KB
+const TAMANO_MAXIMO_IMAGEN_BYTES = 500 * 1024; // 500 KB
+const TAMANO_MAXIMO_VIDEO_BYTES = 8 * 1024 * 1024; // 8 MB
 
-const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+const tiposImagenPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+const tiposVideoPermitidos = ['video/mp4', 'video/webm'];
 
 function abrirModal() {
   pestanaActiva.value = 'subir';
@@ -73,13 +75,19 @@ function desactivarArrastre() {
 function procesarArchivo(archivo) {
   if (!archivo) return;
 
-  if (!tiposPermitidos.includes(archivo.type)) {
-    error.value = 'Selecciona una imagen JPG, PNG o WEBP.';
+  const esVideo = tiposVideoPermitidos.includes(archivo.type);
+  const esImagen = tiposImagenPermitidos.includes(archivo.type);
+
+  if (!esVideo && !esImagen) {
+    error.value = 'Selecciona una imagen JPG, PNG, WEBP o un video MP4/WEBM.';
     return;
   }
 
-  if (archivo.size > TAMANO_MAXIMO_BYTES) {
-    error.value = 'La imagen no puede pesar más de 500 KB.';
+  const limite = esVideo ? TAMANO_MAXIMO_VIDEO_BYTES : TAMANO_MAXIMO_IMAGEN_BYTES;
+  if (archivo.size > limite) {
+    error.value = esVideo
+      ? 'El video no puede pesar más de 8 MB.'
+      : 'La imagen no puede pesar más de 500 KB.';
     return;
   }
 
@@ -110,7 +118,7 @@ function aplicarEnlace() {
   const enlace = urlImagen.value.trim();
 
   if (!enlace) {
-    error.value = 'Ingresa el enlace de una imagen.';
+    error.value = 'Ingresa el enlace de una imagen o un video.';
     return;
   }
 
@@ -140,7 +148,7 @@ defineExpose({
     <SisdaiModal ref="modalCambiarImagen" class="modal-tarjeta-imagen">
       <template #encabezado>
         <div class="modal-tarjeta-imagen__encabezado">
-          <h2 class="modal-tarjeta-imagen__titulo">Cambiar imagen de tarjeta</h2>
+          <h2 class="modal-tarjeta-imagen__titulo">Cambiar imagen o video de tarjeta</h2>
 
           <button
             type="button"
@@ -203,7 +211,7 @@ defineExpose({
             ref="inputArchivo"
             class="modal-tarjeta-imagen__input-archivo"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
             @change="seleccionarArchivo"
           />
 
@@ -212,7 +220,7 @@ defineExpose({
             :class="{ 'modal-tarjeta-imagen__zona-subida--activa': arrastrandoArchivo }"
             role="button"
             tabindex="0"
-            aria-label="Arrastra o selecciona una imagen de tarjeta"
+            aria-label="Arrastra o selecciona una imagen o video de tarjeta"
             @click="abrirSelectorArchivos"
             @keydown.enter.prevent="abrirSelectorArchivos"
             @keydown.space.prevent="abrirSelectorArchivos"
@@ -248,7 +256,9 @@ defineExpose({
               Las imágenes con un ancho de 800 a 1200 píxeles funcionan mejor.
             </p>
 
-            <p class="modal-tarjeta-imagen__formatos">JPG, PNG o WEBP. Tamaño máximo: 500 KB.</p>
+            <p class="modal-tarjeta-imagen__formatos">
+              Imagen: JPG, PNG o WEBP (máx. 500 KB). Video: MP4 o WEBM (máx. 8 MB).
+            </p>
           </div>
         </section>
 
@@ -260,7 +270,7 @@ defineExpose({
           aria-labelledby="pestana-enlace-tarjeta"
         >
           <div class="modal-tarjeta-imagen__campo">
-            <label for="tarjeta-enlace">Enlace de la imagen</label>
+            <label for="tarjeta-enlace">Enlace de la imagen o video</label>
 
             <input
               id="tarjeta-enlace"
@@ -270,7 +280,9 @@ defineExpose({
               @keyup.enter="aplicarEnlace"
             />
 
-            <p class="formulario-ayuda">Pega un enlace directo a una imagen pública.</p>
+            <p class="formulario-ayuda">
+              Pega un enlace directo a una imagen o video público (mp4, webm).
+            </p>
           </div>
 
           <button
@@ -278,7 +290,7 @@ defineExpose({
             class="boton-primario boton-chico modal-tarjeta-imagen__boton-enlace"
             @click="aplicarEnlace"
           >
-            Usar imagen
+            Usar enlace
           </button>
         </section>
 
