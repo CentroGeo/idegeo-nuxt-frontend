@@ -61,6 +61,17 @@ function guardarTextos() {
   const tituloLimpio = titulo.value.trim();
   const subtituloLimpio = subtitulo.value.trim();
 
+  if (!tituloLimpio) {
+    error.value = 'El título es obligatorio.';
+    inputTitulo.value?.focus();
+    return;
+  }
+
+  if (!subtituloLimpio) {
+    error.value = 'El subtítulo es obligatorio.';
+    return;
+  }
+
   if (!PATRON_COLOR_HEX.test(colorTitulo.value)) {
     error.value = 'El color del título debe tener el formato #RRGGBB.';
     return;

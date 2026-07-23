@@ -50,7 +50,6 @@ export interface LandingBuilderConfig {
   secciones?: LandingBuilderSection[];
   bloques?: LandingBuilderBloque[];
   paginas?: LandingBuilderPagina[];
-  paginaInicioId: string | null;
   actualizadoEn: string;
 }
 
@@ -115,19 +114,10 @@ export function validarYObtenerMimetypeImagen(
     return mimetype;
   }
   const extension = archivo.originalFilename?.split('.').pop()?.toLowerCase();
-  const mimetypePorExtension: Record<string, string> = {
-    png: 'image/png',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    webp: 'image/webp',
-    svg: 'image/svg+xml',
-    mp4: 'video/mp4',
-    webm: 'video/webm',
-  };
-  const mimetypeInferido = extension ? mimetypePorExtension[extension] : undefined;
-  if (mimetypeInferido && permitidos.includes(mimetypeInferido)) {
-    return mimetypeInferido;
-  }
+  if (extension === 'png') return 'image/png';
+  if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
+  if (extension === 'webp') return 'image/webp';
+  if (extension === 'svg') return 'image/svg+xml';
   return null;
 }
 
@@ -211,7 +201,6 @@ const configPorDefecto: LandingBuilderConfig = {
   secciones: [],
   bloques: [],
   paginas: [],
-  paginaInicioId: null,
   actualizadoEn: new Date(0).toISOString(),
 };
 
@@ -329,7 +318,6 @@ export async function saveLandingBuilderConfig(
     logoCuartoUrl,
     tarjetas,
     paginas: actual.paginas,
-    paginaInicioId: actual.paginaInicioId,
     actualizadoEn: new Date().toISOString(),
   };
   await storage.setItem(CONFIG_KEY, nuevaConfig);
@@ -490,32 +478,6 @@ export async function getLandingBuilderPaginaPorSlug(
   return paginas.find((pagina) => pagina.slug === slug) ?? null;
 }
 
-export async function getLandingBuilderPaginaInicio(): Promise<LandingBuilderPagina | null> {
-  const config = await getLandingBuilderConfig();
-  if (!config.paginaInicioId) return null;
-
-  const paginas = await getLandingBuilderPaginas();
-  return paginas.find((pagina) => pagina.id === config.paginaInicioId) ?? null;
-}
-
-export async function setLandingBuilderPaginaInicio(
-  paginaInicioId: string | null
-): Promise<LandingBuilderConfig> {
-  const storage = useStorage('landingBuilder');
-  const config = await getLandingBuilderConfig();
-
-  if (paginaInicioId) {
-    const paginas = await getLandingBuilderPaginas();
-    if (!paginas.some((pagina) => pagina.id === paginaInicioId)) {
-      throw createError({ statusCode: 400, statusMessage: 'Página no encontrada' });
-    }
-  }
-
-  const nuevaConfig = { ...config, paginaInicioId };
-  await storage.setItem(CONFIG_KEY, nuevaConfig);
-  return nuevaConfig;
-}
-
 export async function crearLandingBuilderPagina(
   bloques: LandingBuilderBloque[],
   identidad: LandingBuilderPaginaIdentidad = IDENTIDAD_PAGINA_VACIA,
@@ -547,43 +509,13 @@ export async function crearLandingBuilderPagina(
   return nuevasPaginas;
 }
 
-export async function eliminarLandingBuilderPagina(
-  id: string
-): Promise<{ paginas: LandingBuilderPagina[]; paginaInicioId: string | null }> {
+export async function eliminarLandingBuilderPagina(id: string): Promise<LandingBuilderPagina[]> {
   const storage = useStorage('landingBuilder');
   const config = await getLandingBuilderConfig();
   const paginas = (config.paginas ?? []).filter((pagina) => pagina.id !== id);
-  const paginaInicioId = config.paginaInicioId === id ? null : config.paginaInicioId;
 
-  await storage.setItem(CONFIG_KEY, { ...config, paginas, paginaInicioId });
-  return { paginas, paginaInicioId };
-}
-
-function slugify(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function generarSlugUnico(
-  nombre: string,
-  paginas: LandingBuilderPagina[],
-  idExcluir: string
-): string {
-  const base = slugify(nombre) || 'pagina';
-  let slug = base;
-  let contador = 2;
-
-  while (paginas.some((pagina) => pagina.id !== idExcluir && pagina.slug === slug)) {
-    slug = `${base}-${contador}`;
-    contador += 1;
-  }
-
-  return slug;
+  await storage.setItem(CONFIG_KEY, { ...config, paginas });
+  return paginas;
 }
 
 export async function renombrarLandingBuilderPagina(
@@ -600,7 +532,6 @@ export async function renombrarLandingBuilderPagina(
   }
 
   pagina.nombre = nombre;
-  pagina.slug = generarSlugUnico(nombre, paginas, id);
   await storage.setItem(CONFIG_KEY, { ...config, paginas });
   return paginas;
 }
