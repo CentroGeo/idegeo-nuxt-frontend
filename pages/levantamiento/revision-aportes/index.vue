@@ -1,5 +1,9 @@
 <script setup>
 import { ref, computed, watch, onMounted, shallowRef } from 'vue';
+import { SisdaiCapaVectorial, SisdaiCapaXyz, SisdaiMapa } from '@centrogeomx/sisdai-mapas';
+import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
+
+
 
 definePageMeta({
   middleware: 'auth',
@@ -13,7 +17,7 @@ const aportesAprobados = shallowRef([]);
 const cargandoAportes = ref(false);
 
 
-const modalConfirmacionVisible = ref(false);
+const modalConfirmacion = ref(null);
 const mensajeConfirmacion = ref('');
 
 onMounted(async () => {
@@ -53,7 +57,7 @@ onMounted(async () => {
         atendidoPor: aporte.id_curador || 'Curador no asignado',
         latitud: aporte.latitud,
         longitud: aporte.longitud,
-        fotos: fotosArray,
+        fotos: fotosArray.length > 0 ? fotosArray : [],
         detalle: {
           preguntaAbierta: 'Información pendiente de mapear desde respuestas_ficha',
           preguntaOpcion: 'N/A',
@@ -96,19 +100,19 @@ async function cambiarEstadoAporte(idAporte, nuevoEstado) {
       aporteSeleccionado.value = null;
     }
     
-    //Modal de confirmación (debemos modificarlo)
+  
     mensajeConfirmacion.value = 'El aporte fue desaprobado y devuelto a la sección de Revisión.';
-    modalConfirmacionVisible.value = true;
+    modalConfirmacion.value?.abrirModal();
     
   } catch (error) {
     console.error('Error al cambiar el estado:', error);
     mensajeConfirmacion.value = 'Ocurrió un error de conexión al intentar desaprobar el aporte.';
-    modalConfirmacionVisible.value = true;
+    modalConfirmacion.value?.abrirModal();
   }
 }
 
 function cerrarModalConfirmacion() {
-  modalConfirmacionVisible.value = false;
+  modalConfirmacion.value?.cerrarModal();
 }
 
 // Búsqueda
@@ -164,6 +168,40 @@ function abrirImagen(url) {
 function cerrarImagen() {
   imagenAmpliada.value = null;
 }
+//Lógica de los mapas Sisdai
+const coordenadasValidas = computed(() => {
+  // Evitamos errores si aporteSeleccionado es null (al cargar la página)
+  if (!aporteSeleccionado.value) return false; 
+  
+  const lat = Number(aporteSeleccionado.value.latitud);
+  const lng = Number(aporteSeleccionado.value.longitud);
+  return Number.isFinite(lat) && Number.isFinite(lng);
+});
+
+const vistaMapa = computed(() =>
+  coordenadasValidas.value
+    ? { 
+        centro: [Number(aporteSeleccionado.value.longitud), Number(aporteSeleccionado.value.latitud)], 
+        acercamiento: 17 
+      }
+    : { extension: '-118.3651,14.5321,-86.7104,32.7187' }
+);
+
+const puntoSeleccionado = computed(() => ({
+  type: 'FeatureCollection',
+  features: coordenadasValidas.value
+    ? [
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Point',
+            coordinates: [Number(aporteSeleccionado.value.longitud), Number(aporteSeleccionado.value.latitud)],
+          },
+        },
+      ]
+    : [],
+}));
 </script>
 
 <template>
@@ -228,7 +266,9 @@ function cerrarImagen() {
                 @click="verFichaAporte(aporte)"
               >
                 <div class="flex">
-                  <div class="icono-doc m-r-2">📄</div>
+                  <div class="icono-doc m-r-2" style="font-size: 2rem; display: flex; align-items: center; justify-content: center; min-width: 40px;">
+                    <span class="pictograma-documento" aria-hidden="true"></span>
+                  </div>
                   <div style="flex-grow: 1; overflow: hidden;">
                     <p class="titulo m-0"><strong>{{ aporte.titulo }}</strong></p>
                     <p class="texto-secundario m-0 text-chico">{{ aporte.fecha }}</p>
@@ -278,22 +318,30 @@ function cerrarImagen() {
                 </div>
               </div>
 
-              <!-- Mapa satelital -->
-              <div class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden;">
-                <iframe 
-                  v-if="aporteSeleccionado.latitud && aporteSeleccionado.longitud"
-                  width="100%" 
-                  height="100%" 
-                  frameborder="0" 
-                  scrolling="no" 
-                  marginheight="0" 
-                  marginwidth="0" 
-                  :src="`https://maps.google.com/maps?q=${aporteSeleccionado.latitud},${aporteSeleccionado.longitud}&t=k&z=17&ie=UTF8&iwloc=&output=embed`"
-                >
-                </iframe>
-                <div v-else class="flex flex-contenido-centrado flex-vertical-centrado" style="height: 100%; color: #94a3b8;">
-                  <p>Coordenadas no disponibles para este aporte</p>
-                </div>
+              <!-- Mapa nativo con sisdai-mapas -->
+              <div v-if="aporteSeleccionado" class="mapa-placeholder m-b-3" style="padding: 0; overflow: hidden; height: 300px;">
+                <ClientOnly>
+                  <SisdaiMapa
+                    id="aportesmapa"
+                    class="gema"
+                    style="height: 100%; width: 100%" 
+                    descripcion="Ubicación del aporte"
+                    :vista="vistaMapa"
+                  >
+                    <SisdaiCapaXyz />
+                    <SisdaiCapaVectorial
+                      :key="`punto-${aporteSeleccionado.latitud}-${aporteSeleccionado.longitud}`"
+                      :fuente="puntoSeleccionado"
+                      :posicion="1"
+                      :estilo="{
+                        'circulo-relleno-color': '#d26c89',
+                        'circulo-borde-color': '#ffffff',
+                        'circulo-borde-grosor': 3,
+                        'circulo-radio': 9,
+                      }"
+                    />
+                  </SisdaiMapa>
+                </ClientOnly>
               </div>
 
               <!-- Panel de Detalles del Aporte -->
@@ -367,21 +415,27 @@ function cerrarImagen() {
       </main>
 
       <!--Modal de Confirmación-->
-      <Teleport to="body">
-        <div v-if="modalConfirmacionVisible" class="modal-overlay" @click="cerrarModalConfirmacion">
-          <div class="modal-confirmacion-contenido" @click.stop>
-            <div class="modal-confirmacion-header fondo-guinda">
-              <h3 class="m-0" style="color: white; font-weight: 500;">¡Estado Actualizado!</h3>
-            </div>
-            <div class="p-4 texto-centrado">
-              <p class="m-b-3" style="color: #334155; font-size: 1.05rem;">{{ mensajeConfirmacion }}</p>
-              <button class="btn-moderno btn-guinda" @click="cerrarModalConfirmacion">
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
+      <ClientOnly>
+              <SisdaiModal ref="modalConfirmacion">
+                <template #encabezado>
+                  <h3 class="m-0" style="color: #d48d95; font-weight: 600;">¡Aporte Actualizado!</h3>
+                </template>
+                
+                <template #cuerpo>
+                  <div class="p-y-3 texto-centrado">
+                    <p class="m-b-3" style="color: #d48d95; font-size: 1.05rem;">
+                      {{ mensajeConfirmacion }}
+                    </p>
+                  </div>
+                </template>
+                
+                <template #pie>
+                  <button class="btn-moderno btn-guinda-sisdai" type="button" @click="cerrarModalConfirmacion">
+                    Entendido
+                  </button>
+                </template>
+              </SisdaiModal>
+            </ClientOnly>
 
       <!--Modal de imágenes-->
       <Teleport to="body">
@@ -638,11 +692,15 @@ function cerrarImagen() {
 
 /* Inputs */
 .form-input {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
   border-radius: 8px;
   padding: 10px 14px;
-  color: #334155;
+  
+  color: #334155 !important;
+  -webkit-text-fill-color: #334155 !important;
+  opacity: 1 !important;
+  
   font-size: 0.9rem;
   transition: all 0.3s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
@@ -650,15 +708,13 @@ function cerrarImagen() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
 
-  &:hover, &:focus {
-    outline: none;
-    background-color: #715B62; 
-    color: #FFFFFF; 
-    border-color: #715B62;
-    box-shadow: 0 4px 6px rgba(113, 91, 98, 0.2);
-    cursor: default;
-  }
+.form-input:hover, 
+.form-input:focus {
+  outline: none !important;
+  border-color: #715B62 !important;
+  background-color: #ffffff !important; 
 }
 
 .btn-moderno-chico {
@@ -708,11 +764,10 @@ function cerrarImagen() {
   color:#cbd5e1;
 }
 
-.btn-guinda { 
+.btn-guinda-sisdai { 
   background-color: #715B62; 
   width: 100%; 
   padding: 10px; 
   border-radius: 6px; 
-}
-.btn-guinda:hover { background-color: #5c4a50; }
+  }
 </style>
