@@ -202,7 +202,6 @@ const puntoSeleccionado = computed(() => ({
       ]
     : [],
 }));
-const modalMensajes = ref(null);
 </script>
 
 <template>
