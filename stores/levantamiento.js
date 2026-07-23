@@ -164,6 +164,24 @@ export const useLevantamientoStore = defineStore('levantamiento', () => {
       return this.descargasAprobadas.length;
     },
 
+    async obtenerDescargasAportesRevision(email, status, page = 1) {
+      const data = await $fetch(`${apiUrl}/downloads/reviewer/list`, {
+        method: 'POST',
+        query: { page },
+        body: { email, status },
+      });
+      return {
+        descargas: data?.descargas || [],
+        pagination: data?.pagination || { page, total: 0, totalPages: 1 },
+      };
+    },
+
+    async revisarDescargaAportes(id, payload) {
+      return $fetch(`${apiUrl}/downloads/reviewer/status/${id}`, {
+        method: 'POST',
+        body: payload,
+      });
+    },
     async actualizarStatusAporte(payload, idAporte) {
       try {
         const response = await fetch(`${apiUrl}/raising/reviewer/status/${idAporte}`, {

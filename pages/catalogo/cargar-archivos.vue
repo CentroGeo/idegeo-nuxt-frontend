@@ -3,6 +3,7 @@ import { useAuth, useRuntimeConfig } from '#imports';
 import { useCatalogoStore } from '@/stores/catalogo';
 import { computed, reactive, ref, watch } from 'vue';
 import { convertirBytes } from '~/utils/catalogo';
+import { LIMITE_CARGA_ARCHIVOS_MIB } from '#shared/utils/limiteCargaArchivos';
 
 definePageMeta({
   middleware: 'sidebase-auth',
@@ -520,6 +521,7 @@ async function monitorLayerImport(executionId, archivo) {
               XLSX, XLS, JSON, PDF, TXT, SLD y XML (ISO 19115).</b
             >
           </p>
+          <p class="m-y-1">Tamaño máximo por archivo: {{ LIMITE_CARGA_ARCHIVOS_MIB }} MiB.</p>
           <p
             class="texto-color-informacion fondo-color-informacion borde borde-color-informacion borde-redondeado-2 p-2 m-y-2"
           >

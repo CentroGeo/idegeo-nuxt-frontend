@@ -73,6 +73,10 @@ function CargaCompleta(idx, v) {
 
 <style lang="scss" scoped>
 .mapa-descarga {
+  .sisdai-mapa-leyenda {
+    word-break: break-all;
+    max-width: 100%;
+  }
   background-color: #fff;
   color: #000;
 }

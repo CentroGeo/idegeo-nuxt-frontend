@@ -25,11 +25,6 @@ export default defineNuxtConfig({
           rel: 'shortcut icon',
           href: 'https://framework-gb.cdn.gob.mx/gm/v3/assets/images/favicon.ico',
         },
-        {
-          rel: 'stylesheet',
-          href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
-          crossorigin: 'anonymous',
-        },
       ],
       meta: [
         { name: 'description', content: metaDescription },
@@ -68,6 +63,24 @@ export default defineNuxtConfig({
     baseURL: '/',
     preset: 'node-server',
     compressPublicAssets: false,
+    storage: {
+      // Almacenamiento aislado del constructor de landing page: no toca
+      // GeoNode ni ningún otro backend real de la plataforma.
+      landingBuilder: { driver: 'fs', base: './.data/landing-builder' },
+    },
+  },
+
+  routeRules: {
+    // El visor público se embebe vía <iframe> desde cualquier origen.
+    // 'ALLOWALL' no es un valor estándar: los navegadores lo ignoran y con ello
+    // desactivan el bloqueo por X-Frame-Options; frame-ancestors es la política real.
+    // Si nginx (bundle) inyecta sus propios headers, debe respetar esta ruta.
+    '/mapas/**': {
+      headers: {
+        'X-Frame-Options': 'ALLOWALL',
+        'Content-Security-Policy': 'frame-ancestors *',
+      },
+    },
   },
 
   modules: [
@@ -129,6 +142,8 @@ export default defineNuxtConfig({
       enableGeocontenidos: process.env.NUXT_PUBLIC_ENABLE_GEOCONTENIDOS === 'true',
       enableGeohistorias: process.env.NUXT_PUBLIC_ENABLE_GEOHISTORIAS === 'true',
       enableTableros: process.env.NUXT_PUBLIC_ENABLE_TABLEROS === 'true',
+      enablePanoramas: process.env.NUXT_PUBLIC_ENABLE_PANORAMAS === 'true',
+      enableLandingBuilder: process.env.NUXT_PUBLIC_ENABLE_LANDING_BUILDER === 'true',
     },
   },
 

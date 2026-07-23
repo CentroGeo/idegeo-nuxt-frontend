@@ -1,6 +1,6 @@
 <script setup>
-import SisdaiSelector from '@centrogeomx/sisdai-componentes/src/componentes/selector/SisdaiSelector.vue';
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
+import SisdaiSelector from '@centrogeomx/sisdai-componentes/src/componentes/selector/SisdaiSelector.vue';
 import { SisdaiLeyendaArcgis, SisdaiLeyendaWms } from '@centrogeomx/sisdai-mapas';
 import { useResourcesSupplements } from '~/composables/useResourcesSupplements';
 
@@ -321,5 +321,11 @@ watch(selectedStyle, (nv) => {
 <style lang="scss" scoped>
 .flex {
   gap: 8px;
+}
+.sisdai-mapa-leyenda,
+.sisdai-mapa-leyenda * {
+  overflow-wrap: break-word !important;
+  word-break: break-all !important;
+  white-space: normal !important;
 }
 </style>
