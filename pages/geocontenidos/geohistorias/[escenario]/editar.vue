@@ -1,20 +1,10 @@
 <script setup>
-import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
+import useApi from '~/composables/geocontenidos/useApi';
+import { wait } from '~/utils/consulta';
 
 definePageMeta({ middleware: 'auth' });
 
-const config = useRuntimeConfig();
-const { data: userData } = useAuth();
-const { gnoxyFetch } = useGnoxyUrl();
-const { escenario } = useRoute().params;
-
-const modalStatus = ref(null);
-const estatusAlGuardar = reactive({
-  cargando: false,
-  estado: undefined,
-  mensaje: '',
-  textoCargando: '',
-});
+const { escenario: escenarioId } = useRoute().params;
 const formulario = reactive({
   description: '',
   is_public: false,
@@ -29,30 +19,24 @@ const formulario = reactive({
   url_id: '',
 });
 
+const { api, modal, mostrarModalCargando, mostrarModalError, mostrarModalExito } = useApi();
+
 async function cargarDatosEscenario() {
-  if (escenario === 'nuevo') return;
+  if (escenarioId === 'nuevo') return;
 
-  estatusAlGuardar.cargando = true;
-  estatusAlGuardar.textoCargando = 'Cargando escenario...';
-  modalStatus.value.abrirModal();
+  mostrarModalCargando('Cargando escenario...');
+  const { respuesta, datos } = await api(`scenarios/${escenarioId}`);
 
-  const url = `${config.public.geonodeApi}/scenarios/${escenario}`;
-  const respuesta = await gnoxyFetch(url);
-  const data = await respuesta.json();
+  if (!respuesta.ok) {
+    mostrarModalError([datos.detail]);
+    modal.permitirCerrar = false;
+    return;
+  }
 
-  // TODO: mostrar error si la respuesta no es ok o el escenario no existe
-
-  // console.log(data);
-  formulario.description = data.description;
-  formulario.is_public = data.is_public;
-  formulario.name = data.name;
-  formulario.scenes_layout_styles = data.scenes_layout_styles;
-  formulario.url_id = data.url_id;
-
-  estatusAlGuardar.cargando = false;
-  modalStatus.value.cerrarModal();
+  Object.assign(formulario, datos);
+  modal.visible = false;
 }
-watch(modalStatus, cargarDatosEscenario);
+cargarDatosEscenario();
 
 const nombre = computed({
   get: () => formulario.name,
@@ -74,53 +58,28 @@ const distribucionLayout = computed({
   },
 });
 
+const accionGuardar = ref('');
 async function guardarCambios() {
-  // Aquí iría la lógica para guardar los cambios realizados en el escenario
-  // console.log('Cambios guardados:', toRaw(formulario));
-  modalStatus.value?.abrirModal();
-  estatusAlGuardar.cargando = true;
-  estatusAlGuardar.textoCargando = 'Guardando...';
+  mostrarModalCargando('Guardando...');
 
-  const respuesta = await gnoxyFetch(
-    `${config.public.geonodeApi}/scenarios/${escenario !== 'nuevo' ? `${escenario}/` : ''}/`,
-    {
-      method: escenario === 'nuevo' ? 'POST' : 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${userData.value?.accessToken}`,
-      },
-      body: JSON.stringify(formulario),
-    }
-  );
+  const url = `scenarios/${escenarioId !== 'nuevo' ? `${escenarioId}/` : ''}/`;
+  const { datos } = await api(url, escenarioId === 'nuevo' ? 'POST' : 'PUT', formulario);
 
-  if (escenario === 'nuevo') {
-    if (!respuesta.ok || respuesta.status !== 201 || respuesta.statusText !== 'Created') {
-      console.error('Error al guardar el escenario:', respuesta.statusText);
-    }
-  } else {
-    if (!respuesta.ok || respuesta.status !== 200) {
-      console.error('Error al guardar el escenario:', respuesta.statusText);
-    }
+  if (datos?.success === false) {
+    mostrarModalError(datos.errors);
+    return;
   }
 
-  const data = await respuesta.json();
-  // console.log(data);
+  mostrarModalExito();
+  await wait(1500);
+  modal.visible = false;
 
-  // if (Object.hasOwn(data, 'success') && data.success === false) {
-  if (data?.success === false) {
-    estatusAlGuardar.cargando = false;
-    estatusAlGuardar.mensaje = data.errors.join(` `);
-    estatusAlGuardar.estado = data.success;
+  if (accionGuardar.value === 'escenas') {
+    navigateTo(`/geocontenidos/geohistorias/${datos.id}/escenas`);
+  } else if (escenarioId === 'nuevo') {
+    navigateTo(`/geocontenidos/geohistorias/${datos.id}/editar`);
   } else {
-    estatusAlGuardar.cargando = false;
-    estatusAlGuardar.estado = true;
-    setTimeout(() => {
-      modalStatus.value?.cerrarModal();
-
-      if (escenario === 'nuevo') {
-        navigateTo(`/geocontenidos/geohistorias/${data.id}/editar`);
-      }
-    }, 1500);
+    reloadNuxtApp();
   }
 }
 </script>
@@ -250,31 +209,15 @@ async function guardarCambios() {
     <section class="flex flex-contenido-final">
       <NuxtLink to="/geocontenidos/geohistorias" class="boton boton-secundario">Volver</NuxtLink>
 
-      <input type="submit" class="boton-primario" value="Guardar" />
+      <button type="submit" class="boton-primario" @click="accionGuardar = 'recargar'">
+        Guardar
+      </button>
 
-      <button class="boton-primario" @click="modalStatus?.abrirModal()">
+      <button type="submit" class="boton-primario" @click="accionGuardar = 'escenas'">
         Guardar y Editar escenas
       </button>
     </section>
 
-    <ClientOnly>
-      <SisdaiModal ref="modalStatus">
-        <template #encabezado>
-          <span v-if="estatusAlGuardar.cargando" />
-          <h2 v-else>{{ estatusAlGuardar.estado ? 'Guardado con éxito' : 'Error' }}</h2>
-        </template>
-
-        <template #cuerpo>
-          <GeocontenidosLoader
-            v-if="estatusAlGuardar.cargando"
-            :mensaje="estatusAlGuardar.textoCargando"
-          />
-
-          <p v-else-if="estatusAlGuardar.estado === false" v-text="estatusAlGuardar.mensaje" />
-
-          <p v-else><span class="pictograma-aprobado pictograma-grande" /></p>
-        </template>
-      </SisdaiModal>
-    </ClientOnly>
+    <GeocontenidosLoaderModal v-bind="modal" @al-cerrar="modal.visible = false" />
   </form>
 </template>

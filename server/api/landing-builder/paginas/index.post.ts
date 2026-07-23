@@ -1,16 +1,19 @@
 import formidable from 'formidable';
 import { promises as fsp } from 'fs';
-import type { LandingBuilderPaginaIdentidad } from '../../../utils/landingBuilderConfig';
 import {
+  crearLandingBuilderPagina,
+  saveLandingBuilderPaginaLogo,
+  SLOTS_LOGO_PAGINA,
   TIPOS_LOGO_PAGINA_PERMITIDOS,
   TAMANO_MAXIMO_LOGO_PAGINA,
-  SLOTS_LOGO_PAGINA,
   CAMPO_IDENTIDAD_POR_SLOT,
   IDENTIDAD_PAGINA_VACIA,
+  validarYObtenerMimetypeImagen,
 } from '../../../utils/landingBuilderConfig';
+import type { LandingBuilderPaginaIdentidad } from '../../../utils/landingBuilderConfig';
 
 export default defineEventHandler(async (event) => {
-  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_LOGO_PAGINA });
+  const form = formidable({ multiples: true });
   const { fields, files } = await new Promise<{
     fields: formidable.Fields;
     files: formidable.Files;
@@ -61,13 +64,30 @@ export default defineEventHandler(async (event) => {
         : null,
     logoCuartoUrl:
       typeof identidadEntrante.logoCuartoUrl === 'string' ? identidadEntrante.logoCuartoUrl : null,
+    logoRedirectUrl:
+      typeof identidadEntrante.logoRedirectUrl === 'string'
+        ? identidadEntrante.logoRedirectUrl
+        : null,
+    logoSecundarioRedirectUrl:
+      typeof identidadEntrante.logoSecundarioRedirectUrl === 'string'
+        ? identidadEntrante.logoSecundarioRedirectUrl
+        : null,
+    logoTerceroRedirectUrl:
+      typeof identidadEntrante.logoTerceroRedirectUrl === 'string'
+        ? identidadEntrante.logoTerceroRedirectUrl
+        : null,
+    logoCuartoRedirectUrl:
+      typeof identidadEntrante.logoCuartoRedirectUrl === 'string'
+        ? identidadEntrante.logoCuartoRedirectUrl
+        : null,
   };
 
   for (const slot of SLOTS_LOGO_PAGINA) {
     const archivo = files[slot]?.[0];
     if (!archivo) continue;
 
-    if (!archivo.mimetype || !TIPOS_LOGO_PAGINA_PERMITIDOS.includes(archivo.mimetype)) {
+    const mimetypeValido = validarYObtenerMimetypeImagen(archivo, TIPOS_LOGO_PAGINA_PERMITIDOS);
+    if (!mimetypeValido) {
       throw createError({
         statusCode: 400,
         statusMessage: 'El logo debe ser una imagen PNG, JPEG, WEBP o SVG',
@@ -78,7 +98,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const data = await fsp.readFile(archivo.filepath);
-    const url = await saveLandingBuilderPaginaLogo(paginaId, slot, data, archivo.mimetype);
+    const url = await saveLandingBuilderPaginaLogo(paginaId, slot, data, mimetypeValido);
     identidad[CAMPO_IDENTIDAD_POR_SLOT[slot]] = url;
   }
 

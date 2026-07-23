@@ -1,7 +1,5 @@
 <script setup>
-// Bypass temporal para trabajar localmente sin Keycloak.
-// Antes del commit final, vuelve a habilitar el middleware:
-// definePageMeta({ middleware: 'auth' });
+definePageMeta({ middleware: 'admin' });
 
 const store = useLandingBuilderStore();
 

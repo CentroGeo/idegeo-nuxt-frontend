@@ -52,10 +52,43 @@ async function cargarCuadros() {
 
 watch(indicadorActivo, cargarCuadros);
 
-async function borrarCuadro(id) {
-  if (!confirm('¿Eliminar este cuadro de datos?')) return;
-  const ok = await eliminarCuadroDatos(id, userData.value?.accessToken);
-  if (ok) cuadros.value = cuadros.value.filter((c) => c.id !== id);
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const cuadroToDelete = ref(null);
+const isBeingDeleted = ref(false);
+const wasDeletionSuccesful = ref(null);
+
+function abrirModalEliminar(cuadro) {
+  cuadroToDelete.value = cuadro;
+  wasDeletionSuccesful.value = null;
+  modalEliminar.value?.abrir();
+}
+
+function cancelarEliminar() {
+  cuadroToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!cuadroToDelete.value) return;
+  isBeingDeleted.value = true;
+  try {
+    const ok = await eliminarCuadroDatos(cuadroToDelete.value.id, userData.value?.accessToken);
+    if (ok) {
+      wasDeletionSuccesful.value = true;
+      cuadros.value = cuadros.value.filter((c) => c.id !== cuadroToDelete.value.id);
+      setTimeout(() => {
+        modalEliminar.value?.cerrar();
+      }, 1200);
+    } else {
+      wasDeletionSuccesful.value = false;
+    }
+  } catch (e) {
+    console.error('Error al eliminar cuadro:', e);
+    wasDeletionSuccesful.value = false;
+  } finally {
+    isBeingDeleted.value = false;
+  }
 }
 
 function editarCuadro(cuadro) {
@@ -152,7 +185,7 @@ onMounted(cargarIndicadores);
             <button
               type="button"
               class="boton boton-chico tab-datos__btn-tarjeta tab-datos__btn-tarjeta--eliminar"
-              @click="borrarCuadro(cuadro.id)"
+              @click="abrirModalEliminar(cuadro)"
             >
               Eliminar
             </button>
@@ -168,10 +201,60 @@ onMounted(cargarIndicadores);
         @cerrar="mostrarFormulario = false"
       />
     </template>
+
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
+        <template #encabezado>
+          <h2 class="m-t-0">Eliminar cuadro de datos</h2>
+        </template>
+
+        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="alerta-advertencia-modal">
+          El cuadro de datos
+          <strong style="font-weight: bold">{{ cuadroToDelete?.name }}</strong> será eliminado
+          permanentemente del servidor y no será posible recuperarlo.
+        </p>
+
+        <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
+          <span class="pictograma-aprobado m-r-1" />
+          El cuadro de datos fue eliminado correctamente.
+        </p>
+
+        <p v-else class="texto-color-error">
+          No se pudo eliminar el cuadro de datos. Intenta de nuevo.
+        </p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button
+              class="boton boton-secundario"
+              :disabled="isBeingDeleted"
+              @click="cancelarEliminar"
+            >
+              Cancelar
+            </button>
+            <button
+              v-if="wasDeletionSuccesful === null"
+              class="boton boton-primario"
+              :disabled="isBeingDeleted"
+              @click="confirmarEliminar"
+            >
+              <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .tab-datos {
   &__selector {
     label {

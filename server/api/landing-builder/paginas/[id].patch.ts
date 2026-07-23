@@ -1,12 +1,16 @@
 import formidable from 'formidable';
 import { promises as fsp } from 'fs';
-import type { LandingBuilderPaginaIdentidad } from '../../../utils/landingBuilderConfig';
+import type {
+  LandingBuilderPaginaIdentidad,
+  LandingBuilderBloque,
+} from '../../../utils/landingBuilderConfig';
 import {
   TIPOS_LOGO_PAGINA_PERMITIDOS,
   TAMANO_MAXIMO_LOGO_PAGINA,
   SLOTS_LOGO_PAGINA,
   CAMPO_IDENTIDAD_POR_SLOT,
   IDENTIDAD_PAGINA_VACIA,
+  validarYObtenerMimetypeImagen,
 } from '../../../utils/landingBuilderConfig';
 
 export default defineEventHandler(async (event) => {
@@ -18,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const contentType = getHeader(event, 'content-type') || '';
 
   if (contentType.includes('multipart/form-data')) {
-    const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_LOGO_PAGINA });
+    const form = formidable({ multiples: true });
     const { fields, files } = await new Promise<{
       fields: formidable.Fields;
       files: formidable.Files;
@@ -29,29 +33,11 @@ export default defineEventHandler(async (event) => {
       });
     });
 
-    let bloques: any[];
-    try {
-      bloques = JSON.parse(fields.bloques?.[0] ?? 'null');
-    } catch {
-      throw createError({ statusCode: 400, statusMessage: 'El listado de bloques es inválido' });
-    }
+    const bloquesRaw = fields.bloques?.[0] ?? '[]';
+    const bloques: LandingBuilderBloque[] = JSON.parse(bloquesRaw);
 
-    if (!Array.isArray(bloques) || !bloques.length) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Agrega al menos un bloque al lienzo antes de guardar la página',
-      });
-    }
-
-    let identidadEntrante: Record<string, unknown> = {};
-    try {
-      identidadEntrante = fields.identidad?.[0] ? JSON.parse(fields.identidad[0]) : {};
-    } catch {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'La identidad de la página es inválida',
-      });
-    }
+    const identidadRaw = fields.identidad?.[0] ?? '{}';
+    const identidadEntrante: Partial<LandingBuilderPaginaIdentidad> = JSON.parse(identidadRaw);
 
     const identidad: LandingBuilderPaginaIdentidad = {
       ...IDENTIDAD_PAGINA_VACIA,
@@ -72,13 +58,30 @@ export default defineEventHandler(async (event) => {
         typeof identidadEntrante.logoCuartoUrl === 'string'
           ? identidadEntrante.logoCuartoUrl
           : null,
+      logoRedirectUrl:
+        typeof identidadEntrante.logoRedirectUrl === 'string'
+          ? identidadEntrante.logoRedirectUrl
+          : null,
+      logoSecundarioRedirectUrl:
+        typeof identidadEntrante.logoSecundarioRedirectUrl === 'string'
+          ? identidadEntrante.logoSecundarioRedirectUrl
+          : null,
+      logoTerceroRedirectUrl:
+        typeof identidadEntrante.logoTerceroRedirectUrl === 'string'
+          ? identidadEntrante.logoTerceroRedirectUrl
+          : null,
+      logoCuartoRedirectUrl:
+        typeof identidadEntrante.logoCuartoRedirectUrl === 'string'
+          ? identidadEntrante.logoCuartoRedirectUrl
+          : null,
     };
 
     for (const slot of SLOTS_LOGO_PAGINA) {
       const archivo = files[slot]?.[0];
       if (!archivo) continue;
 
-      if (!archivo.mimetype || !TIPOS_LOGO_PAGINA_PERMITIDOS.includes(archivo.mimetype)) {
+      const mimetypeValido = validarYObtenerMimetypeImagen(archivo, TIPOS_LOGO_PAGINA_PERMITIDOS);
+      if (!mimetypeValido) {
         throw createError({
           statusCode: 400,
           statusMessage: 'El logo debe ser una imagen PNG, JPEG, WEBP o SVG',
@@ -89,7 +92,7 @@ export default defineEventHandler(async (event) => {
       }
 
       const data = await fsp.readFile(archivo.filepath);
-      const url = await saveLandingBuilderPaginaLogo(id, slot, data, archivo.mimetype);
+      const url = await saveLandingBuilderPaginaLogo(id, slot, data, mimetypeValido);
       identidad[CAMPO_IDENTIDAD_POR_SLOT[slot]] = url;
     }
 

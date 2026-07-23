@@ -1,8 +1,9 @@
-import type { Fields, Files } from 'formidable';
-
 import formidable from 'formidable';
 import { promises as fsp } from 'fs';
 import { createError } from 'h3';
+import { LIMITE_CARGA_ARCHIVOS_BYTES } from '#shared/utils/limiteCargaArchivos';
+import { parseUploadForm } from '../utils/parseUploadForm';
+
 export const config = {
   api: {
     bodyParser: false,
@@ -11,15 +12,9 @@ export const config = {
 export default defineEventHandler(async (event) => {
   const configEnv = useRuntimeConfig();
   // Parsea FormData con formidable
-  const form = formidable({ multiples: false });
-  console.log('form', form);
+  const form = formidable({ multiples: false, maxFileSize: LIMITE_CARGA_ARCHIVOS_BYTES });
 
-  const data = await new Promise<{ fields: Fields; files: Files }>((resolve, reject) => {
-    form.parse(event.node.req, (err, fields, files) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
-  });
+  const data = await parseUploadForm(form, event.node.req);
   const { doc_file } = data.files;
   const token = data?.fields?.token?.[0];
 

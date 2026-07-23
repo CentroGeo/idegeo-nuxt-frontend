@@ -1,4 +1,6 @@
 <script setup>
+const store = useLandingBuilderStore();
+
 const TIPOS_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
 const TAMANO_MAXIMO = 2 * 1024 * 1024; // 2MB
 
@@ -42,7 +44,11 @@ function manejarArchivos(archivos) {
   <div>
     <label class="m-0">{{ label }}</label>
     <div v-if="logoUrl" class="m-y-2">
-      <img :src="logoUrl" :alt="`Previsualización de ${label}`" style="max-height: 96px" />
+      <img
+        :src="store.resolverUrlImagen(logoUrl)"
+        :alt="`Previsualización de ${label}`"
+        style="max-height: 96px"
+      />
     </div>
     <ClientOnly>
       <CatalogoElementoDragNdDrop ref="dragNdrop" @pasar-archivo="manejarArchivos" />
