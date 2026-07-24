@@ -63,9 +63,120 @@ function sincronizarLogoDesdeConfig(valorActual, valorConfig) {
   return valorConfig ?? null;
 }
 
+// Limpia los bloques antes de enviarlos al servidor: quita el `archivo`/
+// `imagenFile` temporal (el archivo en sí se manda aparte, ver
+// `adjuntarImagenesDeBloques`) y descarta cualquier URL `blob:` que haya
+// quedado sin subir (solo válida en la sesión del navegador que la creó).
+function serializarBloquesParaEnvio(bloques) {
+  return bloques.map((bloque) => {
+    if (bloque.tipo === 'portada') {
+      // eslint-disable-next-line no-unused-vars
+      const { archivo, ...fondo } = bloque.datos.fondo || {};
+      return {
+        ...bloque,
+        datos: {
+          ...bloque.datos,
+          fondo: {
+            ...fondo,
+            url: fondo.url && !fondo.url.startsWith('blob:') ? fondo.url : null,
+          },
+        },
+      };
+    }
+
+    if (bloque.tipo === 'carrusel') {
+      return {
+        ...bloque,
+        datos: {
+          ...bloque.datos,
+          diapositivas: (bloque.datos.diapositivas || []).map(
+            ({ id, texto, imagenUrl, imagenTipo, botonTexto, botonUrl }) => ({
+              id,
+              texto,
+              imagenUrl: imagenUrl && !imagenUrl.startsWith('blob:') ? imagenUrl : null,
+              imagenTipo: imagenTipo || 'imagen',
+              botonTexto: botonTexto || '',
+              botonUrl: botonUrl || '',
+            })
+          ),
+        },
+      };
+    }
+
+    if (bloque.tipo === 'tarjetas') {
+      return {
+        ...bloque,
+        datos: {
+          ...bloque.datos,
+          // eslint-disable-next-line no-unused-vars
+          tarjetas: (bloque.datos.tarjetas || []).map(({ imagenFile, ...tarjeta }) => ({
+            ...tarjeta,
+            imagenUrl:
+              tarjeta.imagenUrl && !tarjeta.imagenUrl.startsWith('blob:')
+                ? tarjeta.imagenUrl
+                : null,
+          })),
+        },
+      };
+    }
+
+    if (bloque.tipo === 'texto-imagen') {
+      // eslint-disable-next-line no-unused-vars
+      const { archivo, ...imagen } = bloque.datos.imagen || {};
+      return {
+        ...bloque,
+        datos: {
+          ...bloque.datos,
+          imagen: {
+            ...imagen,
+            url: imagen.url && !imagen.url.startsWith('blob:') ? imagen.url : null,
+          },
+        },
+      };
+    }
+
+    return bloque;
+  });
+}
+
+// Adjunta al FormData los archivos reales (imagen o video) de cada bloque
+// que tenga uno pendiente de subir, con el mismo nombre de campo
+// `bloque_imagen::<bloqueId>::<tipo>::<itemId>` que el servidor espera.
+function adjuntarImagenesDeBloques(formData, bloques) {
+  bloques.forEach((bloque) => {
+    if (bloque.tipo === 'portada' && bloque.datos.fondo?.archivo) {
+      formData.append(`bloque_imagen::${bloque.id}::portada::fondo`, bloque.datos.fondo.archivo);
+    }
+
+    if (bloque.tipo === 'texto-imagen' && bloque.datos.imagen?.archivo) {
+      formData.append(
+        `bloque_imagen::${bloque.id}::contenido::imagen`,
+        bloque.datos.imagen.archivo
+      );
+    }
+
+    if (bloque.tipo === 'carrusel') {
+      (bloque.datos.diapositivas || []).forEach((d) => {
+        if (d.imagenArchivo) {
+          formData.append(`bloque_imagen::${bloque.id}::diapositiva::${d.id}`, d.imagenArchivo);
+        }
+      });
+    }
+
+    if (bloque.tipo === 'tarjetas') {
+      (bloque.datos.tarjetas || []).forEach((t) => {
+        if (t.imagenFile) {
+          formData.append(`bloque_imagen::${bloque.id}::tarjeta::${t.id}`, t.imagenFile);
+        }
+      });
+    }
+  });
+}
+
 async function construirFormDataPagina(store, paginaId) {
   const formData = new FormData();
-  formData.append('bloques', JSON.stringify(store.bloques));
+  formData.append('bloques', JSON.stringify(serializarBloquesParaEnvio(store.bloques)));
+  adjuntarImagenesDeBloques(formData, store.bloques);
 
   const identidad = {
     nombrePlataforma: store.nombrePlataforma || '',
@@ -635,108 +746,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
           }
         });
 
-        const bloquesParaGuardar = this.bloques.map((bloque) => {
-          if (bloque.tipo === 'portada') {
-            // eslint-disable-next-line no-unused-vars
-            const { archivo, ...fondo } = bloque.datos.fondo || {};
-            return {
-              ...bloque,
-              datos: {
-                ...bloque.datos,
-                fondo: {
-                  ...fondo,
-                  url: fondo.url && !fondo.url.startsWith('blob:') ? fondo.url : null,
-                },
-              },
-            };
-          }
-
-          if (bloque.tipo === 'carrusel') {
-            return {
-              ...bloque,
-              datos: {
-                ...bloque.datos,
-                diapositivas: (bloque.datos.diapositivas || []).map(({ id, texto, imagenUrl }) => ({
-                  id,
-                  texto,
-                  imagenUrl: imagenUrl && !imagenUrl.startsWith('blob:') ? imagenUrl : null,
-                })),
-              },
-            };
-          }
-
-          if (bloque.tipo === 'tarjetas') {
-            return {
-              ...bloque,
-              datos: {
-                ...bloque.datos,
-                // eslint-disable-next-line no-unused-vars
-                tarjetas: (bloque.datos.tarjetas || []).map(({ imagenFile, ...tarjeta }) => ({
-                  ...tarjeta,
-                  imagenUrl:
-                    tarjeta.imagenUrl && !tarjeta.imagenUrl.startsWith('blob:')
-                      ? tarjeta.imagenUrl
-                      : null,
-                })),
-              },
-            };
-          }
-
-          if (bloque.tipo === 'texto-imagen') {
-            // eslint-disable-next-line no-unused-vars
-            const { archivo, ...imagen } = bloque.datos.imagen || {};
-
-            return {
-              ...bloque,
-              datos: {
-                ...bloque.datos,
-                imagen: {
-                  ...imagen,
-                  url: imagen.url && !imagen.url.startsWith('blob:') ? imagen.url : null,
-                },
-              },
-            };
-          }
-
-          return bloque;
-        });
-
-        formData.append('bloques', JSON.stringify(bloquesParaGuardar));
-
-        this.bloques.forEach((bloque) => {
-          if (bloque.tipo === 'portada' && bloque.datos.fondo?.archivo) {
-            formData.append(
-              `bloque_imagen::${bloque.id}::portada::fondo`,
-              bloque.datos.fondo.archivo
-            );
-          }
-
-          if (bloque.tipo === 'texto-imagen' && bloque.datos.imagen?.archivo) {
-            formData.append(
-              `bloque_imagen::${bloque.id}::contenido::imagen`,
-              bloque.datos.imagen.archivo
-            );
-          }
-
-          if (bloque.tipo === 'carrusel') {
-            (bloque.datos.diapositivas || []).forEach((d) => {
-              if (d.imagenArchivo) {
-                formData.append(
-                  `bloque_imagen::${bloque.id}::diapositiva::${d.id}`,
-                  d.imagenArchivo
-                );
-              }
-            });
-          }
-
-          if (bloque.tipo === 'tarjetas') {
-            (bloque.datos.tarjetas || []).forEach((t) => {
-              if (t.imagenFile) {
-                formData.append(`bloque_imagen::${bloque.id}::tarjeta::${t.id}`, t.imagenFile);
-              }
-            });
-          }
-        });
+        formData.append('bloques', JSON.stringify(serializarBloquesParaEnvio(this.bloques)));
+        adjuntarImagenesDeBloques(formData, this.bloques);
 
         const config = await $fetch('/api/landing-builder/config', {
           method: 'POST',

@@ -7,10 +7,12 @@ import type {
 import {
   TIPOS_LOGO_PAGINA_PERMITIDOS,
   TAMANO_MAXIMO_LOGO_PAGINA,
+  TAMANO_MAXIMO_VIDEO_BLOQUE,
   SLOTS_LOGO_PAGINA,
   CAMPO_IDENTIDAD_POR_SLOT,
   IDENTIDAD_PAGINA_VACIA,
   validarYObtenerMimetypeImagen,
+  procesarImagenesDeBloques,
 } from '../../../utils/landingBuilderConfig';
 
 export default defineEventHandler(async (event) => {
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
   const contentType = getHeader(event, 'content-type') || '';
 
   if (contentType.includes('multipart/form-data')) {
-    const form = formidable({ multiples: true });
+    const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_VIDEO_BLOQUE });
     const { fields, files } = await new Promise<{
       fields: formidable.Fields;
       files: formidable.Files;
@@ -35,6 +37,7 @@ export default defineEventHandler(async (event) => {
 
     const bloquesRaw = fields.bloques?.[0] ?? '[]';
     const bloques: LandingBuilderBloque[] = JSON.parse(bloquesRaw);
+    await procesarImagenesDeBloques(files, bloques);
 
     const identidadRaw = fields.identidad?.[0] ?? '{}';
     const identidadEntrante: Partial<LandingBuilderPaginaIdentidad> = JSON.parse(identidadRaw);
