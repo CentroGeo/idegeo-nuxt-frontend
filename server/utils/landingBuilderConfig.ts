@@ -1,3 +1,5 @@
+import { promises as fsp } from 'fs';
+
 export interface LandingBuilderTarjeta {
   id: string;
   titulo: string;
@@ -431,6 +433,88 @@ export async function getLandingBuilderBloqueImagen(
   ]);
   if (!data || !meta) return null;
   return { data, mimetype: meta.mimetype };
+}
+
+export const TIPOS_VIDEO_BLOQUE_PERMITIDOS = ['video/mp4', 'video/webm'];
+export const TIPOS_MEDIA_BLOQUE_PERMITIDOS = [
+  ...TIPOS_LOGO_PAGINA_PERMITIDOS,
+  ...TIPOS_VIDEO_BLOQUE_PERMITIDOS,
+];
+export const TAMANO_MAXIMO_IMAGEN_BLOQUE = 5 * 1024 * 1024; // 5MB
+export const TAMANO_MAXIMO_VIDEO_BLOQUE = 15 * 1024 * 1024; // 15MB
+
+// Procesa los campos `bloque_imagen::<bloqueId>::<tipo>::<itemId>` de un
+// formulario multipart: sube cada archivo y escribe la URL resultante en el
+// bloque correspondiente (portada, texto-imagen, diapositiva de carrusel o
+// tarjeta). Se usa tanto al guardar el borrador general como al editar una
+// página ya publicada, para que ambos flujos suban imágenes/videos igual.
+export async function procesarImagenesDeBloques(
+  files: Record<string, any>,
+  bloques: any[]
+): Promise<any[]> {
+  for (const key of Object.keys(files)) {
+    if (!key.startsWith('bloque_imagen::')) continue;
+
+    const [, bloqueId, tipoImagen, itemId] = key.split('::');
+    const archivoBloque = files[key]?.[0];
+    if (!archivoBloque) continue;
+
+    const mimetypeValido = validarYObtenerMimetypeImagen(
+      archivoBloque,
+      TIPOS_MEDIA_BLOQUE_PERMITIDOS
+    );
+    if (!mimetypeValido) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El archivo del bloque debe ser PNG, JPEG, WEBP, SVG, MP4 o WEBM',
+      });
+    }
+    const esVideo = TIPOS_VIDEO_BLOQUE_PERMITIDOS.includes(mimetypeValido);
+    const limiteBloque = esVideo ? TAMANO_MAXIMO_VIDEO_BLOQUE : TAMANO_MAXIMO_IMAGEN_BLOQUE;
+    if (archivoBloque.size > limiteBloque) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: esVideo
+          ? 'El video del bloque no debe superar 15MB'
+          : 'La imagen del bloque no debe superar 5MB',
+      });
+    }
+
+    const data = await fsp.readFile(archivoBloque.filepath);
+    const url = await saveLandingBuilderBloqueImagen(
+      bloqueId,
+      tipoImagen,
+      itemId,
+      data,
+      mimetypeValido
+    );
+
+    const bloque = bloques.find((b: any) => b.id === bloqueId);
+
+    if (tipoImagen === 'portada') {
+      if (bloque?.datos?.fondo) {
+        bloque.datos.fondo.url = url;
+      }
+      continue;
+    }
+
+    if (tipoImagen === 'contenido') {
+      if (bloque?.datos?.imagen) {
+        bloque.datos.imagen.url = url;
+      }
+      continue;
+    }
+
+    const lista =
+      tipoImagen === 'diapositiva' ? bloque?.datos?.diapositivas : bloque?.datos?.tarjetas;
+    const item = lista?.find((i: any) => i.id === itemId);
+    if (item) {
+      item.imagenUrl = url;
+      item.imagenTipo = esVideo ? 'video' : 'imagen';
+    }
+  }
+
+  return bloques;
 }
 
 const paginaLogoKey = (paginaId: string, slot: string) => `pagina:${paginaId}:logo:${slot}:archivo`;
