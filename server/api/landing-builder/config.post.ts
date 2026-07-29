@@ -19,7 +19,7 @@ const CAMPOS_REQUERIDOS = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_IMAGEN_BLOQUE });
+  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_VIDEO_BLOQUE });
   const { fields, files } = await new Promise<{
     fields: formidable.Fields;
     files: formidable.Files;

@@ -34,16 +34,41 @@ const modulosSwiper = [Navigation, Pagination];
       >
         <SwiperSlide v-for="diapositiva in diapositivas" :key="diapositiva.id">
           <figure class="carrusel-vista-previa__diapositiva">
+            <video
+              v-if="diapositiva.imagenUrl && diapositiva.imagenTipo === 'video'"
+              class="carrusel-vista-previa__imagen"
+              autoplay
+              loop
+              muted
+              playsinline
+            >
+              <source :src="store.resolverUrlImagen(diapositiva.imagenUrl)" type="video/mp4" />
+            </video>
             <img
-              v-if="diapositiva.imagenUrl"
+              v-else-if="diapositiva.imagenUrl"
               class="carrusel-vista-previa__imagen"
               :src="store.resolverUrlImagen(diapositiva.imagenUrl)"
               :alt="diapositiva.texto || 'Diapositiva del carrusel'"
             />
             <div v-else class="carrusel-vista-previa__imagen-vacia" aria-hidden="true" />
 
-            <figcaption v-if="diapositiva.texto" class="carrusel-vista-previa__texto">
-              {{ diapositiva.texto }}
+            <figcaption
+              v-if="diapositiva.texto || diapositiva.botonTexto"
+              class="carrusel-vista-previa__texto"
+            >
+              <p v-if="diapositiva.texto" class="carrusel-vista-previa__texto-contenido">
+                {{ diapositiva.texto }}
+              </p>
+
+              <NuxtLink
+                v-if="diapositiva.botonTexto"
+                :to="diapositiva.botonUrl || '#'"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="boton-primario boton-chico"
+              >
+                {{ diapositiva.botonTexto }}
+              </NuxtLink>
             </figcaption>
           </figure>
         </SwiperSlide>
@@ -118,10 +143,18 @@ const modulosSwiper = [Navigation, Pagination];
   &__texto {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
     margin: 0;
     padding: 20px;
     background: linear-gradient(to top, rgb(0 0 0 / 65%), transparent);
     color: white;
+  }
+
+  &__texto-contenido {
+    margin: 0;
   }
 }
 </style>

@@ -128,12 +128,10 @@ onMounted(sincronizarContenido);
       :negrita="Boolean(props.modelValue.negrita)"
       :alineacion="props.modelValue.alineacion || 'left'"
       :tamano="props.modelValue.tamano || 'normal'"
-      :color="props.modelValue.color || '#FFFFFF'"
       :tipo-lista="props.modelValue.tipoLista || 'ninguna'"
       @update:negrita="actualizarPropiedad('negrita', $event)"
       @update:alineacion="actualizarPropiedad('alineacion', $event)"
       @update:tamano="actualizarPropiedad('tamano', $event)"
-      @update:color="actualizarPropiedad('color', $event)"
       @update:tipo-lista="actualizarPropiedad('tipoLista', $event)"
     />
 

@@ -60,6 +60,10 @@ watch(
         if (t.descripcionAlineacion === undefined) t.descripcionAlineacion = 'left';
         if (t.descripcionColor === undefined || t.descripcionColor === 'inherit')
           t.descripcionColor = '#FFFFFF';
+
+        if (!t.imagenTipo) t.imagenTipo = 'imagen';
+        if (!t.imagenPosicion) t.imagenPosicion = { x: 50, y: 50 };
+        if (t.imagenEscala === undefined) t.imagenEscala = 100;
       });
     }
   },
@@ -94,6 +98,9 @@ function agregarTarjeta() {
     titulo: '',
     descripcion: '',
     imagenUrl: '/inicio/tarjeta_visualiza.png',
+    imagenTipo: 'imagen',
+    imagenPosicion: { x: 50, y: 50 },
+    imagenEscala: 100,
     orientacion: esHorizontal ? 'horizontal-derecha' : 'vertical-abajo',
     tituloTipo: 'h2',
     tituloAlineacion: 'left',
@@ -151,6 +158,9 @@ function manejarSeleccionarArchivo(archivo) {
   }
   tarjeta.imagenFile = archivo;
   tarjeta.imagenUrl = URL.createObjectURL(archivo);
+  tarjeta.imagenTipo = archivo.type.startsWith('video/') ? 'video' : 'imagen';
+  tarjeta.imagenPosicion = { x: 50, y: 50 };
+  tarjeta.imagenEscala = 100;
 }
 
 function manejarSeleccionarEnlace(url) {
@@ -162,6 +172,106 @@ function manejarSeleccionarEnlace(url) {
   }
   tarjeta.imagenFile = null;
   tarjeta.imagenUrl = url;
+  tarjeta.imagenTipo = 'imagen';
+  tarjeta.imagenPosicion = { x: 50, y: 50 };
+  tarjeta.imagenEscala = 100;
+}
+
+// Reposicionamiento/escala de la imagen de una tarjeta (mismo patrón de
+// arrastre que PortadaEditor.vue, pero acotado a un índice de tarjeta a la
+// vez porque puede haber varias tarjetas en el mismo bloque).
+const indiceTarjetaReposicionando = ref(-1);
+const arrastrandoImagenTarjeta = ref(false);
+const inicioArrastreTarjeta = ref({ punteroX: 0, punteroY: 0, posicionX: 50, posicionY: 50 });
+const posicionTarjetaGuardada = ref({ x: 50, y: 50 });
+const escalaTarjetaGuardada = ref(100);
+
+function limitarValor(valor, minimo, maximo) {
+  return Math.min(Math.max(valor, minimo), maximo);
+}
+
+function estiloImagenTarjeta(tarjeta) {
+  const posicion = tarjeta.imagenPosicion || { x: 50, y: 50 };
+  const escala = tarjeta.imagenEscala || 100;
+  return {
+    objectPosition: `${posicion.x}% ${posicion.y}%`,
+    transform: `scale(${escala / 100})`,
+  };
+}
+
+function iniciarReposicionTarjeta(idx) {
+  const tarjeta = props.datos.tarjetas[idx];
+  posicionTarjetaGuardada.value = { ...(tarjeta.imagenPosicion || { x: 50, y: 50 }) };
+  escalaTarjetaGuardada.value = tarjeta.imagenEscala || 100;
+  indiceTarjetaReposicionando.value = idx;
+}
+
+function iniciarArrastreImagenTarjeta(idx, event) {
+  if (indiceTarjetaReposicionando.value !== idx) return;
+
+  event.preventDefault();
+
+  const tarjeta = props.datos.tarjetas[idx];
+  arrastrandoImagenTarjeta.value = true;
+  inicioArrastreTarjeta.value = {
+    punteroX: event.clientX,
+    punteroY: event.clientY,
+    posicionX: tarjeta.imagenPosicion?.x ?? 50,
+    posicionY: tarjeta.imagenPosicion?.y ?? 50,
+  };
+
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+}
+
+function moverImagenTarjeta(idx, event) {
+  if (indiceTarjetaReposicionando.value !== idx || !arrastrandoImagenTarjeta.value) return;
+
+  event.preventDefault();
+
+  const contenedor = event.currentTarget?.getBoundingClientRect();
+  if (!contenedor?.width || !contenedor?.height) return;
+
+  const desplazamientoX = event.clientX - inicioArrastreTarjeta.value.punteroX;
+  const desplazamientoY = event.clientY - inicioArrastreTarjeta.value.punteroY;
+
+  props.datos.tarjetas[idx].imagenPosicion = {
+    x: limitarValor(
+      inicioArrastreTarjeta.value.posicionX - (desplazamientoX / contenedor.width) * 100,
+      0,
+      100
+    ),
+    y: limitarValor(
+      inicioArrastreTarjeta.value.posicionY - (desplazamientoY / contenedor.height) * 100,
+      0,
+      100
+    ),
+  };
+}
+
+function terminarArrastreImagenTarjeta(event) {
+  if (!arrastrandoImagenTarjeta.value) return;
+
+  arrastrandoImagenTarjeta.value = false;
+
+  if (event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+}
+
+function actualizarEscalaTarjeta(idx, valor) {
+  props.datos.tarjetas[idx].imagenEscala = Number(valor);
+}
+
+function guardarPosicionTarjeta() {
+  indiceTarjetaReposicionando.value = -1;
+  arrastrandoImagenTarjeta.value = false;
+}
+
+function cancelarReposicionTarjeta(idx) {
+  props.datos.tarjetas[idx].imagenPosicion = { ...posicionTarjetaGuardada.value };
+  props.datos.tarjetas[idx].imagenEscala = escalaTarjetaGuardada.value;
+  indiceTarjetaReposicionando.value = -1;
+  arrastrandoImagenTarjeta.value = false;
 }
 
 function registrarTitulo(elemento, tarjeta) {
@@ -310,13 +420,37 @@ function manejarInput(limite, event, tarjeta, campo) {
                 'tarjeta-dragover': indiceTarjetaSobre === idx && indiceTarjetaArrastrada !== idx,
               }"
             >
-              <div class="tarjeta-imagen-wrapper">
+              <div
+                class="tarjeta-imagen-wrapper"
+                :class="{
+                  'tarjeta-imagen-wrapper--reposicionando': indiceTarjetaReposicionando === idx,
+                }"
+                @pointerdown="iniciarArrastreImagenTarjeta(idx, $event)"
+                @pointermove="moverImagenTarjeta(idx, $event)"
+                @pointerup="terminarArrastreImagenTarjeta"
+                @pointercancel="terminarArrastreImagenTarjeta"
+              >
+                <video
+                  v-if="tarjeta.imagenTipo === 'video'"
+                  class="tarjeta-imagen"
+                  :style="estiloImagenTarjeta(tarjeta)"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                >
+                  <source :src="store.resolverUrlImagen(tarjeta.imagenUrl)" type="video/mp4" />
+                </video>
                 <img
+                  v-else
                   :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
                   class="tarjeta-imagen"
+                  :style="estiloImagenTarjeta(tarjeta)"
                   alt=""
+                  draggable="false"
                 />
                 <div
+                  v-if="indiceTarjetaReposicionando !== idx"
                   class="tarjeta-imagen-overlay flex flex-column align-items-center justify-content-center flex-gap-2"
                 >
                   <button
@@ -326,6 +460,14 @@ function manejarInput(limite, event, tarjeta, campo) {
                   >
                     <span class="pictograma-editar m-r-1" aria-hidden="true"></span>
                     <span>Editar Imagen</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="boton-secundario boton-chico boton-imagen-cambiar"
+                    @click.stop="iniciarReposicionTarjeta(idx)"
+                  >
+                    <span>Reposicionar/Escalar</span>
                   </button>
 
                   <!-- Selector Acotado de Orientación por Tarjeta (Condicional según disposición global) -->
@@ -383,6 +525,38 @@ function manejarInput(limite, event, tarjeta, campo) {
                         <span class="pictograma-flecha-derecha" aria-hidden="true"></span>
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                <div v-else class="tarjeta-imagen-overlay-reposicion" @click.stop>
+                  <p class="tarjeta-imagen-ayuda-reposicion">Arrastra la imagen para moverla</p>
+
+                  <label class="tarjeta-imagen-escala-label">
+                    Tamaño
+                    <input
+                      type="range"
+                      min="100"
+                      max="200"
+                      :value="tarjeta.imagenEscala || 100"
+                      @input="actualizarEscalaTarjeta(idx, $event.target.value)"
+                    />
+                  </label>
+
+                  <div class="flex flex-gap-1">
+                    <button
+                      type="button"
+                      class="boton-secundario boton-chico boton-imagen-cambiar"
+                      @click="guardarPosicionTarjeta"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      class="boton-secundario boton-chico boton-imagen-cambiar"
+                      @click="cancelarReposicionTarjeta(idx)"
+                    >
+                      Cancelar
+                    </button>
                   </div>
                 </div>
               </div>
@@ -792,6 +966,50 @@ function manejarInput(limite, event, tarjeta, campo) {
   transition: opacity 0.2s;
   z-index: 10;
   box-sizing: border-box;
+}
+
+.tarjeta-imagen-wrapper--reposicionando {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  img {
+    transition: none;
+  }
+}
+
+.tarjeta-imagen-overlay-reposicion {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0) 60%);
+  z-index: 10;
+  box-sizing: border-box;
+  cursor: default;
+}
+
+.tarjeta-imagen-ayuda-reposicion {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tarjeta-imagen-escala-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .boton-imagen-cambiar {
