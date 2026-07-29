@@ -132,6 +132,26 @@ onMounted(() => {
       </ul>
     </section>
 
+    <section v-if="store.paginas.length" class="contenedor m-y-3 landing-builder-pagina-inicio">
+      <label for="select-pagina-inicio">Página de inicio</label>
+
+      <select
+        id="select-pagina-inicio"
+        class="landing-builder-pagina-inicio__select"
+        :value="store.paginaInicioId ?? ''"
+        @change="store.establecerPaginaInicio($event.target.value || null)"
+      >
+        <option value="">Predeterminada (Index)</option>
+        <option v-for="pagina in store.paginas" :key="pagina.id" :value="pagina.id">
+          {{ pagina.nombre }}
+        </option>
+      </select>
+
+      <p class="texto-color-secundario m-t-1">
+        Elige qué página se muestra cuando alguien visita el sitio en "/".
+      </p>
+    </section>
+
     <!--
     Formulario existente (config, editor de portada/sección/logo, tarjetas y vista previa).
     Se deja comentado mientras el lienzo en blanco reemplaza este flujo; no se elimina por si
@@ -255,6 +275,24 @@ onMounted(() => {
   gap: 12px;
 }
 
+.landing-builder-pagina-inicio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-weight: 600;
+  }
+}
+
+.landing-builder-pagina-inicio__select {
+  width: fit-content;
+  min-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-neutro-2, #e0e0e0);
+  border-radius: 6px;
+}
+
 .landing-builder-configuracion {
   padding-top: 32px;
   padding-bottom: 48px;
@@ -294,6 +332,11 @@ onMounted(() => {
 }
 
 .landing-builder-acciones {
+  // Sobrescribe flex-direction: column / align-items: stretch de la utilidad
+  // "flex-vertical-centrado" (sisdai-css); sin esto los botones se apilan y
+  // se estiran a todo el ancho en vez de quedar chicos uno junto al otro.
+  flex-direction: row;
+  align-items: center;
   flex-wrap: wrap;
   gap: 12px;
 }

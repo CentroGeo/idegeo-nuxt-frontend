@@ -52,6 +52,7 @@ export interface LandingBuilderConfig {
   secciones?: LandingBuilderSection[];
   bloques?: LandingBuilderBloque[];
   paginas?: LandingBuilderPagina[];
+  paginaInicioId?: string | null;
   actualizadoEn: string;
 }
 
@@ -203,6 +204,7 @@ const configPorDefecto: LandingBuilderConfig = {
   secciones: [],
   bloques: [],
   paginas: [],
+  paginaInicioId: null,
   actualizadoEn: new Date(0).toISOString(),
 };
 
@@ -320,6 +322,7 @@ export async function saveLandingBuilderConfig(
     logoCuartoUrl,
     tarjetas,
     paginas: actual.paginas,
+    paginaInicioId: actual.paginaInicioId,
     actualizadoEn: new Date().toISOString(),
   };
   await storage.setItem(CONFIG_KEY, nuevaConfig);
@@ -593,13 +596,66 @@ export async function crearLandingBuilderPagina(
   return nuevasPaginas;
 }
 
-export async function eliminarLandingBuilderPagina(id: string): Promise<LandingBuilderPagina[]> {
+export async function eliminarLandingBuilderPagina(
+  id: string
+): Promise<{ paginas: LandingBuilderPagina[]; paginaInicioId: string | null }> {
   const storage = useStorage('landingBuilder');
   const config = await getLandingBuilderConfig();
   const paginas = (config.paginas ?? []).filter((pagina) => pagina.id !== id);
+  const paginaInicioId = config.paginaInicioId === id ? null : (config.paginaInicioId ?? null);
 
-  await storage.setItem(CONFIG_KEY, { ...config, paginas });
-  return paginas;
+  await storage.setItem(CONFIG_KEY, { ...config, paginas, paginaInicioId });
+  return { paginas, paginaInicioId };
+}
+
+export async function getLandingBuilderPaginaInicio(): Promise<LandingBuilderPagina | null> {
+  const config = await getLandingBuilderConfig();
+  if (!config.paginaInicioId) return null;
+
+  const paginas = await getLandingBuilderPaginas();
+  return paginas.find((pagina) => pagina.id === config.paginaInicioId) ?? null;
+}
+
+export async function setLandingBuilderPaginaInicio(
+  id: string | null
+): Promise<{ paginaInicioId: string | null }> {
+  const storage = useStorage('landingBuilder');
+  const config = await getLandingBuilderConfig();
+
+  if (id !== null) {
+    const paginas = await getLandingBuilderPaginas();
+    if (!paginas.some((pagina) => pagina.id === id)) {
+      throw createError({ statusCode: 400, statusMessage: 'La página seleccionada no existe' });
+    }
+  }
+
+  await storage.setItem(CONFIG_KEY, { ...config, paginaInicioId: id });
+  return { paginaInicioId: id };
+}
+
+function slugify(texto: string): string {
+  const base = texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'pagina';
+}
+
+function generarSlugUnico(
+  nombre: string,
+  paginas: LandingBuilderPagina[],
+  idExcluir?: string
+): string {
+  const base = slugify(nombre);
+  let slug = base;
+  let contador = 2;
+  while (paginas.some((pagina) => pagina.slug === slug && pagina.id !== idExcluir)) {
+    slug = `${base}-${contador}`;
+    contador += 1;
+  }
+  return slug;
 }
 
 export async function renombrarLandingBuilderPagina(
@@ -616,6 +672,7 @@ export async function renombrarLandingBuilderPagina(
   }
 
   pagina.nombre = nombre;
+  pagina.slug = generarSlugUnico(nombre, paginas, id);
   await storage.setItem(CONFIG_KEY, { ...config, paginas });
   return paginas;
 }

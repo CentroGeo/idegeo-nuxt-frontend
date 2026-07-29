@@ -21,6 +21,15 @@ const tamanosParrafo = {
   mediano: '1rem',
   grande: '1.125rem',
 };
+
+function estiloImagenTarjeta(tarjeta) {
+  const posicion = tarjeta.imagenPosicion || { x: 50, y: 50 };
+  const escala = tarjeta.imagenEscala || 100;
+  return {
+    objectPosition: `${posicion.x}% ${posicion.y}%`,
+    transform: `scale(${escala / 100})`,
+  };
+}
 </script>
 
 <template>
@@ -37,9 +46,22 @@ const tamanosParrafo = {
           :class="'visor-tarjeta-orientacion-' + (tarjeta.orientacion || 'vertical-abajo')"
         >
           <div class="visor-tarjeta-imagen-wrapper">
+            <video
+              v-if="tarjeta.imagenTipo === 'video'"
+              class="visor-tarjeta-imagen"
+              :style="estiloImagenTarjeta(tarjeta)"
+              autoplay
+              loop
+              muted
+              playsinline
+            >
+              <source :src="store.resolverUrlImagen(tarjeta.imagenUrl)" type="video/mp4" />
+            </video>
             <img
+              v-else
               :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
               class="visor-tarjeta-imagen"
+              :style="estiloImagenTarjeta(tarjeta)"
               alt=""
             />
           </div>

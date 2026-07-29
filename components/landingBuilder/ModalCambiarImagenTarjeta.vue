@@ -11,9 +11,12 @@ const urlImagen = ref('');
 const error = ref('');
 const arrastrandoArchivo = ref(false);
 
-const TAMANO_MAXIMO_BYTES = 500 * 1024; // 500 KB
+const TAMANO_MAXIMO_IMAGEN_BYTES = 500 * 1024; // 500 KB
+const TAMANO_MAXIMO_VIDEO_BYTES = 15 * 1024 * 1024; // 15 MB
 
-const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
+const TIPOS_VIDEO_PERMITIDOS = ['video/mp4', 'video/webm'];
+const tiposPermitidos = [...TIPOS_IMAGEN_PERMITIDOS, ...TIPOS_VIDEO_PERMITIDOS];
 
 function abrirModal() {
   pestanaActiva.value = 'subir';
@@ -74,12 +77,17 @@ function procesarArchivo(archivo) {
   if (!archivo) return;
 
   if (!tiposPermitidos.includes(archivo.type)) {
-    error.value = 'Selecciona una imagen JPG, PNG o WEBP.';
+    error.value = 'Selecciona una imagen JPG, PNG, WEBP o un video MP4/WEBM.';
     return;
   }
 
-  if (archivo.size > TAMANO_MAXIMO_BYTES) {
-    error.value = 'La imagen no puede pesar más de 500 KB.';
+  const esVideo = TIPOS_VIDEO_PERMITIDOS.includes(archivo.type);
+  const limite = esVideo ? TAMANO_MAXIMO_VIDEO_BYTES : TAMANO_MAXIMO_IMAGEN_BYTES;
+
+  if (archivo.size > limite) {
+    error.value = esVideo
+      ? 'El video no puede pesar más de 15 MB.'
+      : 'La imagen no puede pesar más de 500 KB.';
     return;
   }
 
@@ -203,7 +211,7 @@ defineExpose({
             ref="inputArchivo"
             class="modal-tarjeta-imagen__input-archivo"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
             @change="seleccionarArchivo"
           />
 
@@ -248,7 +256,9 @@ defineExpose({
               Las imágenes con un ancho de 800 a 1200 píxeles funcionan mejor.
             </p>
 
-            <p class="modal-tarjeta-imagen__formatos">JPG, PNG o WEBP. Tamaño máximo: 500 KB.</p>
+            <p class="modal-tarjeta-imagen__formatos">
+              JPG, PNG o WEBP (máx. 500 KB), o video MP4/WEBM (máx. 15 MB).
+            </p>
           </div>
         </section>
 

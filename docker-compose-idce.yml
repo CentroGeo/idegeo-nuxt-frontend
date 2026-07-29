@@ -19,6 +19,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    volumes:
+      - landing_builder_data:/app/.data
     environment:
       NODE_ENV: production
       NUXT_PUBLIC_BASE_URL: ${NGINX_BASE_URL}
@@ -70,6 +72,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    volumes:
+      - landing_builder_data:/app/.data
     environment:
       NODE_ENV: production
       NUXT_PUBLIC_BASE_URL: ${NGINX_BASE_URL}
@@ -108,4 +112,7 @@ networks:
   sigic:
     name: sigic_sigicnetwork
     external: true
+
+volumes:
+  landing_builder_data:
 

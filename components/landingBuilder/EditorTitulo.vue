@@ -73,11 +73,9 @@ onMounted(sincronizarContenido);
       :negrita="Boolean(props.modelValue.negrita)"
       :alineacion="props.modelValue.alineacion || 'left'"
       :tamano="props.modelValue.tamano || 'grande'"
-      :color="props.modelValue.color || '#FFFFFF'"
       @update:negrita="actualizarPropiedad('negrita', $event)"
       @update:alineacion="actualizarPropiedad('alineacion', $event)"
       @update:tamano="actualizarPropiedad('tamano', $event)"
-      @update:color="actualizarPropiedad('color', $event)"
     />
 
     <h2

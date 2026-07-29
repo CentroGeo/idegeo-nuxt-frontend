@@ -1,13 +1,20 @@
 <script setup>
 const store = useLandingBuilderStore();
 
-const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-const TAMANO_MAXIMO_BYTES = 5 * 1024 * 1024;
+const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const TIPOS_VIDEO_PERMITIDOS = ['video/mp4', 'video/webm'];
+const TIPOS_PERMITIDOS = [...TIPOS_IMAGEN_PERMITIDOS, ...TIPOS_VIDEO_PERMITIDOS];
+const TAMANO_MAXIMO_IMAGEN_BYTES = 5 * 1024 * 1024;
+const TAMANO_MAXIMO_VIDEO_BYTES = 15 * 1024 * 1024;
 
 defineProps({
   imagenUrl: {
     type: String,
     default: null,
+  },
+  imagenTipo: {
+    type: String,
+    default: 'imagen',
   },
 });
 
@@ -33,12 +40,17 @@ function procesarArchivo(archivo) {
   if (!archivo) return;
 
   if (!TIPOS_PERMITIDOS.includes(archivo.type)) {
-    error.value = 'Selecciona una imagen JPG, PNG, WEBP o SVG.';
+    error.value = 'Selecciona una imagen JPG, PNG, WEBP, SVG o un video MP4/WEBM.';
     return;
   }
 
-  if (archivo.size > TAMANO_MAXIMO_BYTES) {
-    error.value = 'La imagen no puede pesar más de 5 MB.';
+  const esVideo = TIPOS_VIDEO_PERMITIDOS.includes(archivo.type);
+  const limite = esVideo ? TAMANO_MAXIMO_VIDEO_BYTES : TAMANO_MAXIMO_IMAGEN_BYTES;
+
+  if (archivo.size > limite) {
+    error.value = esVideo
+      ? 'El video no puede pesar más de 15 MB.'
+      : 'La imagen no puede pesar más de 5 MB.';
     return;
   }
 
@@ -77,15 +89,18 @@ function soltarArchivo(event) {
         ref="inputArchivo"
         class="selector-imagen-carrusel__input"
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml,video/mp4,video/webm"
         @change="seleccionarArchivo"
       />
 
-      <img :src="store.resolverUrlImagen(imagenUrl)" alt="Imagen de la diapositiva" />
+      <video v-if="imagenTipo === 'video'" autoplay loop muted playsinline>
+        <source :src="store.resolverUrlImagen(imagenUrl)" type="video/mp4" />
+      </video>
+      <img v-else :src="store.resolverUrlImagen(imagenUrl)" alt="Imagen de la diapositiva" />
 
       <span class="selector-imagen-carrusel__superponer" aria-hidden="true">
         <span class="pictograma-archivo-subir pictograma-chico" />
-        Cambiar imagen
+        Cambiar imagen o video
       </span>
     </div>
 
@@ -108,12 +123,12 @@ function soltarArchivo(event) {
         ref="inputArchivo"
         class="selector-imagen-carrusel__input"
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+        accept="image/jpeg,image/png,image/webp,image/svg+xml,video/mp4,video/webm"
         @change="seleccionarArchivo"
       />
 
       <span class="pictograma-archivo-subir pictograma-mediano" aria-hidden="true" />
-      <p class="selector-imagen-carrusel__indicacion">Arrastra o elige una imagen</p>
+      <p class="selector-imagen-carrusel__indicacion">Arrastra o elige una imagen o video</p>
     </div>
 
     <p v-if="error" class="texto-color-error">{{ error }}</p>
@@ -128,7 +143,8 @@ function soltarArchivo(event) {
     border-radius: 10px;
     cursor: pointer;
 
-    img {
+    img,
+    video {
       display: block;
       width: 100%;
       height: 140px;
