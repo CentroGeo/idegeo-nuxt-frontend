@@ -30,6 +30,13 @@ const tamanosParrafo = {
   grande: '1.125rem',
 };
 
+// Mientras el color siga en el blanco por defecto, se deja que el texto se
+// adapte al tema claro/oscuro; solo se respeta un color explícito elegido
+// por la persona usuaria (mismo criterio que RenderizadorBloques.vue).
+function colorTextoResuelto(color) {
+  return color && color !== '#FFFFFF' ? color : 'var(--texto-primario)';
+}
+
 // Estados para el modal de configuración de hipervínculo
 const tarjetaEnlaceIndex = ref(-1);
 const tempBotonTexto = ref('');
@@ -63,7 +70,6 @@ watch(
 
         if (!t.imagenTipo) t.imagenTipo = 'imagen';
         if (!t.imagenPosicion) t.imagenPosicion = { x: 50, y: 50 };
-        if (t.imagenEscala === undefined) t.imagenEscala = 100;
       });
     }
   },
@@ -100,7 +106,6 @@ function agregarTarjeta() {
     imagenUrl: '/inicio/tarjeta_visualiza.png',
     imagenTipo: 'imagen',
     imagenPosicion: { x: 50, y: 50 },
-    imagenEscala: 100,
     orientacion: esHorizontal ? 'horizontal-derecha' : 'vertical-abajo',
     tituloTipo: 'h2',
     tituloAlineacion: 'left',
@@ -160,7 +165,6 @@ function manejarSeleccionarArchivo(archivo) {
   tarjeta.imagenUrl = URL.createObjectURL(archivo);
   tarjeta.imagenTipo = archivo.type.startsWith('video/') ? 'video' : 'imagen';
   tarjeta.imagenPosicion = { x: 50, y: 50 };
-  tarjeta.imagenEscala = 100;
 }
 
 function manejarSeleccionarEnlace(url) {
@@ -174,17 +178,15 @@ function manejarSeleccionarEnlace(url) {
   tarjeta.imagenUrl = url;
   tarjeta.imagenTipo = 'imagen';
   tarjeta.imagenPosicion = { x: 50, y: 50 };
-  tarjeta.imagenEscala = 100;
 }
 
-// Reposicionamiento/escala de la imagen de una tarjeta (mismo patrón de
-// arrastre que PortadaEditor.vue, pero acotado a un índice de tarjeta a la
-// vez porque puede haber varias tarjetas en el mismo bloque).
+// Reposicionamiento de la imagen de una tarjeta (mismo patrón de arrastre
+// que PortadaEditor.vue, pero acotado a un índice de tarjeta a la vez
+// porque puede haber varias tarjetas en el mismo bloque).
 const indiceTarjetaReposicionando = ref(-1);
 const arrastrandoImagenTarjeta = ref(false);
 const inicioArrastreTarjeta = ref({ punteroX: 0, punteroY: 0, posicionX: 50, posicionY: 50 });
 const posicionTarjetaGuardada = ref({ x: 50, y: 50 });
-const escalaTarjetaGuardada = ref(100);
 
 function limitarValor(valor, minimo, maximo) {
   return Math.min(Math.max(valor, minimo), maximo);
@@ -192,17 +194,14 @@ function limitarValor(valor, minimo, maximo) {
 
 function estiloImagenTarjeta(tarjeta) {
   const posicion = tarjeta.imagenPosicion || { x: 50, y: 50 };
-  const escala = tarjeta.imagenEscala || 100;
   return {
     objectPosition: `${posicion.x}% ${posicion.y}%`,
-    transform: `scale(${escala / 100})`,
   };
 }
 
 function iniciarReposicionTarjeta(idx) {
   const tarjeta = props.datos.tarjetas[idx];
   posicionTarjetaGuardada.value = { ...(tarjeta.imagenPosicion || { x: 50, y: 50 }) };
-  escalaTarjetaGuardada.value = tarjeta.imagenEscala || 100;
   indiceTarjetaReposicionando.value = idx;
 }
 
@@ -258,10 +257,6 @@ function terminarArrastreImagenTarjeta(event) {
   }
 }
 
-function actualizarEscalaTarjeta(idx, valor) {
-  props.datos.tarjetas[idx].imagenEscala = Number(valor);
-}
-
 function guardarPosicionTarjeta() {
   indiceTarjetaReposicionando.value = -1;
   arrastrandoImagenTarjeta.value = false;
@@ -269,7 +264,6 @@ function guardarPosicionTarjeta() {
 
 function cancelarReposicionTarjeta(idx) {
   props.datos.tarjetas[idx].imagenPosicion = { ...posicionTarjetaGuardada.value };
-  props.datos.tarjetas[idx].imagenEscala = escalaTarjetaGuardada.value;
   indiceTarjetaReposicionando.value = -1;
   arrastrandoImagenTarjeta.value = false;
 }
@@ -467,7 +461,7 @@ function manejarInput(limite, event, tarjeta, campo) {
                     class="boton-secundario boton-chico boton-imagen-cambiar"
                     @click.stop="iniciarReposicionTarjeta(idx)"
                   >
-                    <span>Reposicionar/Escalar</span>
+                    <span>Reposicionar</span>
                   </button>
 
                   <!-- Selector Acotado de Orientación por Tarjeta (Condicional según disposición global) -->
@@ -531,17 +525,6 @@ function manejarInput(limite, event, tarjeta, campo) {
                 <div v-else class="tarjeta-imagen-overlay-reposicion" @click.stop>
                   <p class="tarjeta-imagen-ayuda-reposicion">Arrastra la imagen para moverla</p>
 
-                  <label class="tarjeta-imagen-escala-label">
-                    Tamaño
-                    <input
-                      type="range"
-                      min="100"
-                      max="200"
-                      :value="tarjeta.imagenEscala || 100"
-                      @input="actualizarEscalaTarjeta(idx, $event.target.value)"
-                    />
-                  </label>
-
                   <div class="flex flex-gap-1">
                     <button
                       type="button"
@@ -587,7 +570,7 @@ function manejarInput(limite, event, tarjeta, campo) {
                     }"
                     :style="{
                       textAlign: tarjeta.tituloAlineacion || 'left',
-                      color: tarjeta.tituloColor || 'inherit',
+                      color: colorTextoResuelto(tarjeta.tituloColor),
                       fontWeight: tarjeta.tituloNegrita ? '700' : '400',
                       fontSize: tamanosTitulo[tarjeta.tituloTamano] || '1.375rem',
                     }"
@@ -625,7 +608,7 @@ function manejarInput(limite, event, tarjeta, campo) {
                     }"
                     :style="{
                       textAlign: tarjeta.descripcionAlineacion || 'left',
-                      color: tarjeta.descripcionColor || 'inherit',
+                      color: colorTextoResuelto(tarjeta.descripcionColor),
                       fontWeight: tarjeta.descripcionNegrita ? '700' : '400',
                       fontSize: tamanosParrafo[tarjeta.descripcionTamano] || '0.875rem',
                     }"
@@ -1003,15 +986,6 @@ function manejarInput(limite, event, tarjeta, campo) {
   text-align: center;
 }
 
-.tarjeta-imagen-escala-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
 .boton-imagen-cambiar {
   background: var(--color-neutro-0, #ffffff) !important;
   color: var(--color-primario-2, rgb(105 28 50)) !important;
@@ -1249,7 +1223,7 @@ function manejarInput(limite, event, tarjeta, campo) {
 
   .tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
+    height: 240px;
     border-radius: 8px 8px 0 0;
   }
 }
@@ -1259,7 +1233,7 @@ function manejarInput(limite, event, tarjeta, campo) {
 
   .tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
+    height: 240px;
     border-radius: 0 0 8px 8px;
   }
 }
