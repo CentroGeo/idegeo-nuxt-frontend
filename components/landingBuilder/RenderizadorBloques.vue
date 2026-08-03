@@ -208,6 +208,19 @@ function obtenerLineasParrafoTextoImagen(bloque) {
         v-else-if="bloque.tipo === 'tarjetas'"
         :datos="bloque.datos"
       />
+
+      <section
+        v-else-if="bloque.tipo === 'mapa' && bloque.datos?.url"
+        class="visor-mapa contenedor ancho-fijo m-y-6"
+      >
+        <iframe
+          class="visor-mapa__iframe"
+          :src="bloque.datos.url"
+          :height="bloque.datos.alto || 480"
+          :title="bloque.datos.titulo || 'Mapa embebido'"
+          loading="lazy"
+        />
+      </section>
     </template>
   </div>
 </template>
@@ -313,6 +326,15 @@ function obtenerLineasParrafoTextoImagen(bloque) {
     .visor-texto-imagen__media {
       order: 2;
     }
+  }
+}
+
+.visor-mapa {
+  &__iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 12px;
   }
 }
 

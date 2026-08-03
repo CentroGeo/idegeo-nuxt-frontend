@@ -58,7 +58,15 @@ export interface LandingBuilderConfig {
 
 export interface LandingBuilderBloque {
   id: string;
-  tipo: 'portada' | 'titulo' | 'parrafo' | 'texto-imagen' | 'texto' | 'carrusel' | 'tarjetas';
+  tipo:
+    | 'portada'
+    | 'titulo'
+    | 'parrafo'
+    | 'texto-imagen'
+    | 'texto'
+    | 'carrusel'
+    | 'tarjetas'
+    | 'mapa';
   etiqueta?: string;
   datos: Record<string, unknown>;
 }
@@ -73,6 +81,10 @@ export interface LandingBuilderPaginaIdentidad {
   logoSecundarioRedirectUrl?: string | null;
   logoTerceroRedirectUrl?: string | null;
   logoCuartoRedirectUrl?: string | null;
+  // Controla la barra superior de identidad de Gobierno de México (el
+  // escudo/marca oficial que se muestra sobre el encabezado). Ausente en
+  // páginas creadas antes de esta opción; se trata como `true`.
+  mostrarBarraGobMx?: boolean;
 }
 
 export interface LandingBuilderPagina {
@@ -90,6 +102,7 @@ export const IDENTIDAD_PAGINA_VACIA: LandingBuilderPaginaIdentidad = {
   logoSecundarioUrl: null,
   logoTerceroUrl: null,
   logoCuartoUrl: null,
+  mostrarBarraGobMx: true,
 };
 
 export interface LandingBuilderLogo {
