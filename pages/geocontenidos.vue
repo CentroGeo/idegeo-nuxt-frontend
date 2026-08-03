@@ -39,6 +39,19 @@ const itemsMenu = computed(() => {
 
   return items;
 });
+
+const submenusAbiertos = reactive({});
+
+function alternarSubmenu(nombre) {
+  submenusAbiertos[nombre] = !submenusAbiertos[nombre];
+}
+
+const menuLateralRef = ref(null);
+onClickOutside(menuLateralRef, () => {
+  Object.keys(submenusAbiertos).forEach((nombre) => {
+    submenusAbiertos[nombre] = false;
+  });
+});
 </script>
 
 <template>
@@ -66,7 +79,7 @@ const itemsMenu = computed(() => {
     <div class="contenedor-contenido">
       <UiLayoutPaneles>
         <template #catalogo>
-          <nav class="menu-lateral">
+          <nav ref="menuLateralRef" class="menu-lateral">
             <div class="menu-lateral-contenedor">
               <h4 class="m-0 p-4">Menú</h4>
 
@@ -74,18 +87,24 @@ const itemsMenu = computed(() => {
                 <li
                   v-for="item in itemsMenu"
                   :key="item.nombre"
-                  :class="{ 'menu-lateral-item-con-submenu': item.subMenu }"
+                  :class="{
+                    'menu-lateral-item-con-submenu': item.subMenu,
+                    abierto: item.subMenu && submenusAbiertos[item.nombre],
+                  }"
                 >
                   <div class="menu-lateral-item-fila">
                     <NuxtLink :to="item.ruta">{{ item.nombre }}</NuxtLink>
 
-                    <span
+                    <button
                       v-if="item.subMenu"
+                      type="button"
                       class="pictograma-menu-hamburguesa"
-                      aria-hidden="true"
+                      :aria-expanded="Boolean(submenusAbiertos[item.nombre])"
+                      :aria-label="`Mostrar páginas de ${item.nombre}`"
+                      @click="alternarSubmenu(item.nombre)"
                     >
                       ☰
-                    </span>
+                    </button>
                   </div>
 
                   <ul v-if="item.subMenu" class="menu-lateral-submenu">
@@ -123,6 +142,23 @@ const itemsMenu = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  // El estado activo del enlace pinta un acento de 8px con box-shadow (ver
+  // sisdai-css .menu-lateral-contenedor a.router-link-exact-active); sin este
+  // espacio el acento se dibuja encima de la primera letra del texto.
+  a {
+    padding-left: 8px;
+  }
+}
+
+.pictograma-menu-hamburguesa {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px 8px;
 }
 
 .menu-lateral-item-con-submenu {
@@ -130,8 +166,7 @@ const itemsMenu = computed(() => {
     display: none;
   }
 
-  &:hover .menu-lateral-submenu,
-  &:focus-within .menu-lateral-submenu {
+  &.abierto .menu-lateral-submenu {
     display: block;
   }
 }

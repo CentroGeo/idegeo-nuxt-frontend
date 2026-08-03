@@ -24,11 +24,16 @@ const tamanosParrafo = {
 
 function estiloImagenTarjeta(tarjeta) {
   const posicion = tarjeta.imagenPosicion || { x: 50, y: 50 };
-  const escala = tarjeta.imagenEscala || 100;
   return {
     objectPosition: `${posicion.x}% ${posicion.y}%`,
-    transform: `scale(${escala / 100})`,
   };
+}
+
+// Mientras el color siga en el blanco por defecto, se deja que el texto se
+// adapte al tema claro/oscuro; solo se respeta un color explícito elegido
+// por la persona usuaria (mismo criterio que RenderizadorBloques.vue).
+function colorTextoResuelto(color) {
+  return color && color !== '#FFFFFF' ? color : 'var(--texto-primario)';
 }
 </script>
 
@@ -71,7 +76,7 @@ function estiloImagenTarjeta(tarjeta) {
               class="visor-tarjeta-titulo"
               :style="{
                 textAlign: tarjeta.tituloAlineacion || 'left',
-                color: tarjeta.tituloColor || 'inherit',
+                color: colorTextoResuelto(tarjeta.tituloColor),
                 fontWeight: tarjeta.tituloNegrita ? '700' : '400',
                 fontSize: tamanosTitulo[tarjeta.tituloTamano] || '1.375rem',
               }"
@@ -83,7 +88,7 @@ function estiloImagenTarjeta(tarjeta) {
               class="visor-tarjeta-descripcion"
               :style="{
                 textAlign: tarjeta.descripcionAlineacion || 'left',
-                color: tarjeta.descripcionColor || 'inherit',
+                color: colorTextoResuelto(tarjeta.descripcionColor),
                 fontWeight: tarjeta.descripcionNegrita ? '700' : '400',
                 fontSize: tamanosParrafo[tarjeta.descripcionTamano] || '0.875rem',
               }"
@@ -184,7 +189,7 @@ function estiloImagenTarjeta(tarjeta) {
 
   .visor-tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
+    height: 240px;
   }
 }
 
@@ -193,7 +198,7 @@ function estiloImagenTarjeta(tarjeta) {
 
   .visor-tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
+    height: 240px;
   }
 }
 
