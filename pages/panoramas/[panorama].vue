@@ -8,7 +8,6 @@ import {
   SisdaiLeyendaWms,
 } from '@centrogeomx/sisdai-mapas';
 import DOMPurify from 'dompurify';
-import EstadoCargaCapa from '~/components/mapas/EstadoCargaCapa.vue';
 import { useDownloadResources } from '~/composables/useDownloadResources';
 import { basemapsPanorama } from '~/utils/geocontenidos/basemapsPanorama';
 import pictogramas from '~/utils/geocontenidos/pictogramas.json';
@@ -93,7 +92,6 @@ async function reintentarWmsExterno(item) {
 
   wmsExternosEncendidos.add(item.id);
 }
-const modalWmsExternos = ref(null);
 const modalBasemap = ref(null);
 const capaMascara = ref(null);
 const leyendaVisible = ref(true);
@@ -209,10 +207,6 @@ function manejarHerramientaPanorama(herramientaId) {
   switch (herramientaId) {
     case 'informacion':
       modalInfoAdicional.value?.abrirModal();
-      break;
-
-    case 'wms':
-      modalWmsExternos.value?.abrirModal();
       break;
 
     default:
@@ -444,6 +438,26 @@ async function contenidoCuadroInfoCapa(url, capa) {
   return `<p>${titulo}</p><ul>${filas}</ul>`;
 }
 
+const mensajesEstadoWms = {
+  loading: 'Cargando capa…',
+  success: 'Capa agregada al mapa',
+  error: 'No fue posible cargar esta capa',
+  idle: '',
+};
+
+const wmsExternosParaBarra = computed(() =>
+  (panorama.datos?.external_wms || []).map((item) => {
+    const estado = obtenerEstadoWms(item.id);
+
+    return {
+      ...item,
+      activo: wmsExternosEncendidos.has(item.id),
+      estado,
+      mensaje: mensajesEstadoWms[estado] || '',
+    };
+  })
+);
+
 const wmsExternosActivos = computed(() =>
   (panorama.datos?.external_wms || []).filter((item) => wmsExternosEncendidos.has(item.id))
 );
@@ -500,8 +514,11 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
           <PanoramasBarraHerramientasFlotante
             :topicos-capas="panorama.datos.topics || []"
             :topicos-texto="panorama.datos.text_topics || []"
+            :wms-externos="wmsExternosParaBarra"
             @seleccionar-herramienta="manejarHerramientaPanorama"
             @seleccionar-topico="manejarTopicoPanorama"
+            @alternar-wms="alternarWmsExterno"
+            @reintentar-wms="reintentarWmsExterno"
           />
 
           <div class="panorama__control panorama__control--leyenda">
@@ -809,55 +826,6 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
           </template>
           <template #cuerpo>
             <p class="panorama__texto-info">{{ itemTextoActivo?.contents }}</p>
-          </template>
-        </SisdaiModal>
-
-        <SisdaiModal ref="modalWmsExternos">
-          <template #encabezado>
-            <h2 class="m-t-0">WMS externos</h2>
-          </template>
-          <template #cuerpo>
-            <div
-              v-for="externo in panorama.datos.external_wms"
-              :key="`toggle-externo-${externo.id}`"
-              class="panorama__wms-item"
-            >
-              <div class="panorama__capa-etiqueta">
-                <input
-                  :id="`toggle-externo-${externo.id}`"
-                  type="checkbox"
-                  :checked="wmsExternosEncendidos.has(externo.id)"
-                  :disabled="obtenerEstadoWms(externo.id) === 'loading'"
-                  @change="alternarWmsExterno(externo)"
-                />
-
-                <label :for="`toggle-externo-${externo.id}`">
-                  {{ externo.name }}
-                </label>
-              </div>
-
-              <EstadoCargaCapa
-                :estado="obtenerEstadoWms(externo.id)"
-                :mensaje="
-                  obtenerEstadoWms(externo.id) === 'loading'
-                    ? 'Cargando capa…'
-                    : obtenerEstadoWms(externo.id) === 'success'
-                      ? 'Capa agregada al mapa'
-                      : obtenerEstadoWms(externo.id) === 'error'
-                        ? 'No fue posible cargar esta capa'
-                        : ''
-                "
-              />
-
-              <button
-                v-if="obtenerEstadoWms(externo.id) === 'error'"
-                type="button"
-                class="panorama__wms-reintentar"
-                @click="reintentarWmsExterno(externo)"
-              >
-                Reintentar
-              </button>
-            </div>
           </template>
         </SisdaiModal>
       </ClientOnly>

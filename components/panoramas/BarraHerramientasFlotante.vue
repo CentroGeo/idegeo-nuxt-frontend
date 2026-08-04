@@ -8,9 +8,18 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  wmsExternos: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['seleccionar-herramienta', 'seleccionar-topico']);
+const emit = defineEmits([
+  'seleccionar-herramienta',
+  'seleccionar-topico',
+  'alternar-wms',
+  'reintentar-wms',
+]);
 
 const barraAbierta = ref(false);
 const seccionAbierta = ref(null);
@@ -59,7 +68,7 @@ function alternarBarra() {
 }
 
 function seleccionarHerramienta(herramientaId) {
-  if (herramientaId === 'capas' || herramientaId === 'texto') {
+  if (['wms', 'capas', 'texto'].includes(herramientaId)) {
     seccionAbierta.value = seccionAbierta.value === herramientaId ? null : herramientaId;
 
     return;
@@ -78,6 +87,18 @@ function seleccionarTopico(tipo, topicoId) {
 
   barraAbierta.value = false;
   seccionAbierta.value = null;
+}
+
+function alternarWms(externo) {
+  if (externo.estado === 'loading') {
+    return;
+  }
+
+  emit('alternar-wms', externo);
+}
+
+function reintentarWms(externo) {
+  emit('reintentar-wms', externo);
 }
 </script>
 
@@ -113,7 +134,7 @@ function seleccionarTopico(tipo, topicoId) {
             :aria-label="herramienta.nombre"
             :title="herramienta.descripcion"
             :aria-expanded="
-              herramienta.id === 'capas' || herramienta.id === 'texto'
+              ['wms', 'capas', 'texto'].includes(herramienta.id)
                 ? seccionAbierta === herramienta.id
                 : undefined
             "
@@ -126,13 +147,83 @@ function seleccionarTopico(tipo, topicoId) {
             </span>
 
             <span
-              v-if="herramienta.id === 'capas' || herramienta.id === 'texto'"
+              v-if="['wms', 'capas', 'texto'].includes(herramienta.id)"
               :class="seccionAbierta === herramienta.id ? 'pictograma-arriba' : 'pictograma-abajo'"
               class="barra-herramientas__flecha"
               aria-hidden="true"
             />
           </button>
 
+          <!-- Servicios WMS -->
+          <div
+            v-if="herramienta.id === 'wms' && seccionAbierta === 'wms'"
+            class="barra-herramientas__subopciones barra-herramientas__subopciones--wms"
+          >
+            <p v-if="wmsExternos.length === 0" class="barra-herramientas__vacio">
+              No hay servicios WMS disponibles.
+            </p>
+
+            <template v-else>
+              <div
+                v-for="externo in wmsExternos"
+                :key="`wms-${externo.id}`"
+                class="barra-herramientas__wms"
+              >
+                <div class="barra-herramientas__wms-principal">
+                  <span class="barra-herramientas__wms-nombre">
+                    {{ externo.name }}
+                  </span>
+
+                  <button
+                    type="button"
+                    class="barra-herramientas__interruptor"
+                    :class="{
+                      'barra-herramientas__interruptor--activo': externo.activo,
+                    }"
+                    :disabled="externo.estado === 'loading'"
+                    role="switch"
+                    :aria-checked="externo.activo"
+                    :aria-label="`${externo.activo ? 'Desactivar' : 'Activar'} ${externo.name}`"
+                    :title="externo.activo ? 'Desactivar' : 'Activar'"
+                    @click="alternarWms(externo)"
+                  >
+                    <span class="barra-herramientas__interruptor-control" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div
+                  v-if="externo.estado !== 'idle'"
+                  class="barra-herramientas__wms-estado"
+                  :class="`barra-herramientas__wms-estado--${externo.estado}`"
+                  :role="externo.estado === 'error' ? 'alert' : 'status'"
+                  aria-live="polite"
+                >
+                  <span
+                    v-if="externo.estado === 'loading'"
+                    class="barra-herramientas__wms-spinner"
+                    aria-hidden="true"
+                  />
+
+                  <span v-else-if="externo.estado === 'success'" aria-hidden="true"> ✓ </span>
+
+                  <span v-else-if="externo.estado === 'error'" aria-hidden="true"> ! </span>
+
+                  <span>{{ externo.mensaje }}</span>
+
+                  <button
+                    v-if="externo.estado === 'error'"
+                    type="button"
+                    class="barra-herramientas__wms-reintentar"
+                    @click="reintentarWms(externo)"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Temáticas de capas -->
           <div
             v-if="herramienta.id === 'capas' && seccionAbierta === 'capas'"
             class="barra-herramientas__subopciones"
@@ -141,30 +232,34 @@ function seleccionarTopico(tipo, topicoId) {
               No hay temáticas de capas.
             </p>
 
-            <button
-              v-for="topico in topicosCapasOrdenados"
-              v-else
-              :key="`capas-${topico.id}`"
-              type="button"
-              class="barra-herramientas__subopcion"
-              @click="seleccionarTopico('capas', topico.id)"
-            >
-              <img
-                v-if="topico.custom_icon"
-                :src="topico.custom_icon"
-                alt=""
-                class="barra-herramientas__topico-icono"
-              />
-              <span
-                v-else
-                :class="`pictograma-${topico.icon}`"
-                class="barra-herramientas__topico-icono"
-                aria-hidden="true"
-              />
-              <span>{{ topico.name }}</span>
-            </button>
+            <template v-else>
+              <button
+                v-for="topico in topicosCapasOrdenados"
+                :key="`capas-${topico.id}`"
+                type="button"
+                class="barra-herramientas__subopcion"
+                @click="seleccionarTopico('capas', topico.id)"
+              >
+                <img
+                  v-if="topico.custom_icon"
+                  :src="topico.custom_icon"
+                  alt=""
+                  class="barra-herramientas__topico-icono"
+                />
+
+                <span
+                  v-else
+                  :class="`pictograma-${topico.icon}`"
+                  class="barra-herramientas__topico-icono"
+                  aria-hidden="true"
+                />
+
+                <span>{{ topico.name }}</span>
+              </button>
+            </template>
           </div>
 
+          <!-- Temáticas de texto -->
           <div
             v-if="herramienta.id === 'texto' && seccionAbierta === 'texto'"
             class="barra-herramientas__subopciones"
@@ -173,28 +268,31 @@ function seleccionarTopico(tipo, topicoId) {
               No hay temáticas de texto.
             </p>
 
-            <button
-              v-for="topico in topicosTextoOrdenados"
-              v-else
-              :key="`texto-${topico.id}`"
-              type="button"
-              class="barra-herramientas__subopcion"
-              @click="seleccionarTopico('texto', topico.id)"
-            >
-              <img
-                v-if="topico.custom_icon"
-                :src="topico.custom_icon"
-                alt=""
-                class="barra-herramientas__topico-icono"
-              />
-              <span
-                v-else
-                :class="`pictograma-${topico.icon}`"
-                class="barra-herramientas__topico-icono"
-                aria-hidden="true"
-              />
-              <span>{{ topico.name }}</span>
-            </button>
+            <template v-else>
+              <button
+                v-for="topico in topicosTextoOrdenados"
+                :key="`texto-${topico.id}`"
+                type="button"
+                class="barra-herramientas__subopcion"
+                @click="seleccionarTopico('texto', topico.id)"
+              >
+                <img
+                  v-if="topico.custom_icon"
+                  :src="topico.custom_icon"
+                  alt=""
+                  class="barra-herramientas__topico-icono"
+                />
+
+                <span
+                  v-else
+                  :class="`pictograma-${topico.icon}`"
+                  class="barra-herramientas__topico-icono"
+                  aria-hidden="true"
+                />
+
+                <span>{{ topico.name }}</span>
+              </button>
+            </template>
           </div>
         </div>
       </nav>
@@ -311,6 +409,134 @@ function seleccionarTopico(tipo, topicoId) {
     font-size: 0.75rem;
     color: var(--texto-secundario);
   }
+
+  &__subopciones--wms {
+    margin-left: 10px;
+    padding: 2px 0 2px 10px;
+  }
+
+  &__wms {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--color-secundario-4);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__wms-principal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__wms-nombre {
+    min-width: 0;
+    flex: 1;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  &__interruptor {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex: 0 0 40px;
+    padding: 0;
+    background-color: var(--color-secundario-3);
+    border: 1px solid var(--color-secundario-2);
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primario-1);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    &--activo {
+      background-color: var(--color-primario-1);
+      border-color: var(--color-primario-1);
+    }
+  }
+
+  &__interruptor-control {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background-color: var(--fondo);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+    transition: transform 160ms ease;
+  }
+
+  &__interruptor--activo &__interruptor-control {
+    transform: translateX(18px);
+  }
+
+  &__wms-estado {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    font-size: 0.7rem;
+    line-height: 1.25;
+
+    &--loading {
+      color: var(--color-primario-1);
+    }
+
+    &--success {
+      color: var(--color-confirmacion-1, #216e4e);
+    }
+
+    &--error {
+      color: var(--color-error-1, #b42318);
+    }
+  }
+
+  &__wms-spinner {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: girar-wms 0.75s linear infinite;
+  }
+
+  &__wms-reintentar {
+    margin-left: auto;
+    padding: 2px 0;
+    color: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-decoration: underline;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: none;
+    }
+  }
+}
+
+@keyframes girar-wms {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .barra-herramientas-enter-active,
@@ -339,6 +565,12 @@ function seleccionarTopico(tipo, topicoId) {
     &__nombre {
       font-size: 0.8rem;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-herramientas__wms-spinner {
+    animation-duration: 1.5s;
   }
 }
 </style>
