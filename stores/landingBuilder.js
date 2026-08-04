@@ -195,6 +195,7 @@ async function construirFormDataPagina(store, paginaId) {
     logoSecundarioRedirectUrl: store.logoSecundarioRedirectUrl || null,
     logoTerceroRedirectUrl: store.logoTerceroRedirectUrl || null,
     logoCuartoRedirectUrl: store.logoCuartoRedirectUrl || null,
+    mostrarBarraGobMx: store.mostrarBarraGobMx !== false,
   };
   formData.append('identidad', JSON.stringify(identidad));
 
@@ -228,6 +229,7 @@ function sincronizarIdentidadPublicada(store, paginas, paginaId) {
   store.logoSecundarioRedirectUrl = pagina.identidad.logoSecundarioRedirectUrl || null;
   store.logoTerceroRedirectUrl = pagina.identidad.logoTerceroRedirectUrl || null;
   store.logoCuartoRedirectUrl = pagina.identidad.logoCuartoRedirectUrl || null;
+  store.mostrarBarraGobMx = pagina.identidad.mostrarBarraGobMx !== false;
   store.logoFile = null;
   store.logoSecundarioFile = null;
   store.logoTerceroFile = null;
@@ -255,6 +257,11 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     logoSecundarioRedirectUrl: ref(null),
     logoTerceroRedirectUrl: ref(null),
     logoCuartoRedirectUrl: ref(null),
+    mostrarBarraGobMx: ref(true),
+    // Identidad de la página pública (o de inicio) que se está visitando
+    // actualmente; el layout la usa para decidir si muestra la barra de
+    // Gobierno de México en páginas ajenas al constructor.
+    mostrarBarraGobMxPublica: ref(true),
     tarjetas: ref([]),
     tarjetaImagenFiles: ref({}),
     secciones: ref([]),
@@ -415,6 +422,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoSecundarioRedirectUrl = identidad.logoSecundarioRedirectUrl || null;
       this.logoTerceroRedirectUrl = identidad.logoTerceroRedirectUrl || null;
       this.logoCuartoRedirectUrl = identidad.logoCuartoRedirectUrl || null;
+      this.mostrarBarraGobMx = identidad.mostrarBarraGobMx !== false;
       this.logoFile = null;
       this.logoSecundarioFile = null;
       this.logoTerceroFile = null;
@@ -434,6 +442,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoSecundarioRedirectUrl = null;
       this.logoTerceroRedirectUrl = null;
       this.logoCuartoRedirectUrl = null;
+      this.mostrarBarraGobMx = true;
       this.logoFile = null;
       this.logoSecundarioFile = null;
       this.logoTerceroFile = null;

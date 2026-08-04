@@ -40,11 +40,20 @@ const IDENTIDAD_PUBLICA_VACIA = {
   logoSecundarioUrl: null,
   logoTerceroUrl: null,
   logoCuartoUrl: null,
+  mostrarBarraGobMx: true,
 };
 
 // Identidad (logos + nombre) de la página pública que se está viendo, propia
 // de esa página y por eso independiente del borrador del constructor.
 const identidadPublica = ref({ ...IDENTIDAD_PUBLICA_VACIA });
+
+// El layout (fuera de este componente) necesita saber si la página pública
+// actual desactivó la barra de Gobierno de México, así que se refleja en el
+// store cada vez que cambia la identidad pública resuelta.
+function establecerIdentidadPublica(identidad) {
+  identidadPublica.value = identidad || IDENTIDAD_PUBLICA_VACIA;
+  store.mostrarBarraGobMxPublica = identidadPublica.value.mostrarBarraGobMx !== false;
+}
 
 // MainNavegacion vive en el layout persistente: al navegar entre páginas por
 // SPA el componente no se remonta, así que hay que observar la ruta en vez
@@ -67,11 +76,11 @@ watch(
     if (route.path === '/') {
       try {
         const pagina = await $fetch('/api/landing-builder/pagina-inicio');
-        identidadPublica.value = pagina?.identidad || IDENTIDAD_PUBLICA_VACIA;
+        establecerIdentidadPublica(pagina?.identidad);
         paginaInicioActiva.value = Boolean(pagina);
       } catch (err) {
         console.error('Error al cargar la identidad de la página de inicio:', err);
-        identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
+        establecerIdentidadPublica(null);
         paginaInicioActiva.value = false;
       }
       return;
@@ -80,16 +89,16 @@ watch(
     paginaInicioActiva.value = false;
 
     if (!esPaginaPublica.value) {
-      identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
+      establecerIdentidadPublica(null);
       return;
     }
 
     try {
       const pagina = await $fetch(`/api/landing-builder/paginas/${route.params.slug}`);
-      identidadPublica.value = pagina?.identidad || IDENTIDAD_PUBLICA_VACIA;
+      establecerIdentidadPublica(pagina?.identidad);
     } catch (err) {
       console.error('Error al cargar la identidad de la página:', err);
-      identidadPublica.value = IDENTIDAD_PUBLICA_VACIA;
+      establecerIdentidadPublica(null);
     }
   },
   { immediate: true }
@@ -373,6 +382,25 @@ function eliminarLogo4() {
             {{ store.nombrePlataforma }}
           </span>
         </div>
+
+        <!-- Barra de identidad de Gobierno de México (arriba de este encabezado) -->
+        <button
+          type="button"
+          class="boton-secundario boton-chico boton-alternar-barra-gobmx"
+          :aria-pressed="store.mostrarBarraGobMx"
+          :title="
+            store.mostrarBarraGobMx
+              ? 'Ocultar la barra de Gobierno de México en esta página'
+              : 'Mostrar la barra de Gobierno de México en esta página'
+          "
+          @click="store.mostrarBarraGobMx = !store.mostrarBarraGobMx"
+        >
+          <span
+            :class="store.mostrarBarraGobMx ? 'pictograma-ojo-ver' : 'pictograma-ojo-ocultar'"
+            aria-hidden="true"
+          ></span>
+          Barra GobMX: {{ store.mostrarBarraGobMx ? 'Activada' : 'Desactivada' }}
+        </button>
       </div>
 
       <!-- Páginas publicadas del constructor: logos y nombre de la plataforma, en modo solo lectura -->
