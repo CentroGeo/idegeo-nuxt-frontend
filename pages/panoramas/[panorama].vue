@@ -8,6 +8,7 @@ import {
   SisdaiLeyendaWms,
 } from '@centrogeomx/sisdai-mapas';
 import DOMPurify from 'dompurify';
+import EstadoCargaCapa from '~/components/mapas/EstadoCargaCapa.vue';
 import { useDownloadResources } from '~/composables/useDownloadResources';
 import { basemapsPanorama } from '~/utils/geocontenidos/basemapsPanorama';
 import pictogramas from '~/utils/geocontenidos/pictogramas.json';
@@ -36,6 +37,62 @@ const modalItemTexto = ref(null);
 const itemTextoActivo = ref(null);
 const basemapActivo = ref(null);
 const wmsExternosEncendidos = reactive(new Set());
+const estadosWmsExternos = reactive({});
+const temporizadoresWms = new Map();
+
+function obtenerEstadoWms(id) {
+  return estadosWmsExternos[id] || 'idle';
+}
+
+function cambiarEstadoWms(id, estado) {
+  const temporizador = temporizadoresWms.get(id);
+
+  if (temporizador) {
+    clearTimeout(temporizador);
+    temporizadoresWms.delete(id);
+  }
+
+  estadosWmsExternos[id] = estado;
+}
+
+function alIniciarCargaWms(item) {
+  cambiarEstadoWms(item.id, 'loading');
+
+  const temporizador = setTimeout(() => {
+    if (estadosWmsExternos[item.id] === 'loading') {
+      estadosWmsExternos[item.id] = 'error';
+    }
+
+    temporizadoresWms.delete(item.id);
+  }, 15000);
+
+  temporizadoresWms.set(item.id, temporizador);
+}
+
+function alFinalizarCargaWms(item, cargaExitosa) {
+  cambiarEstadoWms(item.id, cargaExitosa ? 'success' : 'error');
+
+  if (cargaExitosa) {
+    const temporizador = setTimeout(() => {
+      if (estadosWmsExternos[item.id] === 'success') {
+        estadosWmsExternos[item.id] = 'idle';
+      }
+
+      temporizadoresWms.delete(item.id);
+    }, 3000);
+
+    temporizadoresWms.set(item.id, temporizador);
+  }
+}
+
+async function reintentarWmsExterno(item) {
+  wmsExternosEncendidos.delete(item.id);
+  cambiarEstadoWms(item.id, 'loading');
+
+  await nextTick();
+
+  wmsExternosEncendidos.add(item.id);
+}
 const modalWmsExternos = ref(null);
 const modalBasemap = ref(null);
 const capaMascara = ref(null);
@@ -148,8 +205,31 @@ async function abrirModalTopico(topicoId) {
   await cargarTopico(topicoId);
 }
 
-function topicoTieneCapasActivas(topico) {
-  return (capasPorTopico[topico.id] || []).some((capa) => capasEncendidasIds.has(capa.id));
+function manejarHerramientaPanorama(herramientaId) {
+  switch (herramientaId) {
+    case 'informacion':
+      modalInfoAdicional.value?.abrirModal();
+      break;
+
+    case 'wms':
+      modalWmsExternos.value?.abrirModal();
+      break;
+
+    default:
+      break;
+  }
+}
+
+async function manejarTopicoPanorama({ tipo, id }) {
+  if (tipo === 'capas') {
+    await abrirModalTopico(id);
+    return;
+  }
+
+  if (tipo === 'texto') {
+    await seleccionarTextoTopico(id);
+    leyendaVisible.value = true;
+  }
 }
 
 async function seleccionarTextoTopico(textoId) {
@@ -369,8 +449,19 @@ const wmsExternosActivos = computed(() =>
 );
 
 function alternarWmsExterno(item) {
-  if (wmsExternosEncendidos.has(item.id)) wmsExternosEncendidos.delete(item.id);
-  else wmsExternosEncendidos.add(item.id);
+  if (wmsExternosEncendidos.has(item.id)) {
+    wmsExternosEncendidos.delete(item.id);
+    cambiarEstadoWms(item.id, 'idle');
+    return;
+  }
+
+  if (item.wms_or_tile === 'wms') {
+    cambiarEstadoWms(item.id, 'loading');
+  } else {
+    cambiarEstadoWms(item.id, 'idle');
+  }
+
+  wmsExternosEncendidos.add(item.id);
 }
 
 // Ref además de la extensión inicial del panorama, zoomACapa
@@ -405,89 +496,13 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
       </header>
 
       <div class="panorama__contenedor">
-        <nav
-          class="panorama__temas"
-          :class="{ 'panorama__temas--ancho': panorama.datos.icon_title }"
-        >
-          <button
-            v-for="topico in [...(panorama.datos.topics || [])].sort(
-              (a, b) => a.stack_order - b.stack_order
-            )"
-            :key="`capas-${topico.id}`"
-            class="panorama__tema-item"
-            :class="{ activo: topicoTieneCapasActivas(topico) }"
-            :aria-label="topico.name"
-            :title="topico.name"
-            @click="abrirModalTopico(topico.id)"
-          >
-            <img
-              v-if="topico.custom_icon"
-              :src="topico.custom_icon"
-              alt=""
-              class="panorama__tema-icono"
-            />
-            <span v-else :class="`pictograma-${topico.icon}`" />
-            <span v-if="panorama.datos.icon_title" class="panorama__tema-nombre">
-              {{ topico.name }}
-            </span>
-          </button>
-
-          <hr
-            v-if="panorama.datos.text_topics?.length || panorama.datos.external_wms?.length"
-            class="panorama__temas-separador"
-          />
-
-          <button
-            v-if="panorama.datos.external_wms?.length"
-            type="button"
-            class="panorama__tema-item"
-            aria-label="WMS externos"
-            title="Mostrar/ocultar WMS externos"
-            @click="modalWmsExternos?.abrirModal()"
-          >
-            <span class="pictograma-enlace-externo" aria-hidden="true" />
-            <span v-if="panorama.datos.icon_title" class="panorama__tema-nombre">
-              WMS externos
-            </span>
-          </button>
-
-          <button
-            v-for="topico in [...(panorama.datos.text_topics || [])].sort(
-              (a, b) => a.stack_order - b.stack_order
-            )"
-            :key="`texto-${topico.id}`"
-            class="panorama__tema-item"
-            :class="{ activo: topico.id === textoActivoId }"
-            :aria-label="topico.name"
-            :title="topico.name"
-            @click="seleccionarTextoTopico(topico.id)"
-          >
-            <img
-              v-if="topico.custom_icon"
-              :src="topico.custom_icon"
-              alt=""
-              class="panorama__tema-icono"
-            />
-            <span v-else :class="`pictograma-${topico.icon}`" />
-            <span v-if="panorama.datos.icon_title" class="panorama__tema-nombre">
-              {{ topico.name }}
-            </span>
-          </button>
-        </nav>
-
         <div class="panorama__mapa">
-          <div class="panorama__control panorama__control--info">
-            <button
-              v-if="panorama.datos.extra_info"
-              type="button"
-              class="boton-pictograma boton-primario"
-              aria-label="Información del panorama"
-              title="Información del panorama"
-              @click="modalInfoAdicional?.abrirModal()"
-            >
-              <span class="pictograma-informacion" aria-hidden="true" />
-            </button>
-          </div>
+          <PanoramasBarraHerramientasFlotante
+            :topicos-capas="panorama.datos.topics || []"
+            :topicos-texto="panorama.datos.text_topics || []"
+            @seleccionar-herramienta="manejarHerramientaPanorama"
+            @seleccionar-topico="manejarTopicoPanorama"
+          />
 
           <div class="panorama__control panorama__control--leyenda">
             <button
@@ -544,6 +559,8 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
                 :capa="externo.wms_layers"
                 :posicion="externo.stack_order"
                 :consulta="(url) => gnoxyFetch(url)"
+                @al-iniciar-carga="alIniciarCargaWms(externo)"
+                @al-finalizar-carga="(cargaExitosa) => alFinalizarCargaWms(externo, cargaExitosa)"
               />
               <SisdaiCapaXyz v-else :fuente="externo.url" :posicion="externo.stack_order" />
             </template>
@@ -803,15 +820,43 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
             <div
               v-for="externo in panorama.datos.external_wms"
               :key="`toggle-externo-${externo.id}`"
-              class="panorama__capa-etiqueta m-b-2"
+              class="panorama__wms-item"
             >
-              <input
-                :id="`toggle-externo-${externo.id}`"
-                type="checkbox"
-                :checked="wmsExternosEncendidos.has(externo.id)"
-                @change="alternarWmsExterno(externo)"
+              <div class="panorama__capa-etiqueta">
+                <input
+                  :id="`toggle-externo-${externo.id}`"
+                  type="checkbox"
+                  :checked="wmsExternosEncendidos.has(externo.id)"
+                  :disabled="obtenerEstadoWms(externo.id) === 'loading'"
+                  @change="alternarWmsExterno(externo)"
+                />
+
+                <label :for="`toggle-externo-${externo.id}`">
+                  {{ externo.name }}
+                </label>
+              </div>
+
+              <EstadoCargaCapa
+                :estado="obtenerEstadoWms(externo.id)"
+                :mensaje="
+                  obtenerEstadoWms(externo.id) === 'loading'
+                    ? 'Cargando capa…'
+                    : obtenerEstadoWms(externo.id) === 'success'
+                      ? 'Capa agregada al mapa'
+                      : obtenerEstadoWms(externo.id) === 'error'
+                        ? 'No fue posible cargar esta capa'
+                        : ''
+                "
               />
-              <label :for="`toggle-externo-${externo.id}`">{{ externo.name }}</label>
+
+              <button
+                v-if="obtenerEstadoWms(externo.id) === 'error'"
+                type="button"
+                class="panorama__wms-reintentar"
+                @click="reintentarWmsExterno(externo)"
+              >
+                Reintentar
+              </button>
             </div>
           </template>
         </SisdaiModal>
@@ -975,6 +1020,36 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
     align-items: center;
     gap: 8px;
     font-size: 0.85rem;
+  }
+
+  &__wms-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-secundario-4);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__wms-item .estado-carga-capa {
+    margin-top: 5px;
+    margin-left: 22px;
+  }
+
+  &__wms-reintentar {
+    margin-top: 4px;
+    margin-left: 22px;
+    padding: 0;
+    color: var(--color-primario-1);
+    font-size: 0.78rem;
+    text-decoration: underline;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: none;
+    }
   }
 
   &__capa-titulo {
