@@ -29,9 +29,23 @@ const marcadoresPorCapa = reactive({});
 const cargandoCapasModal = ref(false);
 const cargandoTexto = ref(false);
 const modalTopico = ref(null);
-const modalInfoAdicional = ref(null);
-const modalCapaInfo = ref(null);
+const mapaContenedorRef = ref(null);
+const ventanaInfoRef = ref(null);
+const ventanaInfoVisible = ref(false);
+const tipoInfoFlotante = ref(null);
 const capaInfo = ref(null);
+
+const posicionVentanaInfo = reactive({
+  x: 16,
+  y: 16,
+});
+
+const arrastreVentanaInfo = reactive({
+  activo: false,
+  pointerId: null,
+  desplazamientoX: 0,
+  desplazamientoY: 0,
+});
 const modalItemTexto = ref(null);
 const itemTextoActivo = ref(null);
 const basemapActivo = ref(null);
@@ -42,6 +56,119 @@ const temporizadoresWms = new Map();
 function obtenerEstadoWms(id) {
   return estadosWmsExternos[id] || 'idle';
 }
+
+function limitarPosicionVentanaInfo(x, y) {
+  const mapa = mapaContenedorRef.value;
+  const ventana = ventanaInfoRef.value;
+
+  if (!mapa || !ventana) {
+    return { x: 16, y: 16 };
+  }
+
+  const margen = 16;
+  const maximoX = Math.max(margen, mapa.clientWidth - ventana.offsetWidth - margen);
+  const maximoY = Math.max(margen, mapa.clientHeight - ventana.offsetHeight - margen);
+
+  return {
+    x: Math.min(Math.max(x, margen), maximoX),
+    y: Math.min(Math.max(y, margen), maximoY),
+  };
+}
+
+function ajustarVentanaInfoALimite() {
+  if (!ventanaInfoVisible.value) return;
+
+  const posicion = limitarPosicionVentanaInfo(posicionVentanaInfo.x, posicionVentanaInfo.y);
+
+  posicionVentanaInfo.x = posicion.x;
+  posicionVentanaInfo.y = posicion.y;
+}
+
+async function abrirVentanaInfo(tipo, capa = null) {
+  tipoInfoFlotante.value = tipo;
+  capaInfo.value = capa;
+  ventanaInfoVisible.value = true;
+
+  await nextTick();
+
+  const mapa = mapaContenedorRef.value;
+  const ventana = ventanaInfoRef.value;
+
+  if (!mapa || !ventana) return;
+
+  const posicion = limitarPosicionVentanaInfo(
+    Math.round((mapa.clientWidth - ventana.offsetWidth) / 2),
+    Math.round((mapa.clientHeight - ventana.offsetHeight) / 2)
+  );
+
+  posicionVentanaInfo.x = posicion.x;
+  posicionVentanaInfo.y = posicion.y;
+}
+
+function abrirInformacionGeneral() {
+  abrirVentanaInfo('panorama');
+}
+
+function cerrarVentanaInfo() {
+  ventanaInfoVisible.value = false;
+  tipoInfoFlotante.value = null;
+  capaInfo.value = null;
+  arrastreVentanaInfo.activo = false;
+  arrastreVentanaInfo.pointerId = null;
+}
+
+function iniciarArrastreVentanaInfo(evento) {
+  if (evento.pointerType === 'mouse' && evento.button !== 0) return;
+
+  const mapa = mapaContenedorRef.value;
+  if (!mapa) return;
+
+  const rectMapa = mapa.getBoundingClientRect();
+
+  arrastreVentanaInfo.activo = true;
+  arrastreVentanaInfo.pointerId = evento.pointerId;
+  arrastreVentanaInfo.desplazamientoX = evento.clientX - rectMapa.left - posicionVentanaInfo.x;
+  arrastreVentanaInfo.desplazamientoY = evento.clientY - rectMapa.top - posicionVentanaInfo.y;
+
+  evento.currentTarget.setPointerCapture(evento.pointerId);
+}
+
+function moverVentanaInfo(evento) {
+  if (!arrastreVentanaInfo.activo || evento.pointerId !== arrastreVentanaInfo.pointerId) {
+    return;
+  }
+
+  const mapa = mapaContenedorRef.value;
+  if (!mapa) return;
+
+  const rectMapa = mapa.getBoundingClientRect();
+  const posicion = limitarPosicionVentanaInfo(
+    evento.clientX - rectMapa.left - arrastreVentanaInfo.desplazamientoX,
+    evento.clientY - rectMapa.top - arrastreVentanaInfo.desplazamientoY
+  );
+
+  posicionVentanaInfo.x = posicion.x;
+  posicionVentanaInfo.y = posicion.y;
+}
+
+function terminarArrastreVentanaInfo(evento) {
+  if (evento.pointerId !== arrastreVentanaInfo.pointerId) return;
+
+  arrastreVentanaInfo.activo = false;
+  arrastreVentanaInfo.pointerId = null;
+
+  if (evento.currentTarget.hasPointerCapture(evento.pointerId)) {
+    evento.currentTarget.releasePointerCapture(evento.pointerId);
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('resize', ajustarVentanaInfoALimite);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', ajustarVentanaInfoALimite);
+});
 
 function cambiarEstadoWms(id, estado) {
   const temporizador = temporizadoresWms.get(id);
@@ -169,7 +296,7 @@ async function cargarPanorama() {
 
   if (data.landing_info && data.extra_info) {
     await nextTick();
-    modalInfoAdicional.value?.abrirModal();
+    abrirInformacionGeneral();
   }
 
   const primerTopico = [...(data.topics || [])].sort((a, b) => a.stack_order - b.stack_order)[0];
@@ -206,7 +333,7 @@ async function abrirModalTopico(topicoId) {
 function manejarHerramientaPanorama(herramientaId) {
   switch (herramientaId) {
     case 'informacion':
-      modalInfoAdicional.value?.abrirModal();
+      abrirInformacionGeneral();
       break;
 
     default:
@@ -254,8 +381,7 @@ function alternarCapa(capa) {
 }
 
 function abrirInfoCapa(capa) {
-  capaInfo.value = capa;
-  modalCapaInfo.value?.abrirModal();
+  abrirVentanaInfo('capa', capa);
 }
 
 // Trae la extensión del dataset bajo demanda y reasigna `vista` para que SisdaiMapa haga fit,
@@ -510,7 +636,7 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
       </header>
 
       <div class="panorama__contenedor">
-        <div class="panorama__mapa">
+        <div ref="mapaContenedorRef" class="panorama__mapa">
           <PanoramasBarraHerramientasFlotante
             :topicos-capas="panorama.datos.topics || []"
             :topicos-texto="panorama.datos.text_topics || []"
@@ -520,6 +646,75 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
             @alternar-wms="alternarWmsExterno"
             @reintentar-wms="reintentarWmsExterno"
           />
+
+          <section
+            v-if="ventanaInfoVisible"
+            ref="ventanaInfoRef"
+            class="panorama__ventana-info"
+            :class="{ 'esta-arrastrando': arrastreVentanaInfo.activo }"
+            :style="{
+              left: `${posicionVentanaInfo.x}px`,
+              top: `${posicionVentanaInfo.y}px`,
+            }"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="titulo-ventana-info"
+          >
+            <header
+              class="panorama__ventana-info-encabezado"
+              @pointerdown="iniciarArrastreVentanaInfo"
+              @pointermove="moverVentanaInfo"
+              @pointerup="terminarArrastreVentanaInfo"
+              @pointercancel="terminarArrastreVentanaInfo"
+            >
+              <h2 id="titulo-ventana-info" class="panorama__ventana-info-titulo">
+                {{
+                  tipoInfoFlotante === 'capa'
+                    ? capaInfo?.dataset_title || capaInfo?.name
+                    : panorama.datos.name
+                }}
+              </h2>
+
+              <button
+                type="button"
+                class="panorama__ventana-info-cerrar"
+                aria-label="Cerrar información"
+                title="Cerrar información"
+                @pointerdown.stop
+                @click="cerrarVentanaInfo"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </header>
+
+            <div class="panorama__ventana-info-contenido">
+              <p v-if="tipoInfoFlotante === 'panorama'">
+                {{ panorama.datos.extra_info }}
+              </p>
+
+              <template v-else-if="tipoInfoFlotante === 'capa'">
+                <template v-if="capaInfo?.narrative || capaInfo?.dataset_abstract">
+                  <div v-if="capaInfo.narrative" class="m-b-4">
+                    <h3>Narrativa</h3>
+                    <!-- eslint-disable-next-line vue/no-v-html -->
+                    <div
+                      class="panorama__texto-info"
+                      v-html="DOMPurify.sanitize(capaInfo.narrative)"
+                    />
+                  </div>
+
+                  <div v-if="capaInfo.dataset_abstract">
+                    <h3>Descripción de la capa</h3>
+                    <p class="panorama__texto-info">
+                      {{ capaInfo.dataset_abstract }}
+                    </p>
+                  </div>
+                </template>
+
+                <p v-else>Esta capa no tiene información adicional.</p>
+              </template>
+            </div>
+          </section>
 
           <div class="panorama__control panorama__control--leyenda">
             <button
@@ -684,35 +879,6 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
                 <span class="pictograma-metadatos" aria-hidden="true" />
               </button>
             </div>
-          </template>
-        </SisdaiModal>
-
-        <SisdaiModal ref="modalInfoAdicional">
-          <template #encabezado>
-            <h2 class="m-t-0">{{ panorama.datos.name }}</h2>
-          </template>
-          <template #cuerpo>
-            <p>{{ panorama.datos.extra_info }}</p>
-          </template>
-        </SisdaiModal>
-
-        <SisdaiModal ref="modalCapaInfo">
-          <template #encabezado>
-            <h2 class="m-t-0">{{ capaInfo?.dataset_title || capaInfo?.name }}</h2>
-          </template>
-          <template #cuerpo>
-            <template v-if="capaInfo?.narrative || capaInfo?.dataset_abstract">
-              <div v-if="capaInfo.narrative" class="m-b-4">
-                <h3>Narrativa</h3>
-                <!-- eslint-disable-next-line vue/no-v-html -->
-                <div class="panorama__texto-info" v-html="DOMPurify.sanitize(capaInfo.narrative)" />
-              </div>
-              <div v-if="capaInfo.dataset_abstract">
-                <h3>Descripción de la capa</h3>
-                <p class="panorama__texto-info">{{ capaInfo.dataset_abstract }}</p>
-              </div>
-            </template>
-            <p v-else>Esta capa no tiene información adicional.</p>
           </template>
         </SisdaiModal>
 
@@ -1045,6 +1211,104 @@ const vista = ref({ centro: [-103.5, 23.6], acercamiento: 5 });
 
   &__contenedor-tabla {
     overflow-y: auto;
+  }
+
+  &__ventana-info {
+    position: absolute;
+    z-index: 30;
+
+    // Es más ancho que alto y se adapta al espacio disponible.
+    width: clamp(520px, 42vw, 760px);
+    max-width: calc(100% - 32px);
+    max-height: min(55vh, calc(100% - 32px));
+
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    // Evita que el contenido desaparezca en vista oscura.
+    color: #1f1f1f;
+    background-color: #ffffff;
+
+    border: 1px solid #b8b8b8;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 22%);
+
+    &.esta-arrastrando {
+      user-select: none;
+    }
+  }
+
+  &__ventana-info-encabezado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    color: var(--texto-inverso);
+    background-color: var(--color-primario-4);
+    cursor: grab;
+    touch-action: none;
+
+    .esta-arrastrando & {
+      cursor: grabbing;
+    }
+  }
+
+  &__ventana-info-titulo {
+    margin: 0;
+    font-size: 1.15rem;
+    line-height: 1.3;
+  }
+
+  &__ventana-info-cerrar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: inherit;
+    font-size: 1.7rem;
+    line-height: 1;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background-color: rgb(255 255 255 / 18%);
+    }
+  }
+
+  &__ventana-info-contenido {
+    min-height: 96px;
+    padding: 16px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    color: #1f1f1f;
+    background-color: #ffffff;
+
+    h3,
+    p,
+    li,
+    strong,
+    div {
+      color: inherit;
+    }
+  }
+  @media (max-width: 600px) {
+    &__ventana-info {
+      width: calc(100% - 24px);
+      max-height: calc(100% - 24px);
+    }
+
+    &__ventana-info-encabezado {
+      padding: 10px 12px;
+    }
+
+    &__ventana-info-contenido {
+      padding: 12px;
+    }
   }
 
   &__texto-error {
