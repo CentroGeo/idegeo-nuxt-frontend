@@ -24,6 +24,152 @@ const emit = defineEmits([
 const barraAbierta = ref(false);
 const seccionAbierta = ref(null);
 
+const barraRef = ref(null);
+
+const posicionBarra = reactive({
+  x: 16,
+  y: 16,
+});
+
+const arrastreBarra = reactive({
+  activo: false,
+  movido: false,
+  pointerId: null,
+  inicioX: 0,
+  inicioY: 0,
+  posicionInicialX: 0,
+  posicionInicialY: 0,
+});
+
+const direccionHorizontal = ref('derecha');
+const direccionVertical = ref('abajo');
+
+const estiloBarra = computed(() => ({
+  left: `${posicionBarra.x}px`,
+  top: `${posicionBarra.y}px`,
+}));
+
+function limitarPosicionBarra(x, y) {
+  const barra = barraRef.value;
+  const contenedor = barra?.parentElement;
+
+  if (!barra || !contenedor) {
+    return { x, y };
+  }
+
+  const margen = 8;
+  const anchoBoton = barra.offsetWidth;
+  const altoBoton = barra.offsetHeight;
+
+  return {
+    x: Math.min(
+      Math.max(margen, x),
+      Math.max(margen, contenedor.clientWidth - anchoBoton - margen)
+    ),
+    y: Math.min(
+      Math.max(margen, y),
+      Math.max(margen, contenedor.clientHeight - altoBoton - margen)
+    ),
+  };
+}
+
+function actualizarDireccionApertura() {
+  const barra = barraRef.value;
+  const contenedor = barra?.parentElement;
+
+  if (!barra || !contenedor) return;
+
+  const centroX = posicionBarra.x + barra.offsetWidth / 2;
+  const centroY = posicionBarra.y + barra.offsetHeight / 2;
+
+  direccionHorizontal.value = centroX <= contenedor.clientWidth / 2 ? 'derecha' : 'izquierda';
+
+  direccionVertical.value = centroY <= contenedor.clientHeight / 2 ? 'abajo' : 'arriba';
+}
+
+function ajustarBarraALimite() {
+  const posicion = limitarPosicionBarra(posicionBarra.x, posicionBarra.y);
+
+  posicionBarra.x = posicion.x;
+  posicionBarra.y = posicion.y;
+
+  actualizarDireccionApertura();
+}
+
+function iniciarArrastreBarra(evento) {
+  if (evento.pointerType === 'mouse' && evento.button !== 0) return;
+
+  const boton = evento.currentTarget;
+
+  arrastreBarra.activo = true;
+  arrastreBarra.movido = false;
+  arrastreBarra.pointerId = evento.pointerId;
+  arrastreBarra.inicioX = evento.clientX;
+  arrastreBarra.inicioY = evento.clientY;
+  arrastreBarra.posicionInicialX = posicionBarra.x;
+  arrastreBarra.posicionInicialY = posicionBarra.y;
+
+  boton.setPointerCapture?.(evento.pointerId);
+}
+
+function moverBarra(evento) {
+  if (!arrastreBarra.activo || evento.pointerId !== arrastreBarra.pointerId) {
+    return;
+  }
+
+  const desplazamientoX = evento.clientX - arrastreBarra.inicioX;
+  const desplazamientoY = evento.clientY - arrastreBarra.inicioY;
+
+  if (!arrastreBarra.movido && Math.hypot(desplazamientoX, desplazamientoY) < 5) {
+    return;
+  }
+
+  arrastreBarra.movido = true;
+  evento.preventDefault();
+
+  const posicion = limitarPosicionBarra(
+    arrastreBarra.posicionInicialX + desplazamientoX,
+    arrastreBarra.posicionInicialY + desplazamientoY
+  );
+
+  posicionBarra.x = posicion.x;
+  posicionBarra.y = posicion.y;
+
+  actualizarDireccionApertura();
+}
+
+function terminarArrastreBarra(evento) {
+  if (!arrastreBarra.activo || evento.pointerId !== arrastreBarra.pointerId) {
+    return;
+  }
+
+  evento.currentTarget.releasePointerCapture?.(evento.pointerId);
+
+  arrastreBarra.activo = false;
+  arrastreBarra.pointerId = null;
+
+  actualizarDireccionApertura();
+}
+
+function alternarBarraDesdeActivador() {
+  if (arrastreBarra.movido) {
+    arrastreBarra.movido = false;
+    return;
+  }
+
+  actualizarDireccionApertura();
+  alternarBarra();
+}
+
+onMounted(() => {
+  nextTick(ajustarBarraALimite);
+  window.addEventListener('resize', ajustarBarraALimite);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', ajustarBarraALimite);
+});
+
 const herramientas = [
   {
     id: 'wms',
@@ -103,7 +249,19 @@ function reintentarWms(externo) {
 </script>
 
 <template>
-  <div class="barra-herramientas" :class="{ 'barra-herramientas--abierta': barraAbierta }">
+  <div
+    ref="barraRef"
+    class="barra-herramientas"
+    :class="[
+      {
+        'barra-herramientas--abierta': barraAbierta,
+        'barra-herramientas--arrastrando': arrastreBarra.activo && arrastreBarra.movido,
+      },
+      `barra-herramientas--${direccionHorizontal}`,
+      `barra-herramientas--${direccionVertical}`,
+    ]"
+    :style="estiloBarra"
+  >
     <button
       type="button"
       class="barra-herramientas__activador boton-pictograma boton-primario"
@@ -111,9 +269,19 @@ function reintentarWms(externo) {
       aria-controls="herramientas-panorama"
       :aria-label="barraAbierta ? 'Cerrar herramientas' : 'Abrir herramientas'"
       :title="barraAbierta ? 'Cerrar herramientas' : 'Abrir herramientas'"
-      @click="alternarBarra"
+      @pointerdown.stop="iniciarArrastreBarra"
+      @pointermove.stop="moverBarra"
+      @pointerup.stop="terminarArrastreBarra"
+      @pointercancel.stop="terminarArrastreBarra"
+      @click.stop="alternarBarraDesdeActivador"
     >
-      <span :class="barraAbierta ? 'pictograma-cerrar' : 'pictograma-menu'" aria-hidden="true" />
+      <span v-if="barraAbierta" class="pictograma-cerrar" aria-hidden="true" />
+
+      <span v-else class="barra-herramientas__hamburguesa" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
     </button>
 
     <Transition name="barra-herramientas">
@@ -303,20 +471,85 @@ function reintentarWms(externo) {
 <style lang="scss" scoped>
 .barra-herramientas {
   position: absolute;
-  top: 16px;
-  left: 16px;
   z-index: 10;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  width: 48px;
+  height: 48px;
+
+  &__hamburguesa {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+
+    span {
+      display: block;
+      width: 100%;
+      height: 2px;
+      background-color: currentcolor;
+      border-radius: 2px;
+    }
+  }
+
+  &--arrastrando {
+    z-index: 20;
+    user-select: none;
+  }
+
+  &--derecha &__menu {
+    right: auto;
+    left: calc(100% + 8px);
+  }
+
+  &--izquierda &__menu {
+    right: calc(100% + 8px);
+    left: auto;
+  }
+
+  &--abajo &__menu {
+    top: 0;
+    bottom: auto;
+  }
+
+  &--arriba &__menu {
+    top: auto;
+    bottom: 0;
+  }
 
   &__activador {
-    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    padding: 0;
     margin: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 50%;
     box-shadow: 0 4px 12px rgb(0 0 0 / 25%);
+
+    cursor: grab;
+    touch-action: none;
+
+    .barra-herramientas--arrastrando & {
+      cursor: grabbing;
+      box-shadow: 0 6px 18px rgb(0 0 0 / 32%);
+    }
+
+    > span {
+      font-size: 1.35rem;
+      pointer-events: none;
+    }
   }
 
   &__menu {
+    position: absolute;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     width: min(280px, calc(100vw - 96px));
@@ -554,8 +787,14 @@ function reintentarWms(externo) {
 
 @media (max-width: 600px) {
   .barra-herramientas {
-    top: 8px;
-    left: 8px;
+    width: 44px;
+    height: 44px;
+
+    &__activador {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+    }
 
     &__menu {
       width: min(260px, calc(100vw - 72px));
