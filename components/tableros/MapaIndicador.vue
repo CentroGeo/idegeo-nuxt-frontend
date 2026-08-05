@@ -1,5 +1,6 @@
 <script setup>
 import { SisdaiCapaVectorial, SisdaiCapaXyz, SisdaiMapa } from '@centrogeomx/sisdai-mapas';
+import { fuenteBasemap } from '~/utils/geocontenidos/basemapsPanorama';
 
 const config = useRuntimeConfig();
 const { gnoxyUrl } = useGnoxyUrl();
@@ -41,27 +42,91 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  /** Id de mapa base del catálogo `basemapsPanorama`. */
+  basemap: {
+    type: String,
+    default: 'gray',
+  },
+  /**
+   * Vista configurada del indicador: `{ zoom, centerLat, centerLong, bbox }`.
+   * Lo que falte cae al siguiente respaldo (ver el computed `vista`).
+   */
+  vistaConfigurada: {
+    type: Object,
+    default: null,
+  },
+  /**
+   * Fuente GeoJSON alternativa. La usa la previsualización del panel de
+   * administración, donde todavía no hay indicador guardado al que apuntar.
+   */
+  featuresUrl: {
+    type: String,
+    default: null,
+  },
+  /** Reemitir la vista al navegar el mapa. Solo lo necesita el editor. */
+  emitirVista: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['hover-rango']);
+const emit = defineEmits(['hover-rango', 'vista']);
 
 const leyendaMinimizada = ref(false);
 
 const VISTA_DEFAULT = { centro: [-99.1332, 19.4326], acercamiento: 5 };
 
-const mapaKey = computed(
-  () =>
-    `${props.indicadorId || 'sin-indicador'}-${props.layerName || 'sin-capa'}-${(
-      props.bbox || []
-    ).join(',')}`
-);
+/** Bbox `[minLon, minLat, maxLon, maxLat]` numérico y finito, o null. */
+function extensionValida(bbox) {
+  if (!Array.isArray(bbox) || bbox.length < 4) return null;
+  const numeros = bbox.slice(0, 4).map(Number);
+  return numeros.every((n) => isFinite(n)) ? numeros : null;
+}
 
+const mapaKey = computed(() => {
+  const cfg = props.vistaConfigurada || {};
+  return [
+    props.indicadorId || 'sin-indicador',
+    props.layerName || 'sin-capa',
+    props.featuresUrl || '',
+    (props.bbox || []).join(','),
+    // Cambiar la vista configurada obliga a remontar el mapa: `SisdaiMapa` solo
+    // lee `vista` al inicializarse.
+    cfg.zoom ?? '',
+    cfg.centerLat ?? '',
+    cfg.centerLong ?? '',
+    (cfg.bbox || []).join(','),
+  ].join('|');
+});
+
+/**
+ * Resolución de la vista, de lo más específico a lo más genérico:
+ * centro + zoom configurados → bbox configurado → extensión de la capa → default.
+ */
 const vista = computed(() => {
-  if (!props.bbox || props.bbox.length < 4) return VISTA_DEFAULT;
-  const [minLon, minLat, maxLon, maxLat] = props.bbox;
-  if (!isFinite(minLon) || !isFinite(minLat) || !isFinite(maxLon) || !isFinite(maxLat)) {
-    return VISTA_DEFAULT;
+  const cfg = props.vistaConfigurada || {};
+
+  const lat = Number(cfg.centerLat);
+  const lon = Number(cfg.centerLong);
+  if (
+    cfg.centerLat !== null &&
+    cfg.centerLat !== undefined &&
+    cfg.centerLong !== null &&
+    cfg.centerLong !== undefined &&
+    isFinite(lat) &&
+    isFinite(lon)
+  ) {
+    const zoom = Number(cfg.zoom);
+    return { centro: [lon, lat], acercamiento: isFinite(zoom) && zoom > 0 ? zoom : 5 };
   }
+
+  const bboxConfigurado = extensionValida(cfg.bbox);
+  if (bboxConfigurado) return { extension: bboxConfigurado.join(',') };
+
+  const bboxCapa = extensionValida(props.bbox);
+  if (!bboxCapa) return VISTA_DEFAULT;
+
+  const [minLon, minLat, maxLon, maxLat] = bboxCapa;
   const centro = [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
   const maxDiff = Math.max(maxLon - minLon, maxLat - minLat);
   const acercamiento =
@@ -69,7 +134,10 @@ const vista = computed(() => {
   return { centro, acercamiento };
 });
 
+const fuenteMapaBase = computed(() => fuenteBasemap(props.basemap));
+
 const mapFeaturesUrl = computed(() => {
+  if (props.featuresUrl) return props.featuresUrl;
   if (!props.indicadorId) return null;
 
   const endpoint =
@@ -77,6 +145,10 @@ const mapFeaturesUrl = computed(() => {
 
   return gnoxyUrl(endpoint);
 });
+
+function alMoverVista(evento) {
+  if (props.emitirVista) emit('vista', evento);
+}
 
 function hexToRgba(hex, alpha) {
   const clean = (hex || '#cccccc').replace('#', '');
@@ -168,8 +240,8 @@ const globoInformativo = computed(() => {
 <template>
   <ClientOnly>
     <div class="mapa-indicador">
-      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista">
-        <SisdaiCapaXyz :posicion="0" />
+      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista" @vista="alMoverVista">
+        <SisdaiCapaXyz :fuente="fuenteMapaBase" :posicion="0" />
 
         <SisdaiCapaVectorial
           v-if="mapFeaturesUrl"
