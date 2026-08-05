@@ -189,13 +189,6 @@ async function Eliminar(id) {
 </template>
 
 <style lang="scss" scoped>
-.alerta-advertencia-modal {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: var(--color-neutro-5);
-  margin-bottom: 24px;
-}
-
 .modulo-geocontenidos .contenedor {
   .grid.reticula-12 {
     grid-template-columns: repeat(12, 1fr);
