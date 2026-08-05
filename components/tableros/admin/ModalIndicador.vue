@@ -235,14 +235,38 @@ const datosPrevisualizacion = computed(() => {
   };
 });
 
-/**
- * Vista que se pasa al mapa. Va con retardo a propósito: `SisdaiMapa` solo lee la
- * vista al montarse, así que cada cambio lo remonta. Sin esperar, teclear en los
- * campos de zoom o centro reconstruiría el mapa carácter por carácter.
- */
-const vistaConfigurada = ref({ zoom: null, centerLat: null, centerLong: null, bbox: null });
+/** Vista que el mapa usará la próxima vez que se monte. Siempre al día. */
+const vistaConfigurada = computed(() => ({
+  zoom: formulario.map_zoom,
+  centerLat: formulario.map_center_lat,
+  centerLong: formulario.map_center_long,
+  bbox: bboxFormulario(),
+}));
 
+/**
+ * Reencuadrar el mapa se pide con este contador, no se deduce de que la vista
+ * haya cambiado: cuando es el propio mapa quien la dicta, remontarlo solo lo
+ * devolvería donde ya está, parpadeando en cada arrastre.
+ */
+const revisionVista = ref(0);
+
+/** Se espera a que el usuario termine de teclear antes de reencuadrar. */
 let temporizadorVista = null;
+function pedirReencuadre({ inmediato = false } = {}) {
+  clearTimeout(temporizadorVista);
+  if (inmediato) {
+    revisionVista.value += 1;
+    return;
+  }
+  temporizadorVista = setTimeout(() => {
+    revisionVista.value += 1;
+  }, 600);
+}
+
+// Marca que el cambio de vista lo origino el mapa, para no reencuadrarlo por su
+// propio movimiento.
+let vistaDictadaPorElMapa = false;
+
 watch(
   () => [
     formulario.map_zoom,
@@ -254,19 +278,13 @@ watch(
     formulario.map_bbox_y1,
   ],
   () => {
-    clearTimeout(temporizadorVista);
-    temporizadorVista = setTimeout(sincronizarVistaConfigurada, 600);
+    if (vistaDictadaPorElMapa) {
+      vistaDictadaPorElMapa = false;
+      return;
+    }
+    pedirReencuadre();
   }
 );
-
-function sincronizarVistaConfigurada() {
-  vistaConfigurada.value = {
-    zoom: formulario.map_zoom,
-    centerLat: formulario.map_center_lat,
-    centerLong: formulario.map_center_long,
-    bbox: bboxFormulario(),
-  };
-}
 
 /** Rampa efectiva (ya invertida si aplica) tal como la calculó el backend. */
 const swatches = computed(
@@ -348,21 +366,22 @@ watch(
 
 // ─── Vista del mapa ──────────────────────────────────────────────────────────
 
-const ultimaVista = ref(null);
-
-function alMoverVista(evento) {
-  ultimaVista.value = evento;
-}
+const vistaTomadaDelMapa = ref(false);
 
 /**
- * Fija como vista inicial la que el usuario tiene en pantalla. Guarda centro,
- * zoom y extensión: el visor prefiere centro+zoom y usa la extensión de respaldo.
+ * Navegar el mapa **es** configurar la vista: cada desplazamiento o acercamiento
+ * queda como lo que se guardará. Se registran centro, zoom y extensión — el visor
+ * prefiere centro+zoom y usa la extensión de respaldo.
+ *
+ * `MapaIndicador` ya descarta el eco que emite al montarse, así que aquí solo
+ * llegan movimientos reales del usuario.
  */
-function usarVistaActual() {
-  const evento = ultimaVista.value;
+function alMoverVista(evento) {
   if (!evento) return;
 
   const { centro, acercamiento, vista: vistaOl } = evento;
+
+  vistaDictadaPorElMapa = true;
 
   if (Array.isArray(centro) && centro.length >= 2) {
     formulario.map_center_long = Number(Number(centro[0]).toFixed(6));
@@ -381,6 +400,8 @@ function usarVistaActual() {
   } catch {
     // Sin extensión disponible basta con centro y zoom.
   }
+
+  vistaTomadaDelMapa.value = true;
 }
 
 function restablecerVista() {
@@ -391,6 +412,8 @@ function restablecerVista() {
   formulario.map_bbox_y0 = null;
   formulario.map_bbox_x1 = null;
   formulario.map_bbox_y1 = null;
+  vistaTomadaDelMapa.value = false;
+  pedirReencuadre({ inmediato: true });
 }
 
 const tieneVistaPropia = computed(
@@ -466,8 +489,9 @@ watch(
   async (m) => {
     if (!m) return;
     await cargarDesdeIndicador();
-    // Sin retardo la primera vez: es el estado ya guardado, no algo que se teclea.
-    sincronizarVistaConfigurada();
+    // El mapa aún no existe: la carga inicial no necesita pedir reencuadre, solo
+    // no dejar programado uno de los cambios que acaba de hacer.
+    clearTimeout(temporizadorVista);
     m.abrir();
     if (configuracionCompleta.value) previsualizar();
   }
@@ -886,15 +910,15 @@ async function recalcularColores(id, token) {
                 </template>
                 <template v-else>sin definir — se usa la extensión de la capa.</template>
               </p>
+              <p class="formulario-ayuda">
+                <span v-if="vistaTomadaDelMapa">
+                  Tomado de la previsualización. Sigue navegando el mapa para ajustarlo.
+                </span>
+                <span v-else>
+                  Navega la previsualización para fijar estos valores, o escríbelos aquí.
+                </span>
+              </p>
               <div class="acciones-vista m-t-1">
-                <button
-                  type="button"
-                  class="boton boton-chico boton-secundario"
-                  :disabled="!ultimaVista"
-                  @click="usarVistaActual"
-                >
-                  Usar la vista actual del mapa
-                </button>
                 <button
                   type="button"
                   class="boton boton-chico boton-secundario"
@@ -902,34 +926,6 @@ async function recalcularColores(id, token) {
                   @click="restablecerVista"
                 >
                   Restablecer a la extensión de la capa
-                </button>
-              </div>
-
-              <!-- ── Reparto ── -->
-              <div class="seccion-titulo m-t-4">Reparto de pantalla</div>
-              <div class="campo">
-                <label for="ind-reparto">
-                  Mapa {{ formulario.map_panel }}% · Gráfica {{ formulario.plot_panel }}%
-                </label>
-                <input
-                  id="ind-reparto"
-                  type="range"
-                  min="20"
-                  max="80"
-                  step="5"
-                  :value="formulario.map_panel"
-                  @input="alCambiarReparto($event.target.value)"
-                />
-                <p class="formulario-ayuda">
-                  Ancho que ocupa cada componente en el visor. En pantallas angostas se apilan.
-                </p>
-                <button
-                  type="button"
-                  class="boton boton-chico boton-secundario m-t-1"
-                  :disabled="formulario.map_panel === 65"
-                  @click="restablecerReparto"
-                >
-                  Restablecer 65 / 35
                 </button>
               </div>
 
@@ -1016,9 +1012,43 @@ async function recalcularColores(id, token) {
                 :vista-configurada="vistaConfigurada"
                 :map-panel="formulario.map_panel"
                 :plot-panel="formulario.plot_panel"
+                :revision-vista="revisionVista"
                 emitir-vista
                 @vista="alMoverVista"
               />
+
+              <!-- El reparto vive aquí, pegado a lo que reacomoda. -->
+              <div class="reparto">
+                <label class="reparto__etiqueta" for="ind-reparto">
+                  <span>Reparto de pantalla</span>
+                  <span class="reparto__cifras">
+                    Mapa {{ formulario.map_panel }}% · Gráfica {{ formulario.plot_panel }}%
+                  </span>
+                </label>
+                <div class="reparto__control">
+                  <input
+                    id="ind-reparto"
+                    type="range"
+                    min="20"
+                    max="80"
+                    step="5"
+                    :value="formulario.map_panel"
+                    :aria-valuetext="`Mapa ${formulario.map_panel} por ciento`"
+                    @input="alCambiarReparto($event.target.value)"
+                  />
+                  <button
+                    type="button"
+                    class="boton boton-chico boton-secundario"
+                    :disabled="formulario.map_panel === MAP_PANEL_DEFAULT"
+                    @click="restablecerReparto"
+                  >
+                    65 / 35
+                  </button>
+                </div>
+                <p class="formulario-ayuda">
+                  Ancho que ocupa cada componente en el visor. En pantallas angostas se apilan.
+                </p>
+              </div>
             </aside>
           </div>
 
@@ -1210,6 +1240,40 @@ async function recalcularColores(id, token) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.reparto {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--tableros-modal-control-borde, #ccc);
+
+  &__etiqueta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  &__cifras {
+    font-weight: 400;
+    color: var(--tableros-modal-texto-secundario, #666);
+  }
+
+  &__control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+
+    input[type='range'] {
+      flex: 1;
+      min-width: 0;
+      accent-color: var(--tableros-modal-acento, #991f47);
+    }
+  }
 }
 
 .acciones-modal {

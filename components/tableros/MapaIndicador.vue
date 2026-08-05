@@ -68,6 +68,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /**
+   * Contador que el editor incrementa cuando quiere reencuadrar el mapa.
+   * `vistaConfigurada` cambia también cuando es el propio mapa quien dicta la
+   * vista, y remontarlo entonces solo lo devolvería donde ya está; por eso el
+   * reencuadre se pide explícitamente y no se deduce de los valores.
+   */
+  revisionVista: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const emit = defineEmits(['hover-rango', 'vista']);
@@ -83,21 +93,20 @@ function extensionValida(bbox) {
   return numeros.every((n) => isFinite(n)) ? numeros : null;
 }
 
-const mapaKey = computed(() => {
-  const cfg = props.vistaConfigurada || {};
-  return [
+// `SisdaiMapa` y `SisdaiCapaXyz` fijan vista y fuente al crearse, así que
+// cualquier cambio de fondo o de encuadre pide remontar. Cuando eso ocurre, se
+// lee `vistaConfigurada` tal como esté en ese momento, de modo que el mapa
+// reaparece donde el usuario lo dejó.
+const mapaKey = computed(() =>
+  [
     props.indicadorId || 'sin-indicador',
     props.layerName || 'sin-capa',
     props.featuresUrl || '',
     (props.bbox || []).join(','),
-    // Cambiar la vista configurada obliga a remontar el mapa: `SisdaiMapa` solo
-    // lee `vista` al inicializarse.
-    cfg.zoom ?? '',
-    cfg.centerLat ?? '',
-    cfg.centerLong ?? '',
-    (cfg.bbox || []).join(','),
-  ].join('|');
-});
+    props.basemap || '',
+    props.revisionVista,
+  ].join('|')
+);
 
 /**
  * Resolución de la vista, de lo más específico a lo más genérico:
@@ -146,8 +155,36 @@ const mapFeaturesUrl = computed(() => {
   return gnoxyUrl(endpoint);
 });
 
+// Al montarse, el mapa emite la vista que acaba de recibir. Ese eco no es una
+// navegación del usuario: quien escucha lo tomaría como "eligió esta vista" y la
+// fijaría. Se descarta solo si de verdad coincide con lo que se le pidió pintar,
+// para no perder un movimiento temprano.
+let primeraEmision = true;
+watch(mapaKey, () => {
+  primeraEmision = true;
+});
+
+function esLaVistaQueSePidio({ centro, acercamiento }) {
+  const pedida = vista.value;
+  // Encuadre por extensión: el centro y el zoom resultantes los calcula el mapa,
+  // así que no hay con qué compararlos y la primera emisión siempre es el eco.
+  if (pedida.extension) return true;
+  if (!Array.isArray(centro) || !Array.isArray(pedida.centro)) return false;
+  return (
+    Math.abs(centro[0] - pedida.centro[0]) < 1e-6 &&
+    Math.abs(centro[1] - pedida.centro[1]) < 1e-6 &&
+    Math.abs(Number(acercamiento) - Number(pedida.acercamiento)) < 0.05
+  );
+}
+
 function alMoverVista(evento) {
-  if (props.emitirVista) emit('vista', evento);
+  if (!props.emitirVista || !evento) return;
+
+  const esInicial = primeraEmision;
+  primeraEmision = false;
+  if (esInicial && esLaVistaQueSePidio(evento)) return;
+
+  emit('vista', evento);
 }
 
 function hexToRgba(hex, alpha) {
@@ -240,7 +277,7 @@ const globoInformativo = computed(() => {
 <template>
   <ClientOnly>
     <div class="mapa-indicador">
-      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista" @vista="alMoverVista">
+      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista" @al-mover-vista="alMoverVista">
         <SisdaiCapaXyz :fuente="fuenteMapaBase" :posicion="0" />
 
         <SisdaiCapaVectorial

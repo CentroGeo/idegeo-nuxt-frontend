@@ -45,6 +45,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  revisionVista: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const emit = defineEmits(['vista']);
@@ -133,6 +137,7 @@ watch(
             :vista-configurada="vistaEfectiva"
             :features-url="featuresUrl"
             :emitir-vista="emitirVista"
+            :revision-vista="revisionVista"
             @hover-rango="onHoverRango"
             @vista="emit('vista', $event)"
           />
