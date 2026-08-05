@@ -73,8 +73,7 @@ const mapFeaturesUrl = computed(() => {
   if (!props.indicadorId) return null;
 
   const endpoint =
-    `${config.public.geonodeApi}/dashboard/indicators/` +
-    `${props.indicadorId}/map-features/`;
+    `${config.public.geonodeApi}/dashboard/indicators/` + `${props.indicadorId}/map-features/`;
 
   return gnoxyUrl(endpoint);
 });
@@ -109,10 +108,8 @@ const estiloVectorial = computed(() => {
     const color = info.color || '#cccccc';
     const isActive = !props.rangoActivoColor || color === props.rangoActivoColor;
     const thematicColor = isActive ? color : hexToRgba(color, 0.45);
-    const borderColor =
-      isActive && props.rangoActivoColor ? '#333333' : '#ffffff';
-    const borderWidth =
-      isActive && props.rangoActivoColor ? 2 : 0.8;
+    const borderColor = isActive && props.rangoActivoColor ? '#333333' : '#ffffff';
+    const borderWidth = isActive && props.rangoActivoColor ? 2 : 0.8;
 
     estilosCategorias[String(featureId)] = {
       // Estilo para geometrías puntuales.
@@ -147,6 +144,15 @@ const estiloVectorial = computed(() => {
   };
 });
 
+/**
+ * Sin `mapValues` (o sin el campo que los liga a las geometrías) el mapa se dibuja completo
+ * con los grises de respaldo de `estiloVectorial`, lo que se lee como un error de estilo y no
+ * como lo que es: el indicador nunca fue recalculado, o su último recálculo falló.
+ */
+const sinColoresCalculados = computed(
+  () => !props.layerIdField || !props.mapValues || Object.keys(props.mapValues).length === 0
+);
+
 const globoInformativo = computed(() => {
   if (!props.mapValues) return undefined;
   return (featureProps) => {
@@ -173,6 +179,11 @@ const globoInformativo = computed(() => {
           :posicion="1"
         />
       </SisdaiMapa>
+
+      <p v-if="sinColoresCalculados" class="mapa-indicador__aviso" role="status">
+        Este indicador no tiene colores calculados, por eso el mapa se muestra en gris. Recalcúlalo
+        desde el repositorio de indicadores del tablero.
+      </p>
 
       <div v-if="plotConfig?.ranges" class="mapa-indicador__leyenda">
         <button
@@ -211,6 +222,23 @@ const globoInformativo = computed(() => {
   .gema {
     width: 100%;
     height: 520px;
+  }
+
+  &__aviso {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(90%, 34rem);
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.95);
+    border-left: 4px solid #b45309;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-size: 0.8rem;
+    color: #1f2937;
+    z-index: 10;
   }
 
   &__leyenda {
