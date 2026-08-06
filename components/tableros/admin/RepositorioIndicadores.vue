@@ -79,14 +79,26 @@ async function confirmarEliminar() {
   }
 }
 
-function alCrear() {
+function alCrear(indicador) {
   mostrarModalNuevo.value = false;
+  mostrarAviso(indicador?.avisoRecalculo);
   emit('crear');
 }
 
-function alGuardarEdicion() {
+function alGuardarEdicion(indicador) {
   indicadorEditando.value = null;
+  // El formulario recalcula los colores al guardar; si eso falló, la paleta sí quedó
+  // guardada pero el mapa sigue con los colores anteriores. Hay que decirlo.
+  mostrarAviso(indicador?.avisoRecalculo);
   emit('crear'); // recarga la lista
+}
+
+function mostrarAviso(mensaje) {
+  if (!mensaje) return;
+  mensajeRecalculo.value = `Se guardó la configuración, pero no se recalcularon los colores: ${mensaje}`;
+  setTimeout(() => {
+    mensajeRecalculo.value = '';
+  }, 8000);
 }
 
 async function recalcular(ind) {

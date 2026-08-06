@@ -19,7 +19,6 @@ const itemsMenu = computed(() => {
     { nombre: 'Panoramas', ruta: `${ruta}/panoramas` },
     { nombre: 'Geo-historias', ruta: `${ruta}/geohistorias` },
     { nombre: 'Tableros de datos', ruta: `${ruta}/tableros` },
-    { nombre: 'Importar datos', ruta: `${ruta}/importar-datos` },
   ];
 
   if (mostrarConstructor.value) {
@@ -98,7 +97,7 @@ onClickOutside(menuLateralRef, () => {
                     <button
                       v-if="item.subMenu"
                       type="button"
-                      class="pictograma-menu-hamburguesa"
+                      class="pictograma-menu"
                       :aria-expanded="Boolean(submenusAbiertos[item.nombre])"
                       :aria-label="`Mostrar páginas de ${item.nombre}`"
                       @click="alternarSubmenu(item.nombre)"

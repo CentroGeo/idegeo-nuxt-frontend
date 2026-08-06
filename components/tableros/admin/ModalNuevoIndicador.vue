@@ -1,5 +1,6 @@
 <script setup>
 import { categoriesNamesInSpanish } from '~/utils/consulta';
+import { PALETAS, PALETA_POR_DEFECTO, codificarPaleta } from '~/utils/tableros/paletas';
 
 const props = defineProps({
   siteId: { type: Number, required: true },
@@ -8,12 +9,18 @@ const props = defineProps({
 const emit = defineEmits(['creado', 'cerrar']);
 
 const { data: userData } = useAuth();
-const { crearIndicador, fetchDatasetsPaginados, fetchDatasetAttributes, syncDatasetAttributes } =
-  useTableroApi();
+const {
+  crearIndicador,
+  recalcularIndicador,
+  fetchDatasetsPaginados,
+  fetchDatasetAttributes,
+  syncDatasetAttributes,
+} = useTableroApi();
 
 const modal = ref(null);
 const paso = ref(1);
 const guardando = ref(false);
+const recalculando = ref(false);
 const error = ref('');
 
 const formulario = reactive({
@@ -26,7 +33,7 @@ const formulario = reactive({
   plot_type: 'bar',
   category_method: 'quantil',
   field_category: 5,
-  colors: 'azules_3',
+  colors: PALETA_POR_DEFECTO,
   reverse_colors: false,
   use_single_field: true,
   is_histogram: false,
@@ -192,7 +199,7 @@ async function guardar() {
   error.value = '';
   guardando.value = true;
   try {
-    const colorsValue = formulario.reverse_colors ? `${formulario.colors}_r` : formulario.colors;
+    const colorsValue = codificarPaleta(formulario.colors, formulario.reverse_colors);
     const payload = {
       site: props.siteId,
       group: null,
@@ -212,17 +219,45 @@ async function guardar() {
       show_general_values: formulario.show_general_values,
       stack_order: 1,
     };
-    const data = await crearIndicador(payload, userData.value?.accessToken);
-    if (data?.id) {
-      emit('creado', data);
-      modal.value?.cerrar();
-    } else {
+    const token = userData.value?.accessToken;
+    const data = await crearIndicador(payload, token);
+    if (!data?.id) {
       error.value = data?.detail || JSON.stringify(data);
+      return;
     }
+
+    // La creación solo persiste la configuración: los colores del mapa y la gráfica
+    // (plot_config / map_values) se materializan hasta el recálculo. Sin esto el
+    // indicador nace "Sin datos" y la paleta elegida no se aplica.
+    guardando.value = false;
+    recalculando.value = true;
+    const avisoRecalculo = await recalcularColores(data.id, token);
+    recalculando.value = false;
+
+    emit('creado', { ...data, avisoRecalculo });
+    modal.value?.cerrar();
   } catch (e) {
     error.value = e?.message || 'Error al crear indicador';
   } finally {
     guardando.value = false;
+    recalculando.value = false;
+  }
+}
+
+/**
+ * Genera los colores del indicador recién creado. Un fallo aquí no invalida la creación
+ * (el indicador ya existe), así que se devuelve como aviso en vez de como error.
+ * @returns {Promise<string>} mensaje de aviso, o cadena vacía si todo salió bien
+ */
+async function recalcularColores(id, token) {
+  try {
+    const resultado = await recalcularIndicador(id, token);
+    if (resultado?.status === 'ok') return '';
+    return (
+      resultado?.error || resultado?.detail || 'No se pudieron calcular los colores del indicador.'
+    );
+  } catch (e) {
+    return e?.message || 'No se pudo conectar con el servidor para calcular los colores.';
   }
 }
 
@@ -494,52 +529,10 @@ onMounted(async () => {
               <div class="campo">
                 <label for="ind-colors">Rampa de color</label>
                 <select id="ind-colors" v-model="formulario.colors">
-                  <optgroup label="Azules">
-                    <option value="azules">Azules</option>
-                    <option value="azules_2">Azules 2</option>
-                    <option value="azules_3">Azules 3</option>
-                    <option value="azules_4">Azules 4</option>
-                    <option value="azules_5">Azules 5</option>
-                  </optgroup>
-                  <optgroup label="Verdes">
-                    <option value="verdes">Verdes</option>
-                    <option value="verdes_2">Verdes 2</option>
-                    <option value="verdes_3">Verdes 3</option>
-                    <option value="verdes_4">Verdes 4</option>
-                    <option value="verdes_5">Verdes 5</option>
-                    <option value="verdes_6">Verdes 6</option>
-                  </optgroup>
-                  <optgroup label="Cafés / naranjas">
-                    <option value="cafes">Cafés</option>
-                    <option value="cafes_2">Cafés 2</option>
-                    <option value="cafes_3">Cafés 3</option>
-                    <option value="naranjas">Naranjas</option>
-                  </optgroup>
-                  <optgroup label="Morados / rosas">
-                    <option value="morados">Morados</option>
-                    <option value="morados_2">Morados 2</option>
-                    <option value="rosas">Rosas</option>
-                  </optgroup>
-                  <optgroup label="Divergentes">
-                    <option value="cafes_verdes">Café ↔ Verde</option>
-                    <option value="naranja_azul">Naranja ↔ Azul</option>
-                    <option value="rosa_verde">Rosa ↔ Verde</option>
-                  </optgroup>
-                  <optgroup label="Semáforo">
-                    <option value="semaforo">Semáforo</option>
-                    <option value="semaforo_2">Semáforo 2</option>
-                    <option value="semaforo_3">Semáforo 3 tonos</option>
-                    <option value="semaforo_4">Semáforo 4 (invertido)</option>
-                    <option value="semaforo_5">Semáforo 5 (intenso, invertido)</option>
-                    <option value="semaforo_6">Semáforo 6 (3 colores)</option>
-                    <option value="semaforo_7">Semáforo 7 (5 pasos)</option>
-                    <option value="semaforo_8">Semáforo 8 (5 pasos)</option>
-                  </optgroup>
-                  <optgroup label="Otras">
-                    <option value="grises">Grises</option>
-                    <option value="varios">Multicolor</option>
-                    <option value="varios_2">Multicolor 2</option>
-                    <option value="varios_3">Multicolor 3</option>
+                  <optgroup v-for="g in PALETAS" :key="g.group" :label="g.group">
+                    <option v-for="p in g.options" :key="p.value" :value="p.value">
+                      {{ p.label }}
+                    </option>
                   </optgroup>
                 </select>
                 <label
@@ -555,9 +548,7 @@ onMounted(async () => {
 
                   <span class="opcion-toggle__contenido">
                     <strong>Invertir paleta</strong>
-                    <span>
-                      Invierte el orden de los colores de la rampa seleccionada.
-                    </span>
+                    <span> Invierte el orden de los colores de la rampa seleccionada. </span>
                   </span>
 
                   <span class="opcion-toggle__estado" aria-hidden="true">
@@ -686,8 +677,16 @@ onMounted(async () => {
             <input
               type="submit"
               class="boton boton-primario"
-              :value="paso < 3 ? 'Siguiente →' : guardando ? 'Guardando...' : 'Crear indicador'"
-              :disabled="guardando"
+              :value="
+                paso < 3
+                  ? 'Siguiente →'
+                  : recalculando
+                    ? 'Calculando colores...'
+                    : guardando
+                      ? 'Guardando...'
+                      : 'Crear indicador'
+              "
+              :disabled="guardando || recalculando"
             />
           </div>
         </form>
@@ -970,8 +969,6 @@ onMounted(async () => {
   font-size: 0.78rem;
 }
 
-
-
 /* Opciones booleanas mostradas como botones de activación */
 .opcion-toggle {
   position: relative;
@@ -1166,5 +1163,4 @@ onMounted(async () => {
     color: var(--tableros-modal-acento, #991f47);
   }
 }
-
 </style>
