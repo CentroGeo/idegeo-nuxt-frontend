@@ -6,6 +6,8 @@ const route = useRoute();
 const config = useRuntimeConfig();
 const store = useLandingBuilderStore();
 const storeCatalogo = useCatalogoStore();
+const { esAdmin, cargarEsAdmin } = useEsAdmin();
+const { mostrarIdentidadGobMx, alternarIdentidadGobMx } = useIdentidadGobMx();
 
 watch(
   status,
@@ -20,6 +22,10 @@ watch(
   },
   { immediate: true }
 );
+
+onMounted(() => {
+  cargarEsAdmin();
+});
 
 const esConstructor = computed(() => {
   return route.path.startsWith('/landing-builder');
@@ -40,19 +46,14 @@ const IDENTIDAD_PUBLICA_VACIA = {
   logoSecundarioUrl: null,
   logoTerceroUrl: null,
   logoCuartoUrl: null,
-  mostrarBarraGobMx: true,
 };
 
 // Identidad (logos + nombre) de la página pública que se está viendo, propia
 // de esa página y por eso independiente del borrador del constructor.
 const identidadPublica = ref({ ...IDENTIDAD_PUBLICA_VACIA });
 
-// El layout (fuera de este componente) necesita saber si la página pública
-// actual desactivó la barra de Gobierno de México, así que se refleja en el
-// store cada vez que cambia la identidad pública resuelta.
 function establecerIdentidadPublica(identidad) {
   identidadPublica.value = identidad || IDENTIDAD_PUBLICA_VACIA;
-  store.mostrarBarraGobMxPublica = identidadPublica.value.mostrarBarraGobMx !== false;
 }
 
 // MainNavegacion vive en el layout persistente: al navegar entre páginas por
@@ -382,25 +383,6 @@ function eliminarLogo4() {
             {{ store.nombrePlataforma }}
           </span>
         </div>
-
-        <!-- Barra de identidad de Gobierno de México (arriba de este encabezado) -->
-        <button
-          type="button"
-          class="boton-secundario boton-chico boton-alternar-barra-gobmx"
-          :aria-pressed="store.mostrarBarraGobMx"
-          :title="
-            store.mostrarBarraGobMx
-              ? 'Ocultar la barra de Gobierno de México en esta página'
-              : 'Mostrar la barra de Gobierno de México en esta página'
-          "
-          @click="store.mostrarBarraGobMx = !store.mostrarBarraGobMx"
-        >
-          <span
-            :class="store.mostrarBarraGobMx ? 'pictograma-ojo-ver' : 'pictograma-ojo-ocultar'"
-            aria-hidden="true"
-          ></span>
-          Barra GobMX: {{ store.mostrarBarraGobMx ? 'Activada' : 'Desactivada' }}
-        </button>
       </div>
 
       <!-- Páginas publicadas del constructor: logos y nombre de la plataforma, en modo solo lectura -->
@@ -525,6 +507,27 @@ function eliminarLogo4() {
       </li>
       <li v-if="mostrarAcercaDe">
         <NuxtLink class="nav-hipervinculo" to="/acerca-de">Acerca de</NuxtLink>
+      </li>
+      <li v-if="esAdmin">
+        <!-- Identidad de Gobierno de México (barra + pie de página): ajuste
+        global del sitio completo, visible en cualquier módulo. -->
+        <button
+          type="button"
+          class="boton-secundario boton-chico boton-alternar-identidad-gobmx"
+          :aria-pressed="mostrarIdentidadGobMx"
+          :title="
+            mostrarIdentidadGobMx
+              ? 'Ocultar la identidad de Gobierno de México en todo el sitio'
+              : 'Mostrar la identidad de Gobierno de México en todo el sitio'
+          "
+          @click="alternarIdentidadGobMx"
+        >
+          <span
+            :class="mostrarIdentidadGobMx ? 'pictograma-ojo-ver' : 'pictograma-ojo-ocultar'"
+            aria-hidden="true"
+          ></span>
+          Identidad GobMX: {{ mostrarIdentidadGobMx ? 'Activada' : 'Desactivada' }}
+        </button>
       </li>
       <li v-if="mostrarAuth">
         <NuxtLink v-if="status === 'authenticated'" class="nav-hipervinculo" to="/mi-cuenta">
