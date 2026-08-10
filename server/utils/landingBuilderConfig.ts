@@ -81,10 +81,6 @@ export interface LandingBuilderPaginaIdentidad {
   logoSecundarioRedirectUrl?: string | null;
   logoTerceroRedirectUrl?: string | null;
   logoCuartoRedirectUrl?: string | null;
-  // Controla la barra superior de identidad de Gobierno de México (el
-  // escudo/marca oficial que se muestra sobre el encabezado). Ausente en
-  // páginas creadas antes de esta opción; se trata como `true`.
-  mostrarBarraGobMx?: boolean;
 }
 
 export interface LandingBuilderPagina {
@@ -102,7 +98,6 @@ export const IDENTIDAD_PAGINA_VACIA: LandingBuilderPaginaIdentidad = {
   logoSecundarioUrl: null,
   logoTerceroUrl: null,
   logoCuartoUrl: null,
-  mostrarBarraGobMx: true,
 };
 
 export interface LandingBuilderLogo {
@@ -149,6 +144,7 @@ export const CAMPO_IDENTIDAD_POR_SLOT: Record<
 };
 
 const CONFIG_KEY = 'config.json';
+const IDENTIDAD_GOBMX_KEY = 'identidad-gobmx.json';
 const LOGO_KEY = 'logo:archivo';
 const LOGO_META_KEY = 'logo:meta.json';
 const LOGO_SECUNDARIO_KEY = 'logo_secundario:archivo';
@@ -220,6 +216,21 @@ const configPorDefecto: LandingBuilderConfig = {
   paginaInicioId: null,
   actualizadoEn: new Date(0).toISOString(),
 };
+
+// Ajuste global del sitio (no ligado a una página del constructor): oculta
+// o muestra la barra y el pie de página de identidad de Gobierno de México
+// en todo el sitio, en cualquier módulo, para todas las personas visitantes.
+export async function getMostrarIdentidadGobMx(): Promise<boolean> {
+  const storage = useStorage('landingBuilder');
+  const valor = await storage.getItem<{ mostrarIdentidadGobMx: boolean }>(IDENTIDAD_GOBMX_KEY);
+  return valor?.mostrarIdentidadGobMx !== false;
+}
+
+export async function setMostrarIdentidadGobMx(mostrar: boolean): Promise<boolean> {
+  const storage = useStorage('landingBuilder');
+  await storage.setItem(IDENTIDAD_GOBMX_KEY, { mostrarIdentidadGobMx: mostrar });
+  return mostrar;
+}
 
 export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
   const storage = useStorage('landingBuilder');

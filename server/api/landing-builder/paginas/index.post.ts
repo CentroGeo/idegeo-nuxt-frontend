@@ -80,10 +80,6 @@ export default defineEventHandler(async (event) => {
       typeof identidadEntrante.logoCuartoRedirectUrl === 'string'
         ? identidadEntrante.logoCuartoRedirectUrl
         : null,
-    mostrarBarraGobMx:
-      typeof identidadEntrante.mostrarBarraGobMx === 'boolean'
-        ? identidadEntrante.mostrarBarraGobMx
-        : true,
   };
 
   for (const slot of SLOTS_LOGO_PAGINA) {
