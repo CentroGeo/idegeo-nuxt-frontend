@@ -46,6 +46,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const paginaId = `pagina-${Date.now()}`;
+  const nombre = fields.nombre?.[0]?.trim() || undefined;
 
   const identidad: LandingBuilderPaginaIdentidad = {
     ...IDENTIDAD_PAGINA_VACIA,
@@ -102,5 +103,5 @@ export default defineEventHandler(async (event) => {
     identidad[CAMPO_IDENTIDAD_POR_SLOT[slot]] = url;
   }
 
-  return crearLandingBuilderPagina(bloques, identidad, paginaId);
+  return crearLandingBuilderPagina(bloques, identidad, paginaId, nombre);
 });

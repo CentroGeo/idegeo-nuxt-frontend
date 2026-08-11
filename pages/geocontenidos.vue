@@ -107,7 +107,11 @@ async function eliminarPaginaDesdeMenu(pagina) {
 
 function verPaginaDesdeMenu(pagina) {
   cerrarMenuConstructor();
-  navigateTo(`/paginas/${pagina.slug}`, { open: { target: '_blank' } });
+  // navigateTo(..., { open }) no resuelve rutas string contra el baseURL de la
+  // app (queda como /paginas/x en vez de /admin/paginas/x en producción, y el
+  // nginx externo la manda a GeoNode como 404); router.resolve() sí lo aplica.
+  const router = useRouter();
+  window.open(router.resolve(`/paginas/${pagina.slug}`).href, '_blank');
 }
 
 const menuLateralRef = ref(null);
