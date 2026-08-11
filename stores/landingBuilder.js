@@ -235,6 +235,12 @@ function sincronizarIdentidadPublicada(store, paginas, paginaId) {
 }
 
 export const useLandingBuilderStore = defineStore('landingBuilder', () => {
+  // MainNavegacion.vue (al navegar) y pages/landing-builder/index.vue (al
+  // montarse) pueden llamar a cargarConfiguracion() casi al mismo tiempo;
+  // esto evita que la segunda llamada pise lo que ya resolvió la primera
+  // (p. ej. el lienzo en blanco que pide solicitarLienzoEnBlanco).
+  let cargandoConfiguracionPromesa = null;
+
   return {
     limitePaginas: LIMITE_PAGINAS,
     nombrePlataforma: ref(''),
@@ -265,6 +271,10 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     paginas: ref([]),
     paginaInicioId: ref(null),
     paginaEditandoId: ref(null),
+    // "Crear página" lo activa antes de navegar a /landing-builder para
+    // pedir explícitamente un lienzo en blanco, en vez de que
+    // cargarConfiguracion() reutilice el borrador general del servidor.
+    solicitarLienzoEnBlanco: ref(false),
     isPublicando: ref(false),
     isCreandoPagina: ref(false),
     isLoading: ref(false),
@@ -274,36 +284,61 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     mensajeExito: ref(''),
 
     async cargarConfiguracion() {
-      this.isLoading = true;
-      this.error = null;
+      if (cargandoConfiguracionPromesa) return cargandoConfiguracionPromesa;
+
+      cargandoConfiguracionPromesa = (async () => {
+        this.isLoading = true;
+        this.error = null;
+        try {
+          const config = await $fetch('/api/landing-builder/config');
+
+          if (this.paginaEditandoId) {
+            // Ya se está editando una página específica (por ejemplo, se
+            // llegó a /landing-builder desde el menú lateral con
+            // cargarPaginaParaEditar ya aplicado); no pisar sus
+            // bloques/identidad con el borrador general.
+          } else if (this.solicitarLienzoEnBlanco) {
+            // "Crear página" ya dejó bloques/identidad en blanco vía
+            // cancelarEdicionPagina(); no reemplazarlos por el borrador
+            // guardado en el servidor.
+            this.solicitarLienzoEnBlanco = false;
+            this.marcarBloquesComoGuardados();
+          } else {
+            this.nombrePlataforma = config.nombrePlataforma;
+            this.titulo = config.titulo;
+            this.subtitulo = config.subtitulo;
+            this.tituloSeccion = config.tituloSeccion;
+            this.descripcion = config.descripcion;
+            this.seccionTexto = config.seccionTexto;
+            this.logoUrl = config.logoUrl;
+            this.logoSecundarioUrl = config.logoSecundarioUrl;
+            this.logoTerceroUrl = config.logoTerceroUrl || null;
+            this.logoCuartoUrl = config.logoCuartoUrl || null;
+            this.logoRedirectUrl = config.logoRedirectUrl || null;
+            this.logoSecundarioRedirectUrl = config.logoSecundarioRedirectUrl || null;
+            this.logoTerceroRedirectUrl = config.logoTerceroRedirectUrl || null;
+            this.logoCuartoRedirectUrl = config.logoCuartoRedirectUrl || null;
+            this.tarjetas = config.tarjetas ?? [];
+            this.tarjetaImagenFiles = {};
+            this.secciones = config.secciones || [];
+            this.bloques = config.bloques || [];
+            this.marcarBloquesComoGuardados();
+          }
+
+          this.paginas = config.paginas || [];
+          this.paginaInicioId = config.paginaInicioId ?? null;
+        } catch (err) {
+          console.error('Error al cargar la configuración de la landing page:', err);
+          this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
+        } finally {
+          this.isLoading = false;
+        }
+      })();
+
       try {
-        const config = await $fetch('/api/landing-builder/config');
-        this.nombrePlataforma = config.nombrePlataforma;
-        this.titulo = config.titulo;
-        this.subtitulo = config.subtitulo;
-        this.tituloSeccion = config.tituloSeccion;
-        this.descripcion = config.descripcion;
-        this.seccionTexto = config.seccionTexto;
-        this.logoUrl = config.logoUrl;
-        this.logoSecundarioUrl = config.logoSecundarioUrl;
-        this.logoTerceroUrl = config.logoTerceroUrl || null;
-        this.logoCuartoUrl = config.logoCuartoUrl || null;
-        this.logoRedirectUrl = config.logoRedirectUrl || null;
-        this.logoSecundarioRedirectUrl = config.logoSecundarioRedirectUrl || null;
-        this.logoTerceroRedirectUrl = config.logoTerceroRedirectUrl || null;
-        this.logoCuartoRedirectUrl = config.logoCuartoRedirectUrl || null;
-        this.tarjetas = config.tarjetas ?? [];
-        this.tarjetaImagenFiles = {};
-        this.secciones = config.secciones || [];
-        this.bloques = config.bloques || [];
-        this.paginas = config.paginas || [];
-        this.paginaInicioId = config.paginaInicioId ?? null;
-        this.marcarBloquesComoGuardados();
-      } catch (err) {
-        console.error('Error al cargar la configuración de la landing page:', err);
-        this.error = 'No se pudo cargar la configuración. Intenta de nuevo.';
+        await cargandoConfiguracionPromesa;
       } finally {
-        this.isLoading = false;
+        cargandoConfiguracionPromesa = null;
       }
     },
 

@@ -2,16 +2,20 @@
 definePageMeta({ middleware: 'admin' });
 
 const store = useLandingBuilderStore();
+const modalConfirmar = ref(null);
 
 const paginaEnEdicion = computed(() =>
   store.paginas.find((pagina) => pagina.id === store.paginaEditandoId)
 );
 
-function eliminarPagina(pagina) {
-  if (!confirm(`¿Estás seguro que deseas eliminar la página publicada "${pagina.nombre}"?`)) {
-    return;
-  }
-  store.eliminarPagina(pagina.id);
+async function eliminarPagina(pagina) {
+  const ok = await modalConfirmar.value?.abrir({
+    titulo: 'Eliminar página',
+    mensaje: `¿Estás seguro que deseas eliminar la página publicada "${pagina.nombre}"?`,
+    textoConfirmar: 'Eliminar',
+  });
+  if (!ok) return;
+  await store.eliminarPagina(pagina.id);
 }
 
 function editarPagina(pagina) {
@@ -47,18 +51,7 @@ onMounted(() => {
 
     <div class="contenedor flex flex-vertical-centrado m-y-3 landing-builder-acciones">
       <button
-        v-if="!store.paginaEditandoId"
         class="boton-primario boton-chico"
-        type="button"
-        :disabled="store.isSaving || store.isCreandoPagina"
-        @click="store.guardarConfiguracion"
-      >
-        {{ store.isSaving && !store.isCreandoPagina ? 'Guardando...' : 'Guardar cambios' }}
-      </button>
-
-      <button
-        :class="store.paginaEditandoId ? 'boton-primario' : 'boton-secundario'"
-        class="boton-chico"
         type="button"
         :disabled="
           store.isSaving ||
@@ -152,6 +145,8 @@ onMounted(() => {
       </p>
     </section>
 
+    <GeocontenidosModalConfirmar ref="modalConfirmar" />
+
     <!--
     Formulario existente (config, editor de portada/sección/logo, tarjetas y vista previa).
     Se deja comentado mientras el lienzo en blanco reemplaza este flujo; no se elimina por si
@@ -233,8 +228,9 @@ onMounted(() => {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 6px;
-  background: var(--color-neutro-1, #f5f5f5);
-  border: 1px solid var(--color-neutro-2, #e0e0e0);
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  color: #ffffff;
 }
 
 .landing-builder-paginas__lista {
