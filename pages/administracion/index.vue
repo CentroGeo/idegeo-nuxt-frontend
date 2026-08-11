@@ -1,6 +1,6 @@
 <script setup>
 definePageMeta({
-  middleware: ['admin', () => navigateTo('/administracion/modulos-permisos', { replace: true })],
+  middleware: ['admin', () => navigateTo('/administracion/modulos', { replace: true })],
 });
 </script>
 

@@ -3,5 +3,5 @@ definePageMeta({ middleware: 'admin' });
 </script>
 
 <template>
-  <AdministracionModulosPermisos />
+  <AdministracionModulos />
 </template>

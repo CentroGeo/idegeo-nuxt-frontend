@@ -29,7 +29,7 @@ const texto = computed(() => {
 </script>
 
 <template>
-  <div class="administracion-switch flex flex-vertical-centrado" style="gap: 8px">
+  <div class="administracion-switch" style="gap: 8px">
     <button
       type="button"
       role="switch"
@@ -59,6 +59,11 @@ const texto = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+.administracion-switch {
+  display: flex;
+  align-items: center;
+}
+
 .administracion-switch-control {
   position: relative;
   width: 40px;

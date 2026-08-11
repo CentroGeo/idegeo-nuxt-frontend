@@ -1,36 +1,85 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
+const store = useCategoriasStore();
+
 const estados = ['Publicada', 'Borrador'];
 
-const categorias = reactive([
-  { id: 1, nombre: 'Zonas Climáticas', tipo: 'Geográfica', valores: 14, estado: 'Publicada' },
-  {
-    id: 2,
-    nombre: 'Áreas Naturales Protegidas',
-    tipo: 'Ambiental',
-    valores: 182,
-    estado: 'Publicada',
-  },
-  { id: 3, nombre: 'Cuencas Hidrológicas', tipo: 'Hidrología', valores: 37, estado: 'Borrador' },
-  {
-    id: 4,
-    nombre: 'Entidades Federativas',
-    tipo: 'Político-Administrativo',
-    valores: 32,
-    estado: 'Publicada',
-  },
-]);
+// --- Navegación interna: general / detalle de conjunto ---
+const vista = ref('general');
+const conjuntoSeleccionado = ref(null);
 
-let siguienteId = categorias.length + 1;
-
-function claseEstado(estado) {
-  return estado === 'Publicada'
-    ? 'texto-color-confirmacion fondo-color-confirmacion borde borde-color-confirmacion'
-    : 'texto-color-neutro fondo-color-neutro borde borde-color-neutro';
+function verDetalleConjunto(conjunto) {
+  conjuntoSeleccionado.value = conjunto;
+  vista.value = 'detalle';
 }
 
-// --- Modal Nueva / Editar categoría ---
+function volverAVistaGeneral() {
+  vista.value = 'general';
+  conjuntoSeleccionado.value = null;
+}
+
+function contarPublicadas(conjunto) {
+  return store.categoriasPublicadas(conjunto).length;
+}
+
+// --- Modal Nuevo / Editar conjunto ---
+const modalConjunto = ref(null);
+const modoModalConjunto = ref('crear');
+const formularioConjunto = reactive({ id: null, nombre: '', descripcion: '' });
+
+function abrirModalNuevoConjunto() {
+  modoModalConjunto.value = 'crear';
+  formularioConjunto.id = null;
+  formularioConjunto.nombre = '';
+  formularioConjunto.descripcion = '';
+  modalConjunto.value?.abrirModal();
+}
+
+function abrirModalEditarConjunto(conjunto) {
+  modoModalConjunto.value = 'editar';
+  formularioConjunto.id = conjunto.id;
+  formularioConjunto.nombre = conjunto.nombre;
+  formularioConjunto.descripcion = conjunto.descripcion;
+  modalConjunto.value?.abrirModal();
+}
+
+function guardarConjunto() {
+  if (!formularioConjunto.nombre.trim()) return;
+
+  if (modoModalConjunto.value === 'crear') {
+    store.crearConjunto({
+      nombre: formularioConjunto.nombre,
+      descripcion: formularioConjunto.descripcion,
+    });
+  } else {
+    store.actualizarConjunto(formularioConjunto.id, {
+      nombre: formularioConjunto.nombre,
+      descripcion: formularioConjunto.descripcion,
+    });
+  }
+  modalConjunto.value?.cerrarModal();
+}
+
+// --- Modal Eliminar conjunto ---
+const modalEliminarConjunto = ref(null);
+const conjuntoAEliminar = ref(null);
+
+function abrirModalEliminarConjunto(conjunto) {
+  conjuntoAEliminar.value = conjunto;
+  modalEliminarConjunto.value?.abrirModal();
+}
+
+function confirmarEliminarConjunto() {
+  const id = conjuntoAEliminar.value?.id;
+  const eliminado = store.eliminarConjunto(id);
+  if (eliminado && vista.value === 'detalle' && conjuntoSeleccionado.value?.id === id) {
+    volverAVistaGeneral();
+  }
+  modalEliminarConjunto.value?.cerrarModal();
+}
+
+// --- Modal Nueva / Editar categoría (dentro del conjunto en detalle) ---
 const modalCategoria = ref(null);
 const modoModalCategoria = ref('crear');
 const formularioCategoria = reactive({
@@ -65,21 +114,19 @@ function guardarCategoria() {
   if (!formularioCategoria.nombre.trim() || !formularioCategoria.tipo.trim()) return;
 
   if (modoModalCategoria.value === 'crear') {
-    categorias.push({
-      id: siguienteId++,
-      nombre: formularioCategoria.nombre.trim(),
-      tipo: formularioCategoria.tipo.trim(),
-      valores: Number(formularioCategoria.valores) || 0,
+    store.crearCategoria(conjuntoSeleccionado.value.id, {
+      nombre: formularioCategoria.nombre,
+      tipo: formularioCategoria.tipo,
+      valores: formularioCategoria.valores,
       estado: formularioCategoria.estado,
     });
   } else {
-    const categoria = categorias.find((item) => item.id === formularioCategoria.id);
-    if (categoria) {
-      categoria.nombre = formularioCategoria.nombre.trim();
-      categoria.tipo = formularioCategoria.tipo.trim();
-      categoria.valores = Number(formularioCategoria.valores) || 0;
-      categoria.estado = formularioCategoria.estado;
-    }
+    store.actualizarCategoria(conjuntoSeleccionado.value.id, formularioCategoria.id, {
+      nombre: formularioCategoria.nombre,
+      tipo: formularioCategoria.tipo,
+      valores: formularioCategoria.valores,
+      estado: formularioCategoria.estado,
+    });
   }
   modalCategoria.value?.cerrarModal();
 }
@@ -94,74 +141,276 @@ function abrirModalEliminarCategoria(categoria) {
 }
 
 function confirmarEliminarCategoria() {
-  const indice = categorias.findIndex((categoria) => categoria.id === categoriaAEliminar.value?.id);
-  if (indice !== -1) categorias.splice(indice, 1);
+  store.eliminarCategoria(conjuntoSeleccionado.value.id, categoriaAEliminar.value?.id);
   modalEliminarCategoria.value?.cerrarModal();
 }
 </script>
 
 <template>
   <div class="administracion-categorias">
-    <div class="flex flex-contenido-separado m-b-4">
-      <div class="flex-vertical-centrado">
-        <p class="m-0">
-          <strong>{{ categorias.length }}</strong> categorías configuradas
-        </p>
-      </div>
-      <button type="button" class="boton-primario" @click="abrirModalNuevaCategoria">
-        <span class="pictograma-agregar" aria-hidden="true" /> Nueva categoría
-      </button>
-    </div>
+    <!-- ============ VISTA GENERAL: CONJUNTOS ============ -->
+    <section v-if="vista === 'general'" aria-label="Conjuntos de categorías">
+      <p class="texto-color-secundario m-b-4">
+        Un conjunto agrupa varias categorías (ej. categorias SIGIC). Solo el conjunto marcado como
+        <strong>activo en esta instancia</strong> se ofrece en el catálogo y en el formulario de
+        llenado de metadatos, y únicamente con sus categorías en estado <strong>Publicada</strong>.
+        Las categorías en <strong>Borrador</strong> permanecen ocultas hasta publicarse.
+      </p>
 
-    <div class="contenedor-tabla">
-      <table class="tabla-expandida">
-        <caption>
-          Categorías y filtros de metadatos
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Categoría</th>
-            <th scope="col">Tipo</th>
-            <th scope="col">Valores</th>
-            <th scope="col">Estado</th>
-            <th scope="col">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="categoria in categorias" :key="categoria.id">
-            <td>{{ categoria.nombre }}</td>
-            <td>{{ categoria.tipo }}</td>
-            <td>{{ categoria.valores }} registros</td>
-            <td>
-              <span class="p-1 borde-redondeado-8" :class="claseEstado(categoria.estado)">
-                {{ categoria.estado }}
-              </span>
-            </td>
-            <td>
-              <div class="flex-width flex" style="gap: 8px">
-                <button
-                  class="boton-secundario boton-chico"
-                  type="button"
-                  @click="abrirModalEditarCategoria(categoria)"
+      <div
+        v-if="store.conjuntoActivo"
+        class="tarjeta administracion-conjunto-activo-aviso m-b-4"
+        role="status"
+      >
+        <div class="tarjeta-cuerpo">
+          <span>
+            El catálogo y el llenado de metadatos usan actualmente
+            <strong>{{ store.categoriasVisiblesInstancia.length }}</strong>
+            categoría(s) publicada(s) del conjunto
+            <strong>{{ store.conjuntoActivo.nombre }}</strong
+            >.
+          </span>
+        </div>
+      </div>
+
+      <div class="flex flex-contenido-separado m-b-3">
+        <p class="m-0">
+          <strong>{{ store.conjuntos.length }}</strong> conjunto(s) de categorías configurados
+        </p>
+        <button type="button" class="boton-primario" @click="abrirModalNuevoConjunto">
+          <span class="pictograma-agregar" aria-hidden="true" /> Nuevo conjunto
+        </button>
+      </div>
+
+      <div class="flex">
+        <div v-for="conjunto in store.conjuntos" :key="conjunto.id" class="columna-4">
+          <div class="tarjeta administracion-conjunto-tarjeta">
+            <div class="tarjeta-cuerpo">
+              <div class="flex flex-contenido-separado">
+                <strong>{{ conjunto.nombre }}</strong>
+                <span
+                  v-if="conjunto.id === store.idConjuntoActivo"
+                  class="p-1 borde-redondeado-8 texto-color-confirmacion fondo-color-confirmacion borde borde-color-confirmacion"
                 >
-                  <span class="pictograma-editar" aria-hidden="true" /> Editar
+                  Activo en esta instancia
+                </span>
+              </div>
+              <p class="texto-color-secundario m-t-2 m-b-2">{{ conjunto.descripcion }}</p>
+              <p class="texto-color-secundario m-0">
+                {{ conjunto.categorias.length }} categoría(s) ·
+                {{ contarPublicadas(conjunto) }} publicada(s)
+              </p>
+
+              <div class="flex m-t-3" style="gap: 8px; flex-wrap: wrap">
+                <button
+                  type="button"
+                  class="boton-secundario boton-chico"
+                  @click="verDetalleConjunto(conjunto)"
+                >
+                  Ver categorías
                 </button>
                 <button
-                  class="boton-pictograma boton-secundario"
-                  aria-label="Eliminar categoría"
+                  v-if="conjunto.id !== store.idConjuntoActivo"
                   type="button"
-                  @click="abrirModalEliminarCategoria(categoria)"
+                  class="boton-secundario boton-chico"
+                  @click="store.activarConjunto(conjunto.id)"
+                >
+                  Usar en esta instancia
+                </button>
+                <button
+                  type="button"
+                  class="boton-pictograma boton-secundario"
+                  aria-label="Editar conjunto"
+                  @click="abrirModalEditarConjunto(conjunto)"
+                >
+                  <span class="pictograma-editar" aria-hidden="true" />
+                </button>
+                <button
+                  v-globo-informacion="
+                    conjunto.protegido
+                      ? 'Este conjunto es parte del esquema por defecto y no puede eliminarse'
+                      : conjunto.id === store.idConjuntoActivo
+                        ? 'No puedes eliminar el conjunto activo en esta instancia'
+                        : 'Eliminar conjunto'
+                  "
+                  type="button"
+                  class="boton-pictograma boton-secundario"
+                  aria-label="Eliminar conjunto"
+                  :disabled="conjunto.protegido || conjunto.id === store.idConjuntoActivo"
+                  @click="abrirModalEliminarConjunto(conjunto)"
                 >
                   <span class="pictograma-eliminar" aria-hidden="true" />
                 </button>
               </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VISTA DETALLE: CATEGORÍAS DE UN CONJUNTO ============ -->
+    <section v-else aria-label="Categorías del conjunto">
+      <button type="button" class="boton-secundario boton-chico m-b-3" @click="volverAVistaGeneral">
+        <span class="pictograma-flecha-izquierda" aria-hidden="true" /> Volver a conjuntos
+      </button>
+
+      <div class="flex flex-contenido-separado m-b-2">
+        <div>
+          <h2 class="m-0">{{ conjuntoSeleccionado.nombre }}</h2>
+          <p class="texto-color-secundario m-0">{{ conjuntoSeleccionado.descripcion }}</p>
+        </div>
+        <div class="flex administracion-fila-centrada" style="gap: 12px">
+          <span
+            v-if="conjuntoSeleccionado.id === store.idConjuntoActivo"
+            class="p-1 borde-redondeado-8 texto-color-confirmacion fondo-color-confirmacion borde borde-color-confirmacion"
+          >
+            Activo en esta instancia
+          </span>
+          <button
+            v-else
+            type="button"
+            class="boton-secundario boton-chico"
+            @click="store.activarConjunto(conjuntoSeleccionado.id)"
+          >
+            Usar en esta instancia
+          </button>
+        </div>
+      </div>
+
+      <p class="texto-color-secundario m-b-4">
+        Solo las categorías en estado <strong>Publicada</strong> aparecen en el catálogo y en el
+        formulario de metadatos cuando este conjunto está activo.
+      </p>
+
+      <div class="flex flex-contenido-separado m-b-3">
+        <p class="m-0">
+          <strong>{{ conjuntoSeleccionado.categorias.length }}</strong> categorías configuradas
+        </p>
+        <button type="button" class="boton-primario" @click="abrirModalNuevaCategoria">
+          <span class="pictograma-agregar" aria-hidden="true" /> Nueva categoría
+        </button>
+      </div>
+
+      <div class="contenedor-tabla">
+        <table class="tabla-expandida">
+          <caption>
+            Categorías del conjunto «{{
+              conjuntoSeleccionado.nombre
+            }}»
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Categoría</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Valores</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="categoria in conjuntoSeleccionado.categorias" :key="categoria.id">
+              <td>{{ categoria.nombre }}</td>
+              <td>{{ categoria.tipo }}</td>
+              <td>{{ categoria.valores }} registros</td>
+              <td>
+                <span class="p-1 borde-redondeado-8" :class="store.claseEstado(categoria.estado)">
+                  {{ categoria.estado }}
+                </span>
+              </td>
+              <td>
+                <div class="flex-width flex" style="gap: 8px">
+                  <button
+                    class="boton-secundario boton-chico"
+                    type="button"
+                    @click="abrirModalEditarCategoria(categoria)"
+                  >
+                    <span class="pictograma-editar" aria-hidden="true" /> Editar
+                  </button>
+                  <button
+                    class="boton-pictograma boton-secundario"
+                    aria-label="Eliminar categoría"
+                    type="button"
+                    @click="abrirModalEliminarCategoria(categoria)"
+                  >
+                    <span class="pictograma-eliminar" aria-hidden="true" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!conjuntoSeleccionado.categorias.length">
+              <td colspan="5" class="texto-color-secundario">
+                Este conjunto todavía no tiene categorías.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <ClientOnly>
+      <SisdaiModal ref="modalConjunto">
+        <template #encabezado>
+          <h2>{{ modoModalConjunto === 'crear' ? 'Nuevo conjunto' : 'Editar conjunto' }}</h2>
+        </template>
+        <template #cuerpo>
+          <label for="conjunto-nombre">Nombre</label>
+          <input
+            id="conjunto-nombre"
+            v-model="formularioConjunto.nombre"
+            type="text"
+            class="m-b-2"
+          />
+
+          <label for="conjunto-descripcion">Descripción</label>
+          <textarea
+            id="conjunto-descripcion"
+            v-model="formularioConjunto.descripcion"
+            rows="3"
+            class="m-b-2"
+          />
+        </template>
+        <template #pie>
+          <button
+            class="boton-secundario boton-chico"
+            type="button"
+            @click="modalConjunto.cerrarModal()"
+          >
+            Cancelar
+          </button>
+          <button class="boton-primario boton-chico" type="button" @click="guardarConjunto">
+            Guardar
+          </button>
+        </template>
+      </SisdaiModal>
+
+      <SisdaiModal ref="modalEliminarConjunto">
+        <template #encabezado>
+          <h2>Eliminar conjunto</h2>
+        </template>
+        <template #cuerpo>
+          <p>
+            ¿Deseas eliminar el conjunto <strong>{{ conjuntoAEliminar?.nombre }}</strong
+            >? Se eliminarán también sus categorías. Esta acción no se puede deshacer.
+          </p>
+        </template>
+        <template #pie>
+          <button
+            class="boton-secundario boton-chico"
+            type="button"
+            @click="modalEliminarConjunto.cerrarModal()"
+          >
+            Cancelar
+          </button>
+          <button
+            class="boton-primario boton-chico"
+            type="button"
+            @click="confirmarEliminarConjunto"
+          >
+            Eliminar
+          </button>
+        </template>
+      </SisdaiModal>
+
       <SisdaiModal ref="modalCategoria">
         <template #encabezado>
           <h2>{{ modoModalCategoria === 'crear' ? 'Nueva categoría' : 'Editar categoría' }}</h2>
@@ -238,6 +487,18 @@ function confirmarEliminarCategoria() {
 </template>
 
 <style lang="scss" scoped>
+.administracion-conjunto-tarjeta {
+  height: 100%;
+}
+
+.administracion-conjunto-activo-aviso {
+  border-left: 4px solid var(--color-confirmacion-2, #2e7d32);
+}
+
+.administracion-fila-centrada {
+  align-items: center;
+}
+
 .contenedor-tabla {
   width: 100%;
   overflow-x: auto;

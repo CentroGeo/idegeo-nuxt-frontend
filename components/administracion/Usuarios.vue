@@ -1,6 +1,8 @@
 <script setup>
 import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/SisdaiModal.vue';
 
+const emit = defineEmits(['ver-detalle-rol']);
+
 const roles = ['Administrador', 'Editor', 'Visualizador'];
 
 const usuarios = reactive([
@@ -74,15 +76,6 @@ const totalAdministradores = computed(
 const totalEditoresActivos = computed(
   () => usuarios.filter((usuario) => usuario.rol === 'Editor' && usuario.diasAcceso <= 30).length
 );
-
-function iniciales(nombre) {
-  return nombre
-    .split(' ')
-    .map((parte) => parte[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}
 
 function textoUltimoAcceso(dias) {
   if (dias === 0) return 'Hoy';
@@ -159,6 +152,10 @@ function confirmarEliminarUsuario() {
   if (indice !== -1) usuarios.splice(indice, 1);
   modalEliminarUsuario.value?.cerrarModal();
 }
+
+function verDetalleRolDe(usuario) {
+  emit('ver-detalle-rol', usuario.rol);
+}
 </script>
 
 <template>
@@ -233,22 +230,13 @@ function confirmarEliminarUsuario() {
             <th scope="col">Correo electrónico</th>
             <th scope="col">Rol</th>
             <th scope="col">Último acceso</th>
+            <th scope="col">Detalle</th>
             <th scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="usuario in usuariosFiltrados" :key="usuario.id">
-            <td>
-              <div class="flex flex-vertical-centrado" style="gap: 8px">
-                <span
-                  class="administracion-avatar texto-color-inverso fondo-color-primario texto-centrado"
-                  aria-hidden="true"
-                >
-                  {{ iniciales(usuario.nombre) }}
-                </span>
-                {{ usuario.nombre }}
-              </div>
-            </td>
+            <td>{{ usuario.nombre }}</td>
             <td>{{ usuario.correo }}</td>
             <td>
               <span class="p-1 borde-redondeado-8" :class="claseRol(usuario.rol)">
@@ -256,6 +244,15 @@ function confirmarEliminarUsuario() {
               </span>
             </td>
             <td>{{ textoUltimoAcceso(usuario.diasAcceso) }}</td>
+            <td>
+              <button
+                class="boton-secundario boton-chico"
+                type="button"
+                @click="verDetalleRolDe(usuario)"
+              >
+                Ver detalle
+              </button>
+            </td>
             <td>
               <div class="flex-width flex" style="gap: 8px">
                 <button
@@ -355,17 +352,5 @@ function confirmarEliminarUsuario() {
   table {
     width: 100%;
   }
-}
-
-.administracion-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 700;
-  flex: 0 0 auto;
 }
 </style>
