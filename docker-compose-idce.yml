@@ -115,4 +115,4 @@ networks:
 
 volumes:
   landing_builder_data:
-
+    name: ${COMPOSE_PROJECT_NAME}-landing_builder_data

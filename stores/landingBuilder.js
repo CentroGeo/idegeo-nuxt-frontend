@@ -2,6 +2,26 @@ import { defineStore } from 'pinia';
 
 export const LIMITE_TARJETAS = 10;
 export const LIMITE_PAGINAS = 3;
+export const LIMITE_ENLACES_PIE = 6;
+export const LIMITE_REDES_SOCIALES_PIE = 6;
+
+// Identidad (logos, nombre, color, pie de página) de la página pública que se
+// está viendo, propia de esa página y por eso independiente del borrador del
+// constructor. Compartida por MainNavegacion.vue y MainPiePagina.vue para no
+// duplicar el fetch de la página que ambos necesitan.
+const IDENTIDAD_PUBLICA_VACIA = {
+  nombrePlataforma: '',
+  logoUrl: null,
+  logoSecundarioUrl: null,
+  logoTerceroUrl: null,
+  logoCuartoUrl: null,
+  colorTema: null,
+  piePagina: { texto: '', enlaces: [], redesSociales: [] },
+};
+
+function crearPiePaginaVacio() {
+  return { texto: '', enlaces: [], redesSociales: [] };
+}
 
 function crearTarjetaVacia() {
   return {
@@ -195,6 +215,8 @@ async function construirFormDataPagina(store, paginaId) {
     logoSecundarioRedirectUrl: store.logoSecundarioRedirectUrl || null,
     logoTerceroRedirectUrl: store.logoTerceroRedirectUrl || null,
     logoCuartoRedirectUrl: store.logoCuartoRedirectUrl || null,
+    colorTema: store.colorTema || null,
+    piePagina: store.piePagina,
   };
   formData.append('identidad', JSON.stringify(identidad));
 
@@ -228,6 +250,8 @@ function sincronizarIdentidadPublicada(store, paginas, paginaId) {
   store.logoSecundarioRedirectUrl = pagina.identidad.logoSecundarioRedirectUrl || null;
   store.logoTerceroRedirectUrl = pagina.identidad.logoTerceroRedirectUrl || null;
   store.logoCuartoRedirectUrl = pagina.identidad.logoCuartoRedirectUrl || null;
+  store.colorTema = pagina.identidad.colorTema || null;
+  store.piePagina = pagina.identidad.piePagina || crearPiePaginaVacio();
   store.logoFile = null;
   store.logoSecundarioFile = null;
   store.logoTerceroFile = null;
@@ -261,6 +285,12 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
     logoSecundarioRedirectUrl: ref(null),
     logoTerceroRedirectUrl: ref(null),
     logoCuartoRedirectUrl: ref(null),
+    colorTema: ref(null),
+    piePagina: ref(crearPiePaginaVacio()),
+    // Identidad de la página pública que se está viendo (fuera del modo
+    // constructor); ver comentario de IDENTIDAD_PUBLICA_VACIA arriba.
+    identidadPublica: ref({ ...IDENTIDAD_PUBLICA_VACIA }),
+    paginaInicioActiva: ref(false),
     tarjetas: ref([]),
     tarjetaImagenFiles: ref({}),
     secciones: ref([]),
@@ -450,6 +480,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoSecundarioRedirectUrl = identidad.logoSecundarioRedirectUrl || null;
       this.logoTerceroRedirectUrl = identidad.logoTerceroRedirectUrl || null;
       this.logoCuartoRedirectUrl = identidad.logoCuartoRedirectUrl || null;
+      this.colorTema = identidad.colorTema || null;
+      this.piePagina = identidad.piePagina || crearPiePaginaVacio();
       this.logoFile = null;
       this.logoSecundarioFile = null;
       this.logoTerceroFile = null;
@@ -469,6 +501,8 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       this.logoSecundarioRedirectUrl = null;
       this.logoTerceroRedirectUrl = null;
       this.logoCuartoRedirectUrl = null;
+      this.colorTema = null;
+      this.piePagina = crearPiePaginaVacio();
       this.logoFile = null;
       this.logoSecundarioFile = null;
       this.logoTerceroFile = null;
@@ -523,6 +557,69 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
         console.error('Error al renombrar la página:', err);
         this.error = 'No se pudo renombrar la página. Intenta de nuevo.';
       }
+    },
+
+    async cargarIdentidadPaginaActual(route) {
+      // Una página pública específica (/paginas/[slug]) siempre muestra su
+      // propia identidad, sin importar si es o no la página de inicio.
+      if (route.path.startsWith('/paginas/')) {
+        this.paginaInicioActiva = false;
+        try {
+          const pagina = await $fetch(`/api/landing-builder/paginas/${route.params.slug}`);
+          this.identidadPublica = pagina?.identidad
+            ? { ...IDENTIDAD_PUBLICA_VACIA, ...pagina.identidad }
+            : { ...IDENTIDAD_PUBLICA_VACIA };
+        } catch (err) {
+          console.error('Error al cargar la identidad de la página:', err);
+          this.identidadPublica = { ...IDENTIDAD_PUBLICA_VACIA };
+        }
+        return;
+      }
+
+      // Cualquier otra ruta del sitio (no solo "/"): si hay una página de
+      // inicio configurada, su identidad (header + footer) se usa como la
+      // identidad de todo el sitio, no solo de la portada.
+      try {
+        const pagina = await $fetch('/api/landing-builder/pagina-inicio');
+        this.identidadPublica = pagina?.identidad
+          ? { ...IDENTIDAD_PUBLICA_VACIA, ...pagina.identidad }
+          : { ...IDENTIDAD_PUBLICA_VACIA };
+        this.paginaInicioActiva = Boolean(pagina);
+      } catch (err) {
+        console.error('Error al cargar la identidad de la página de inicio:', err);
+        this.identidadPublica = { ...IDENTIDAD_PUBLICA_VACIA };
+        this.paginaInicioActiva = false;
+      }
+    },
+
+    puedeAgregarEnlacePie() {
+      return this.piePagina.enlaces.length < LIMITE_ENLACES_PIE;
+    },
+
+    agregarEnlacePie() {
+      if (!this.puedeAgregarEnlacePie()) return null;
+      const enlace = { id: crypto.randomUUID(), texto: '', url: '' };
+      this.piePagina.enlaces.push(enlace);
+      return enlace;
+    },
+
+    eliminarEnlacePie(id) {
+      this.piePagina.enlaces = this.piePagina.enlaces.filter((enlace) => enlace.id !== id);
+    },
+
+    puedeAgregarRedSocialPie() {
+      return this.piePagina.redesSociales.length < LIMITE_REDES_SOCIALES_PIE;
+    },
+
+    agregarRedSocialPie() {
+      if (!this.puedeAgregarRedSocialPie()) return null;
+      const red = { id: crypto.randomUUID(), red: 'facebook', url: '' };
+      this.piePagina.redesSociales.push(red);
+      return red;
+    },
+
+    eliminarRedSocialPie(id) {
+      this.piePagina.redesSociales = this.piePagina.redesSociales.filter((red) => red.id !== id);
     },
 
     puedeAgregarTarjeta() {
