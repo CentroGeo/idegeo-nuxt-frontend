@@ -295,7 +295,10 @@ const globoInformativo = computed(() => {
       </p>
 
       <div v-if="plotConfig?.ranges" class="mapa-indicador__leyenda">
+        <!-- `type` explícito: dentro del editor este mapa vive en un <form>, y un
+             botón sin tipo lo enviaría al plegar la leyenda. -->
         <button
+          type="button"
           class="mapa-indicador__leyenda-toggle"
           :aria-expanded="!leyendaMinimizada"
           @click="leyendaMinimizada = !leyendaMinimizada"

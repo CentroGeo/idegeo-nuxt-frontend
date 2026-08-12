@@ -244,47 +244,19 @@ const vistaConfigurada = computed(() => ({
 }));
 
 /**
- * Reencuadrar el mapa se pide con este contador, no se deduce de que la vista
- * haya cambiado: cuando es el propio mapa quien la dicta, remontarlo solo lo
- * devolvería donde ya está, parpadeando en cada arrastre.
+ * Reencuadrar el mapa se pide con este contador, y **solo** desde una edición
+ * manual de los campos de vista o desde el botón de restablecer.
+ *
+ * Deducirlo de que los valores cambiaron no funciona: el propio mapa los escribe
+ * al navegarlo, y también al cambiar de tamaño (mover el reparto dispara un
+ * `moveend`). Reencuadrar entonces lo devolvería donde ya está y, encadenado,
+ * degenera en remontes en cascada que dejan la interfaz sin responder.
  */
 const revisionVista = ref(0);
 
-/** Se espera a que el usuario termine de teclear antes de reencuadrar. */
-let temporizadorVista = null;
-function pedirReencuadre({ inmediato = false } = {}) {
-  clearTimeout(temporizadorVista);
-  if (inmediato) {
-    revisionVista.value += 1;
-    return;
-  }
-  temporizadorVista = setTimeout(() => {
-    revisionVista.value += 1;
-  }, 600);
+function pedirReencuadre() {
+  revisionVista.value += 1;
 }
-
-// Marca que el cambio de vista lo origino el mapa, para no reencuadrarlo por su
-// propio movimiento.
-let vistaDictadaPorElMapa = false;
-
-watch(
-  () => [
-    formulario.map_zoom,
-    formulario.map_center_lat,
-    formulario.map_center_long,
-    formulario.map_bbox_x0,
-    formulario.map_bbox_y0,
-    formulario.map_bbox_x1,
-    formulario.map_bbox_y1,
-  ],
-  () => {
-    if (vistaDictadaPorElMapa) {
-      vistaDictadaPorElMapa = false;
-      return;
-    }
-    pedirReencuadre();
-  }
-);
 
 /** Rampa efectiva (ya invertida si aplica) tal como la calculó el backend. */
 const swatches = computed(
@@ -374,14 +346,13 @@ const vistaTomadaDelMapa = ref(false);
  * prefiere centro+zoom y usa la extensión de respaldo.
  *
  * `MapaIndicador` ya descarta el eco que emite al montarse, así que aquí solo
- * llegan movimientos reales del usuario.
+ * llegan movimientos reales del usuario y ajustes de tamaño del propio mapa.
+ * Escribir estos campos nunca reencuadra: ver `revisionVista`.
  */
 function alMoverVista(evento) {
   if (!evento) return;
 
   const { centro, acercamiento, vista: vistaOl } = evento;
-
-  vistaDictadaPorElMapa = true;
 
   if (Array.isArray(centro) && centro.length >= 2) {
     formulario.map_center_long = Number(Number(centro[0]).toFixed(6));
@@ -413,7 +384,7 @@ function restablecerVista() {
   formulario.map_bbox_x1 = null;
   formulario.map_bbox_y1 = null;
   vistaTomadaDelMapa.value = false;
-  pedirReencuadre({ inmediato: true });
+  pedirReencuadre();
 }
 
 const tieneVistaPropia = computed(
@@ -489,18 +460,12 @@ watch(
   async (m) => {
     if (!m) return;
     await cargarDesdeIndicador();
-    // El mapa aún no existe: la carga inicial no necesita pedir reencuadre, solo
-    // no dejar programado uno de los cambios que acaba de hacer.
-    clearTimeout(temporizadorVista);
     m.abrir();
     if (configuracionCompleta.value) previsualizar();
   }
 );
 
-onBeforeUnmount(() => {
-  clearTimeout(temporizadorPreview);
-  clearTimeout(temporizadorVista);
-});
+onBeforeUnmount(() => clearTimeout(temporizadorPreview));
 
 // ─── Guardado ────────────────────────────────────────────────────────────────
 
@@ -870,6 +835,8 @@ async function recalcularColores(id, token) {
                 </div>
                 <div class="campo">
                   <label for="ind-zoom">Acercamiento (zoom)</label>
+                  <!-- `change` y no `input`: reencuadrar en cada tecla remontaría
+                       el mapa con valores a medio escribir. -->
                   <input
                     id="ind-zoom"
                     v-model.number="formulario.map_zoom"
@@ -878,6 +845,7 @@ async function recalcularColores(id, token) {
                     min="1"
                     max="20"
                     placeholder="Automático"
+                    @change="pedirReencuadre"
                   />
                 </div>
               </div>
@@ -890,6 +858,7 @@ async function recalcularColores(id, token) {
                     type="number"
                     step="0.000001"
                     placeholder="Automático"
+                    @change="pedirReencuadre"
                   />
                 </div>
                 <div class="campo">
@@ -900,6 +869,7 @@ async function recalcularColores(id, token) {
                     type="number"
                     step="0.000001"
                     placeholder="Automático"
+                    @change="pedirReencuadre"
                   />
                 </div>
               </div>
