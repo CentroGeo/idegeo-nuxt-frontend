@@ -188,7 +188,12 @@ watch(
     display: grid;
     // El reparto lo fija el indicador (variables inline); 65/35 es el respaldo.
     // Se expresa en `fr` y no en `%` para que el `gap` no desborde el contenedor.
-    grid-template-columns: var(--map-panel, 65fr) var(--plot-panel, 35fr);
+    // El `minmax(0, …)` no es opcional: un `fr` a secas nunca baja del ancho
+    // mínimo del contenido, y la gráfica no se deja encoger, así que se quedaba
+    // con el espacio y el mapa recibía las sobras sin importar el porcentaje.
+    grid-template-columns:
+      minmax(0, var(--map-panel, 65fr))
+      minmax(0, var(--plot-panel, 35fr));
     gap: 1rem;
     margin-top: 1rem;
     background: var(--tablero-interface-bg, #ffffff);
@@ -199,6 +204,14 @@ watch(
     @media (max-width: 960px) {
       grid-template-columns: 1fr;
     }
+  }
+
+  // Sin esto, el contenido de cada celda vuelve a imponer su ancho mínimo y
+  // deshace el reparto que fijan las columnas.
+  &__mapa,
+  &__grafica {
+    min-width: 0;
+    overflow: hidden;
   }
 
   &__grafica {

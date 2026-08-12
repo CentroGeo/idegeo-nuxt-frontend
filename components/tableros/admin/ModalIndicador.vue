@@ -1006,13 +1006,16 @@ async function recalcularColores(id, token) {
                     :aria-valuetext="`Mapa ${formulario.map_panel} por ciento`"
                     @input="alCambiarReparto($event.target.value)"
                   />
+                  <!-- Etiqueta verbal, no numérica: un "65 / 35" junto a las
+                       cifras actuales se lee como un segundo valor en conflicto. -->
                   <button
                     type="button"
                     class="boton boton-chico boton-secundario"
+                    title="Volver al reparto por defecto (65 / 35)"
                     :disabled="formulario.map_panel === MAP_PANEL_DEFAULT"
                     @click="restablecerReparto"
                   >
-                    65 / 35
+                    Restablecer
                   </button>
                 </div>
                 <p class="formulario-ayuda">
