@@ -504,6 +504,9 @@ function eliminarLogo4() {
       </li>
       <li v-if="mostrarGeocontenidos && status === 'authenticated'">
         <NuxtLink class="nav-hipervinculo" to="/geocontenidos">Geocontenidos</NuxtLink>
+      </li>   
+      <li v-if="status === 'authenticated' && esAdmin">
+        <NuxtLink class="nav-hipervinculo" to="/administracion">Administración</NuxtLink>
       </li>
       <li v-if="mostrarAcercaDe">
         <NuxtLink class="nav-hipervinculo" to="/acerca-de">Acerca de</NuxtLink>
