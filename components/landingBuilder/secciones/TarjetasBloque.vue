@@ -4,6 +4,7 @@ import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/S
 import ModalCambiarImagenTarjeta from '~/components/landingBuilder/ModalCambiarImagenTarjeta.vue';
 
 const store = useLandingBuilderStore();
+const { sanitizarHtmlEnriquecido, htmlEstaVacio } = useTextoEnriquecido();
 
 const props = defineProps({
   seccionId: { type: String, required: true },
@@ -12,23 +13,41 @@ const props = defineProps({
 const modalCambiarImagen = ref(null);
 const modalEnlace = ref(null);
 
+// Foco activo (título o descripción de alguna tarjeta) para poder aplicar
+// document.execCommand con negrita/lista/alineación/tamaño sobre la
+// selección actual, en vez de a todo el bloque.
+const focoActivo = ref(null);
+const negritaActiva = ref(false);
+const listaActiva = ref(false);
+const alineacionActiva = ref('left');
+const tamanoActivo = ref('grande');
+
+// document.execCommand('fontSize') solo soporta la escala legada 1-7 vía
+// <font size="N">; se usa como mecanismo (con estilos propios en CSS) porque
+// es lo único que aplica de forma nativa y confiable a la selección actual.
+// Título y descripción tienen escalas de tamaño con nombres distintos.
+const TAMANO_TITULO_A_LEGADO = { pequeno: '3', mediano: '4', grande: '5', 'extra-grande': '6' };
+const LEGADO_A_TAMANO_TITULO = { 3: 'pequeno', 4: 'mediano', 5: 'grande', 6: 'extra-grande' };
+const TAMANO_DESCRIPCION_A_LEGADO = { pequeno: '3', normal: '4', mediano: '5', grande: '6' };
+const LEGADO_A_TAMANO_DESCRIPCION = { 3: 'pequeno', 4: 'normal', 5: 'mediano', 6: 'grande' };
+
+const COMANDOS_ALINEACION = {
+  left: 'justifyLeft',
+  center: 'justifyCenter',
+  right: 'justifyRight',
+  justify: 'justifyFull',
+};
+
 const indiceTarjetaEdicion = ref(-1);
 const indiceTarjetaArrastrada = ref(-1);
 const indiceTarjetaSobre = ref(-1);
 
-const tamanosTitulo = {
-  pequeno: '1.125rem',
-  mediano: '1.25rem',
-  grande: '1.5rem',
-  'extra-grande': '1.875rem',
-};
-
-const tamanosParrafo = {
-  pequeno: '0.8125rem',
-  normal: '0.875rem',
-  mediano: '1rem',
-  grande: '1.125rem',
-};
+// Mientras el color siga en el blanco por defecto, se deja que el texto se
+// adapte al tema claro/oscuro; solo se respeta un color explícito elegido
+// por la persona usuaria (mismo criterio que RenderizadorBloques.vue).
+function colorTextoResuelto(color) {
+  return color && color !== '#FFFFFF' ? color : 'var(--texto-primario)';
+}
 
 // Estados para el modal de configuración de hipervínculo
 const tarjetaEnlaceIndex = ref(-1);
@@ -49,17 +68,13 @@ watch(
   (nuevasTarjetas) => {
     if (nuevasTarjetas) {
       nuevasTarjetas.forEach((t) => {
-        if (t.tituloNegrita === undefined) t.tituloNegrita = false;
-        if (t.tituloTamano === undefined || t.tituloTamano === 'normal') t.tituloTamano = 'grande';
-        if (t.tituloAlineacion === undefined) t.tituloAlineacion = 'left';
         if (t.tituloColor === undefined || t.tituloColor === 'inherit') t.tituloColor = '#FFFFFF';
 
-        if (t.descripcionNegrita === undefined) t.descripcionNegrita = false;
-        if (t.descripcionTamano === undefined || t.descripcionTamano === 'grande')
-          t.descripcionTamano = 'normal';
-        if (t.descripcionAlineacion === undefined) t.descripcionAlineacion = 'left';
         if (t.descripcionColor === undefined || t.descripcionColor === 'inherit')
           t.descripcionColor = '#FFFFFF';
+
+        if (!t.imagenTipo) t.imagenTipo = 'imagen';
+        if (!t.imagenPosicion) t.imagenPosicion = { x: 50, y: 50 };
       });
     }
   },
@@ -94,17 +109,13 @@ function agregarTarjeta() {
     titulo: '',
     descripcion: '',
     imagenUrl: '/inicio/tarjeta_visualiza.png',
+    imagenTipo: 'imagen',
+    imagenPosicion: { x: 50, y: 50 },
     orientacion: esHorizontal ? 'horizontal-derecha' : 'vertical-abajo',
     tituloTipo: 'h2',
-    tituloAlineacion: 'left',
     tituloColor: '#FFFFFF',
-    tituloNegrita: false,
-    tituloTamano: 'grande',
     descripcionTipo: 'p',
-    descripcionAlineacion: 'left',
     descripcionColor: '#FFFFFF',
-    descripcionNegrita: false,
-    descripcionTamano: 'normal',
     botonTexto: '',
     botonUrl: '',
   });
@@ -151,9 +162,11 @@ function manejarSeleccionarArchivo(archivo) {
   }
   tarjeta.imagenFile = archivo;
   tarjeta.imagenUrl = URL.createObjectURL(archivo);
+  tarjeta.imagenTipo = archivo.type.startsWith('video/') ? 'video' : 'imagen';
+  tarjeta.imagenPosicion = { x: 50, y: 50 };
 }
 
-function manejarSeleccionarEnlace(url) {
+function manejarSeleccionarEnlace({ url, tipo }) {
   if (!url || indiceTarjetaEdicion.value === -1) return;
 
   const tarjeta = props.datos.tarjetas[indiceTarjetaEdicion.value];
@@ -162,23 +175,201 @@ function manejarSeleccionarEnlace(url) {
   }
   tarjeta.imagenFile = null;
   tarjeta.imagenUrl = url;
+  tarjeta.imagenTipo = tipo === 'video' ? 'video' : 'imagen';
+  tarjeta.imagenPosicion = { x: 50, y: 50 };
+}
+
+// Reposicionamiento de la imagen de una tarjeta (mismo patrón de arrastre
+// que PortadaEditor.vue, pero acotado a un índice de tarjeta a la vez
+// porque puede haber varias tarjetas en el mismo bloque).
+const indiceTarjetaReposicionando = ref(-1);
+const arrastrandoImagenTarjeta = ref(false);
+const inicioArrastreTarjeta = ref({ punteroX: 0, punteroY: 0, posicionX: 50, posicionY: 50 });
+const posicionTarjetaGuardada = ref({ x: 50, y: 50 });
+
+function limitarValor(valor, minimo, maximo) {
+  return Math.min(Math.max(valor, minimo), maximo);
+}
+
+function estiloImagenTarjeta(tarjeta) {
+  const posicion = tarjeta.imagenPosicion || { x: 50, y: 50 };
+  return {
+    objectPosition: `${posicion.x}% ${posicion.y}%`,
+  };
+}
+
+function iniciarReposicionTarjeta(idx) {
+  const tarjeta = props.datos.tarjetas[idx];
+  posicionTarjetaGuardada.value = { ...(tarjeta.imagenPosicion || { x: 50, y: 50 }) };
+  indiceTarjetaReposicionando.value = idx;
+}
+
+function iniciarArrastreImagenTarjeta(idx, event) {
+  if (indiceTarjetaReposicionando.value !== idx) return;
+
+  event.preventDefault();
+
+  const tarjeta = props.datos.tarjetas[idx];
+  arrastrandoImagenTarjeta.value = true;
+  inicioArrastreTarjeta.value = {
+    punteroX: event.clientX,
+    punteroY: event.clientY,
+    posicionX: tarjeta.imagenPosicion?.x ?? 50,
+    posicionY: tarjeta.imagenPosicion?.y ?? 50,
+  };
+
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+}
+
+function moverImagenTarjeta(idx, event) {
+  if (indiceTarjetaReposicionando.value !== idx || !arrastrandoImagenTarjeta.value) return;
+
+  event.preventDefault();
+
+  const contenedor = event.currentTarget?.getBoundingClientRect();
+  if (!contenedor?.width || !contenedor?.height) return;
+
+  const desplazamientoX = event.clientX - inicioArrastreTarjeta.value.punteroX;
+  const desplazamientoY = event.clientY - inicioArrastreTarjeta.value.punteroY;
+
+  props.datos.tarjetas[idx].imagenPosicion = {
+    x: limitarValor(
+      inicioArrastreTarjeta.value.posicionX - (desplazamientoX / contenedor.width) * 100,
+      0,
+      100
+    ),
+    y: limitarValor(
+      inicioArrastreTarjeta.value.posicionY - (desplazamientoY / contenedor.height) * 100,
+      0,
+      100
+    ),
+  };
+}
+
+function terminarArrastreImagenTarjeta(event) {
+  if (!arrastrandoImagenTarjeta.value) return;
+
+  arrastrandoImagenTarjeta.value = false;
+
+  if (event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+}
+
+function guardarPosicionTarjeta() {
+  indiceTarjetaReposicionando.value = -1;
+  arrastrandoImagenTarjeta.value = false;
+}
+
+function cancelarReposicionTarjeta(idx) {
+  props.datos.tarjetas[idx].imagenPosicion = { ...posicionTarjetaGuardada.value };
+  indiceTarjetaReposicionando.value = -1;
+  arrastrandoImagenTarjeta.value = false;
 }
 
 function registrarTitulo(elemento, tarjeta) {
   if (elemento) {
-    if (document.activeElement !== elemento && elemento.textContent !== tarjeta.titulo) {
-      elemento.textContent = tarjeta.titulo;
+    if (document.activeElement !== elemento && elemento.innerHTML !== (tarjeta.titulo || '')) {
+      elemento.innerHTML = tarjeta.titulo || '';
     }
   }
 }
 
 function registrarDescripcion(elemento, tarjeta) {
   if (elemento) {
-    if (document.activeElement !== elemento && elemento.textContent !== tarjeta.descripcion) {
-      elemento.textContent = tarjeta.descripcion;
+    if (document.activeElement !== elemento && elemento.innerHTML !== (tarjeta.descripcion || '')) {
+      elemento.innerHTML = tarjeta.descripcion || '';
     }
   }
 }
+
+function registrarFoco(tarjeta, campo, event) {
+  focoActivo.value = { tarjeta, campo, elemento: event.target };
+  actualizarEstadoFormato();
+}
+
+function limpiarFoco(event) {
+  if (focoActivo.value?.elemento === event.target) {
+    focoActivo.value = null;
+    negritaActiva.value = false;
+    listaActiva.value = false;
+  }
+}
+
+function esFocoDe(tarjeta, campo) {
+  return focoActivo.value?.tarjeta === tarjeta && focoActivo.value?.campo === campo;
+}
+
+function calcularAlineacionActiva() {
+  if (document.queryCommandState('justifyCenter')) return 'center';
+  if (document.queryCommandState('justifyRight')) return 'right';
+  if (document.queryCommandState('justifyFull')) return 'justify';
+  return 'left';
+}
+
+function actualizarEstadoFormato() {
+  const activo = Boolean(focoActivo.value) && document.activeElement === focoActivo.value.elemento;
+  negritaActiva.value = activo && document.queryCommandState('bold');
+  listaActiva.value = activo && document.queryCommandState('insertUnorderedList');
+  alineacionActiva.value = activo ? calcularAlineacionActiva() : 'left';
+
+  if (activo) {
+    const esTitulo = focoActivo.value.campo === 'titulo';
+    const mapaLegado = esTitulo ? LEGADO_A_TAMANO_TITULO : LEGADO_A_TAMANO_DESCRIPCION;
+    tamanoActivo.value =
+      mapaLegado[document.queryCommandValue('fontSize')] || (esTitulo ? 'grande' : 'normal');
+  }
+}
+
+function guardarCampoDesdeElemento({ tarjeta, campo, elemento }) {
+  tarjeta[campo] = sanitizarHtmlEnriquecido(elemento.innerHTML).trim();
+}
+
+function alternarNegrita() {
+  if (!focoActivo.value) return;
+  focoActivo.value.elemento.focus();
+  document.execCommand('bold');
+  guardarCampoDesdeElemento(focoActivo.value);
+  actualizarEstadoFormato();
+}
+
+function alternarLista() {
+  if (!focoActivo.value) return;
+  focoActivo.value.elemento.focus();
+  document.execCommand('insertUnorderedList');
+  guardarCampoDesdeElemento(focoActivo.value);
+  actualizarEstadoFormato();
+}
+
+function cambiarAlineacion(alineacion) {
+  if (!focoActivo.value) return;
+  focoActivo.value.elemento.focus();
+  document.execCommand(COMANDOS_ALINEACION[alineacion] || 'justifyLeft');
+  guardarCampoDesdeElemento(focoActivo.value);
+  actualizarEstadoFormato();
+}
+
+function cambiarTamano(tamano) {
+  if (!focoActivo.value) return;
+  const esTitulo = focoActivo.value.campo === 'titulo';
+  const mapaLegado = esTitulo ? TAMANO_TITULO_A_LEGADO : TAMANO_DESCRIPCION_A_LEGADO;
+  focoActivo.value.elemento.focus();
+  document.execCommand('fontSize', false, mapaLegado[tamano] || '4');
+  guardarCampoDesdeElemento(focoActivo.value);
+  actualizarEstadoFormato();
+}
+
+onMounted(() => {
+  // Fuerza que negritas/etc. produzcan etiquetas semánticas (<b>) en vez de
+  // `style` inline; el saneador solo conserva <b> y no atributos de estilo
+  // arbitrarios, así que sin esto la negrita se perdía al guardar.
+  document.execCommand('styleWithCSS', false, false);
+  document.addEventListener('selectionchange', actualizarEstadoFormato);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('selectionchange', actualizarEstadoFormato);
+});
 
 // Métodos para abrir el modal de configuración de hipervínculo
 function abrirModalEnlace(idx) {
@@ -231,10 +422,13 @@ function evitarExcesoTexto(limite, event) {
 }
 
 function manejarInput(limite, event, tarjeta, campo) {
-  let texto = event.target.textContent || '';
-  if (texto.length > limite) {
-    texto = texto.slice(0, limite);
-    event.target.textContent = texto;
+  const textoVisible = event.target.textContent || '';
+
+  if (textoVisible.length > limite) {
+    // Resguardo simple: al exceder el límite se trunca a texto plano (se
+    // pierde el formato de esa última pulsación, pero evita que el bloque
+    // crezca sin control).
+    event.target.textContent = textoVisible.slice(0, limite);
 
     // Colocar el cursor al final del contenido
     const range = document.createRange();
@@ -244,7 +438,8 @@ function manejarInput(limite, event, tarjeta, campo) {
     sel.removeAllRanges();
     sel.addRange(range);
   }
-  tarjeta[campo] = texto;
+
+  tarjeta[campo] = sanitizarHtmlEnriquecido(event.target.innerHTML);
 }
 </script>
 
@@ -310,13 +505,37 @@ function manejarInput(limite, event, tarjeta, campo) {
                 'tarjeta-dragover': indiceTarjetaSobre === idx && indiceTarjetaArrastrada !== idx,
               }"
             >
-              <div class="tarjeta-imagen-wrapper">
+              <div
+                class="tarjeta-imagen-wrapper"
+                :class="{
+                  'tarjeta-imagen-wrapper--reposicionando': indiceTarjetaReposicionando === idx,
+                }"
+                @pointerdown="iniciarArrastreImagenTarjeta(idx, $event)"
+                @pointermove="moverImagenTarjeta(idx, $event)"
+                @pointerup="terminarArrastreImagenTarjeta"
+                @pointercancel="terminarArrastreImagenTarjeta"
+              >
+                <video
+                  v-if="tarjeta.imagenTipo === 'video'"
+                  class="tarjeta-imagen"
+                  :style="estiloImagenTarjeta(tarjeta)"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                >
+                  <source :src="store.resolverUrlImagen(tarjeta.imagenUrl)" type="video/mp4" />
+                </video>
                 <img
+                  v-else
                   :src="store.resolverUrlImagen(tarjeta.imagenUrl)"
                   class="tarjeta-imagen"
+                  :style="estiloImagenTarjeta(tarjeta)"
                   alt=""
+                  draggable="false"
                 />
                 <div
+                  v-if="indiceTarjetaReposicionando !== idx"
                   class="tarjeta-imagen-overlay flex flex-column align-items-center justify-content-center flex-gap-2"
                 >
                   <button
@@ -326,6 +545,14 @@ function manejarInput(limite, event, tarjeta, campo) {
                   >
                     <span class="pictograma-editar m-r-1" aria-hidden="true"></span>
                     <span>Editar Imagen</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="boton-secundario boton-chico boton-imagen-cambiar"
+                    @click.stop="iniciarReposicionTarjeta(idx)"
+                  >
+                    <span>Reposicionar</span>
                   </button>
 
                   <!-- Selector Acotado de Orientación por Tarjeta (Condicional según disposición global) -->
@@ -385,23 +612,40 @@ function manejarInput(limite, event, tarjeta, campo) {
                     </div>
                   </div>
                 </div>
+
+                <div v-else class="tarjeta-imagen-overlay-reposicion" @click.stop>
+                  <p class="tarjeta-imagen-ayuda-reposicion">Arrastra la imagen para moverla</p>
+
+                  <div class="flex flex-gap-1">
+                    <button
+                      type="button"
+                      class="boton-secundario boton-chico boton-imagen-cambiar"
+                      @click="guardarPosicionTarjeta"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      class="boton-secundario boton-chico boton-imagen-cambiar"
+                      @click="cancelarReposicionTarjeta(idx)"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div class="tarjeta-cuerpo flex flex-column">
                 <div class="editable-texto-seccion">
                   <LandingBuilderBarraHerramientasTexto
                     tipo="titulo"
-                    :negrita="Boolean(tarjeta.tituloNegrita)"
-                    :alineacion="tarjeta.tituloAlineacion || 'left'"
-                    :tamano="
-                      !tarjeta.tituloTamano || tarjeta.tituloTamano === 'normal'
-                        ? 'grande'
-                        : tarjeta.tituloTamano
-                    "
+                    :negrita="esFocoDe(tarjeta, 'titulo') && negritaActiva"
+                    :alineacion="esFocoDe(tarjeta, 'titulo') ? alineacionActiva : 'left'"
+                    :tamano="esFocoDe(tarjeta, 'titulo') ? tamanoActivo : 'grande'"
                     :color="tarjeta.tituloColor || '#FFFFFF'"
-                    @update:negrita="tarjeta.tituloNegrita = $event"
-                    @update:alineacion="tarjeta.tituloAlineacion = $event"
-                    @update:tamano="tarjeta.tituloTamano = $event"
+                    @update:negrita="alternarNegrita"
+                    @update:alineacion="cambiarAlineacion"
+                    @update:tamano="cambiarTamano"
                     @update:color="tarjeta.tituloColor = $event"
                   />
 
@@ -409,19 +653,22 @@ function manejarInput(limite, event, tarjeta, campo) {
                     :ref="(el) => registrarTitulo(el, tarjeta)"
                     class="input-tarjeta-titulo tarjeta-titulo"
                     :class="{
-                      'is-empty': !tarjeta.titulo || tarjeta.titulo.trim() === '',
+                      'is-empty': htmlEstaVacio(tarjeta.titulo),
                     }"
                     :style="{
-                      textAlign: tarjeta.tituloAlineacion || 'left',
-                      color: tarjeta.tituloColor || 'inherit',
-                      fontWeight: tarjeta.tituloNegrita ? '700' : '400',
-                      fontSize: tamanosTitulo[tarjeta.tituloTamano] || '1.375rem',
+                      color: colorTextoResuelto(tarjeta.tituloColor),
                     }"
                     contenteditable="true"
                     data-placeholder="Título de la tarjeta..."
                     @keydown="evitarExcesoTexto(70, $event)"
                     @input="manejarInput(70, $event, tarjeta, 'titulo')"
-                    @blur="tarjeta.titulo = $event.target.textContent.trim() || ''"
+                    @focus="registrarFoco(tarjeta, 'titulo', $event)"
+                    @blur="
+                      (e) => {
+                        tarjeta.titulo = sanitizarHtmlEnriquecido(e.target.innerHTML).trim();
+                        limpiarFoco(e);
+                      }
+                    "
                     @keydown.enter.prevent
                   />
                 </div>
@@ -429,37 +676,40 @@ function manejarInput(limite, event, tarjeta, campo) {
                 <div class="editable-texto-seccion">
                   <LandingBuilderBarraHerramientasTexto
                     tipo="parrafo"
-                    :negrita="Boolean(tarjeta.descripcionNegrita)"
-                    :alineacion="tarjeta.descripcionAlineacion || 'left'"
-                    :tamano="
-                      !tarjeta.descripcionTamano || tarjeta.descripcionTamano === 'grande'
-                        ? 'normal'
-                        : tarjeta.descripcionTamano
+                    :negrita="esFocoDe(tarjeta, 'descripcion') && negritaActiva"
+                    :alineacion="esFocoDe(tarjeta, 'descripcion') ? alineacionActiva : 'left'"
+                    :tamano="esFocoDe(tarjeta, 'descripcion') ? tamanoActivo : 'normal'"
+                    :tipo-lista="
+                      esFocoDe(tarjeta, 'descripcion') && listaActiva ? 'vinetas' : 'ninguna'
                     "
                     :color="tarjeta.descripcionColor || '#FFFFFF'"
-                    @update:negrita="tarjeta.descripcionNegrita = $event"
-                    @update:alineacion="tarjeta.descripcionAlineacion = $event"
-                    @update:tamano="tarjeta.descripcionTamano = $event"
+                    @update:negrita="alternarNegrita"
+                    @update:alineacion="cambiarAlineacion"
+                    @update:tamano="cambiarTamano"
+                    @update:tipo-lista="alternarLista"
                     @update:color="tarjeta.descripcionColor = $event"
                   />
 
-                  <p
+                  <div
                     :ref="(el) => registrarDescripcion(el, tarjeta)"
                     class="textarea-tarjeta-desc tarjeta-descripcion"
                     :class="{
-                      'is-empty': !tarjeta.descripcion || tarjeta.descripcion.trim() === '',
+                      'is-empty': htmlEstaVacio(tarjeta.descripcion),
                     }"
                     :style="{
-                      textAlign: tarjeta.descripcionAlineacion || 'left',
-                      color: tarjeta.descripcionColor || 'inherit',
-                      fontWeight: tarjeta.descripcionNegrita ? '700' : '400',
-                      fontSize: tamanosParrafo[tarjeta.descripcionTamano] || '0.875rem',
+                      color: colorTextoResuelto(tarjeta.descripcionColor),
                     }"
                     contenteditable="true"
                     data-placeholder="Descripción de la tarjeta..."
                     @keydown="evitarExcesoTexto(450, $event)"
                     @input="manejarInput(450, $event, tarjeta, 'descripcion')"
-                    @blur="tarjeta.descripcion = $event.target.textContent.trim() || ''"
+                    @focus="registrarFoco(tarjeta, 'descripcion', $event)"
+                    @blur="
+                      (e) => {
+                        tarjeta.descripcion = sanitizarHtmlEnriquecido(e.target.innerHTML).trim();
+                        limpiarFoco(e);
+                      }
+                    "
                   />
                 </div>
 
@@ -794,6 +1044,41 @@ function manejarInput(limite, event, tarjeta, campo) {
   box-sizing: border-box;
 }
 
+.tarjeta-imagen-wrapper--reposicionando {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  img {
+    transition: none;
+  }
+}
+
+.tarjeta-imagen-overlay-reposicion {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0) 60%);
+  z-index: 10;
+  box-sizing: border-box;
+  cursor: default;
+}
+
+.tarjeta-imagen-ayuda-reposicion {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 .boton-imagen-cambiar {
   background: var(--color-neutro-0, #ffffff) !important;
   color: var(--color-primario-2, rgb(105 28 50)) !important;
@@ -914,6 +1199,8 @@ function manejarInput(limite, event, tarjeta, campo) {
   border-radius: 8px !important;
   font-family: var(--tipografia-familia, inherit);
   color: var(--campo-color, inherit);
+  font-size: 1.5rem;
+  text-align: left;
   transition:
     border-color 0.2s,
     background-color 0.2s,
@@ -940,6 +1227,30 @@ function manejarInput(limite, event, tarjeta, campo) {
     pointer-events: none;
     display: inline-block;
   }
+
+  :deep(font[size='3']) {
+    font-size: 1.125rem;
+  }
+
+  :deep(font[size='4']) {
+    font-size: 1.25rem;
+  }
+
+  :deep(font[size='5']) {
+    font-size: 1.5rem;
+  }
+
+  :deep(font[size='6']) {
+    font-size: 1.875rem;
+  }
+
+  // sisdai-css define b/strong con font-weight: 500, pero la tipografía
+  // real no tiene esa variante y el navegador cae a 400 (se ve igual que
+  // el texto normal); se fuerza 700 para que la negrita sea visible.
+  :deep(b),
+  :deep(strong) {
+    font-weight: 700;
+  }
 }
 
 .textarea-tarjeta-desc {
@@ -953,12 +1264,13 @@ function manejarInput(limite, event, tarjeta, campo) {
   font-family: var(--tipografia-familia, inherit);
   line-height: 1.4;
   color: var(--campo-color, inherit);
+  font-size: 0.875rem;
+  text-align: left;
   transition:
     border-color 0.2s,
     background-color 0.2s,
     box-shadow 0.2s;
   outline: none;
-  white-space: pre-wrap;
   word-break: break-word;
 
   &:hover {
@@ -980,6 +1292,35 @@ function manejarInput(limite, event, tarjeta, campo) {
     opacity: 1;
     pointer-events: none;
     display: inline-block;
+  }
+
+  :deep(ul) {
+    margin: 0.4em 0;
+    padding-left: 1.5rem;
+  }
+
+  :deep(font[size='3']) {
+    font-size: 0.8125rem;
+  }
+
+  :deep(font[size='4']) {
+    font-size: 0.875rem;
+  }
+
+  :deep(font[size='5']) {
+    font-size: 1rem;
+  }
+
+  :deep(font[size='6']) {
+    font-size: 1.125rem;
+  }
+
+  // sisdai-css define b/strong con font-weight: 500, pero la tipografía
+  // real no tiene esa variante y el navegador cae a 400 (se ve igual que
+  // el texto normal); se fuerza 700 para que la negrita sea visible.
+  :deep(b),
+  :deep(strong) {
+    font-weight: 700;
   }
 }
 
@@ -1031,7 +1372,7 @@ function manejarInput(limite, event, tarjeta, campo) {
 
   .tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
+    height: 240px;
     border-radius: 8px 8px 0 0;
   }
 }
@@ -1041,7 +1382,7 @@ function manejarInput(limite, event, tarjeta, campo) {
 
   .tarjeta-imagen-wrapper {
     width: 100%;
-    height: 160px;
+    height: 240px;
     border-radius: 0 0 8px 8px;
   }
 }

@@ -1,4 +1,6 @@
 <script setup>
+import { PALETAS, codificarPaleta, decodificarPaleta } from '~/utils/tableros/paletas';
+
 const props = defineProps({
   indicador: {
     type: Object,
@@ -9,82 +11,12 @@ const props = defineProps({
 const emit = defineEmits(['guardado', 'cerrar']);
 
 const { data: userData } = useAuth();
-const { actualizarIndicador } = useTableroApi();
+const { actualizarIndicador, recalcularIndicador } = useTableroApi();
 
 const modal = ref(null);
 const guardando = ref(false);
+const recalculando = ref(false);
 const error = ref('');
-
-const PALETAS = [
-  {
-    group: 'Azules',
-    options: [
-      { value: 'azules', label: 'Azules' },
-      { value: 'azules_2', label: 'Azules 2' },
-      { value: 'azules_3', label: 'Azules 3' },
-      { value: 'azules_4', label: 'Azules 4' },
-      { value: 'azules_5', label: 'Azules 5' },
-    ],
-  },
-  {
-    group: 'Verdes',
-    options: [
-      { value: 'verdes', label: 'Verdes' },
-      { value: 'verdes_2', label: 'Verdes 2' },
-      { value: 'verdes_3', label: 'Verdes 3' },
-      { value: 'verdes_4', label: 'Verdes 4' },
-      { value: 'verdes_5', label: 'Verdes 5' },
-      { value: 'verdes_6', label: 'Verdes 6' },
-    ],
-  },
-  {
-    group: 'Cafés / naranjas',
-    options: [
-      { value: 'cafes', label: 'Cafés' },
-      { value: 'cafes_2', label: 'Cafés 2' },
-      { value: 'cafes_3', label: 'Cafés 3' },
-      { value: 'naranjas', label: 'Naranjas' },
-    ],
-  },
-  {
-    group: 'Morados / rosas',
-    options: [
-      { value: 'morados', label: 'Morados' },
-      { value: 'morados_2', label: 'Morados 2' },
-      { value: 'rosas', label: 'Rosas' },
-    ],
-  },
-  {
-    group: 'Divergentes',
-    options: [
-      { value: 'cafes_verdes', label: 'Café ↔ Verde' },
-      { value: 'naranja_azul', label: 'Naranja ↔ Azul' },
-      { value: 'rosa_verde', label: 'Rosa ↔ Verde' },
-    ],
-  },
-  {
-    group: 'Semáforo',
-    options: [
-      { value: 'semaforo', label: 'Semáforo' },
-      { value: 'semaforo_2', label: 'Semáforo 2' },
-      { value: 'semaforo_3', label: 'Semáforo 3 tonos' },
-      { value: 'semaforo_4', label: 'Semáforo 4 (invertido)' },
-      { value: 'semaforo_5', label: 'Semáforo 5 (intenso, invertido)' },
-      { value: 'semaforo_6', label: 'Semáforo 6 (3 colores)' },
-      { value: 'semaforo_7', label: 'Semáforo 7 (5 pasos)' },
-      { value: 'semaforo_8', label: 'Semáforo 8 (5 pasos)' },
-    ],
-  },
-  {
-    group: 'Otras',
-    options: [
-      { value: 'grises', label: 'Grises' },
-      { value: 'varios', label: 'Multicolor' },
-      { value: 'varios_2', label: 'Multicolor 2' },
-      { value: 'varios_3', label: 'Multicolor 3' },
-    ],
-  },
-];
 
 const TIPOS_GRAFICA = [
   {
@@ -148,9 +80,9 @@ function cargarDesdeIndicador() {
   formulario.name = props.indicador.name || '';
   formulario.info_text = props.indicador.info_text || '';
   formulario.plot_type = props.indicador.plot_type || 'bar';
-  const rawColors = props.indicador.colors || 'azules_3';
-  formulario.reverse_colors = rawColors.endsWith('_r');
-  formulario.colors = formulario.reverse_colors ? rawColors.slice(0, -2) : rawColors;
+  const paleta = decodificarPaleta(props.indicador.colors);
+  formulario.colors = paleta.base;
+  formulario.reverse_colors = paleta.invertida;
   const rawMethod = props.indicador.category_method || 'quantil';
   formulario.category_method = METODOS_LEGADO[rawMethod] || rawMethod;
   formulario.field_category = props.indicador.field_category ?? 5;
@@ -166,22 +98,45 @@ watch(
       cargarDesdeIndicador();
       m.abrir();
     }
-  },
-  { once: true }
+  }
 );
+
+/**
+ * Los colores que se pintan no salen de `colors`: viven ya materializados como hex en
+ * `plot_config.ranges[].color` y `map_values[fid].color`. Cambiar la paleta, invertirla o
+ * ajustar la clasificación solo los regenera si además se recalcula el indicador; de lo
+ * contrario quedan los hex anteriores y el mapa cae a sus grises de respaldo.
+ */
+function requiereRecalculo(colorsValue) {
+  const original = props.indicador;
+  const metodoOriginal = METODOS_LEGADO[original.category_method] || original.category_method;
+
+  return (
+    colorsValue !== original.colors ||
+    formulario.category_method !== (metodoOriginal || 'quantil') ||
+    Number(formulario.field_category) !== Number(original.field_category ?? 5) ||
+    formulario.use_single_field !== (original.use_single_field ?? true) ||
+    Boolean(original.use_custom_colors)
+  );
+}
 
 async function guardar() {
   error.value = '';
   guardando.value = true;
   try {
     const token = userData.value?.accessToken;
-    const colorsValue = formulario.reverse_colors ? `${formulario.colors}_r` : formulario.colors;
+    const colorsValue = codificarPaleta(formulario.colors, formulario.reverse_colors);
+    const recalcular = requiereRecalculo(colorsValue);
 
     const payload = {
       name: formulario.name,
       info_text: formulario.info_text,
       plot_type: formulario.plot_type,
       colors: colorsValue,
+      // Si hay `custom_colors`, el backend ignora por completo la paleta seleccionada.
+      // Elegir paleta aquí es una decisión explícita, así que se descartan.
+      use_custom_colors: false,
+      custom_colors: '',
       category_method: formulario.category_method,
       field_category: formulario.field_category,
       use_single_field: formulario.use_single_field,
@@ -190,28 +145,52 @@ async function guardar() {
     };
 
     const data = await actualizarIndicador(props.indicador.id, payload, token);
-    if (data?.id) {
-      emit('guardado', data);
-      modal.value?.cerrar();
-    } else {
+    if (!data?.id) {
       error.value = data?.detail || JSON.stringify(data);
+      return;
     }
+
+    let avisoRecalculo = '';
+    if (recalcular) {
+      guardando.value = false;
+      recalculando.value = true;
+      avisoRecalculo = await recalcularColores(token);
+      recalculando.value = false;
+    }
+
+    emit('guardado', { ...data, avisoRecalculo });
+    modal.value?.cerrar();
   } catch (e) {
     error.value = e?.message || 'Error al guardar';
   } finally {
     guardando.value = false;
+    recalculando.value = false;
+  }
+}
+
+/**
+ * Regenera los colores del indicador. Un fallo aquí no invalida el guardado (la paleta ya
+ * quedó persistida), así que se devuelve como aviso en vez de propagarse como error.
+ * @returns {Promise<string>} mensaje de aviso, o cadena vacía si todo salió bien
+ */
+async function recalcularColores(token) {
+  try {
+    const resultado = await recalcularIndicador(props.indicador.id, token);
+    if (resultado?.status === 'ok') return '';
+    return (
+      resultado?.error ||
+      resultado?.detail ||
+      'No se pudieron recalcular los colores del indicador.'
+    );
+  } catch (e) {
+    return e?.message || 'No se pudo conectar con el servidor para recalcular los colores.';
   }
 }
 </script>
 
 <template>
   <ClientOnly>
-    <TablerosAdminModalBase
-      ref="modal"
-      ancho="720px"
-      adaptar-tema
-      @cerrar="emit('cerrar')"
-    >
+    <TablerosAdminModalBase ref="modal" ancho="720px" adaptar-tema @cerrar="emit('cerrar')">
       <template #encabezado>
         <h2>Editar indicador</h2>
       </template>
@@ -260,6 +239,9 @@ async function guardar() {
                 <input v-model="formulario.reverse_colors" type="checkbox" />
                 Invertir paleta
               </label>
+              <p class="formulario-ayuda m-t-1">
+                Al guardar se recalculan los colores del mapa y la gráfica.
+              </p>
             </div>
           </div>
 
@@ -311,8 +293,8 @@ async function guardar() {
               <span class="opcion-toggle__contenido">
                 <strong>Usar campo único para gráfica</strong>
                 <span>
-                  Usa solamente el campo principal. Desactívalo para agrupar por el campo
-                  principal y sumar los valores del campo secundario.
+                  Usa solamente el campo principal. Desactívalo para agrupar por el campo principal
+                  y sumar los valores del campo secundario.
                 </span>
               </span>
 
@@ -335,8 +317,7 @@ async function guardar() {
               <span class="opcion-toggle__contenido">
                 <strong>Mostrar valores generales</strong>
                 <span>
-                  Calcula cifras resumidas que pueden utilizar los cuadros de datos del
-                  indicador.
+                  Calcula cifras resumidas que pueden utilizar los cuadros de datos del indicador.
                 </span>
               </span>
 
@@ -349,14 +330,21 @@ async function guardar() {
           <p v-if="error" class="color-error m-t-2">{{ error }}</p>
 
           <div class="acciones-modal">
-            <button type="button" class="boton boton-secundario" @click="emit('cerrar')">
+            <button
+              type="button"
+              class="boton boton-secundario"
+              :disabled="guardando || recalculando"
+              @click="emit('cerrar')"
+            >
               Cancelar
             </button>
             <input
               type="submit"
               class="boton boton-primario"
-              :value="guardando ? 'Guardando...' : 'Guardar'"
-              :disabled="guardando"
+              :value="
+                recalculando ? 'Recalculando colores...' : guardando ? 'Guardando...' : 'Guardar'
+              "
+              :disabled="guardando || recalculando"
             />
           </div>
         </form>
@@ -371,12 +359,8 @@ async function guardar() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(
-    --tableros-modal-texto-secundario,
-    var(--color-texto-secundario, #777)
-  );
-  border-bottom: 1px solid
-    var(--tableros-modal-control-borde, var(--color-borde, #e8e8e8));
+  color: var(--tableros-modal-texto-secundario, var(--color-texto-secundario, #777));
+  border-bottom: 1px solid var(--tableros-modal-control-borde, var(--color-borde, #e8e8e8));
   padding-bottom: 4px;
   margin-bottom: 1rem;
 }
@@ -413,10 +397,8 @@ async function guardar() {
   gap: 0.75rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid
-    var(--tableros-modal-control-borde, var(--color-borde, #e8e8e8));
+  border-top: 1px solid var(--tableros-modal-control-borde, var(--color-borde, #e8e8e8));
 }
-
 
 form {
   color: var(--tableros-modal-texto, inherit);
@@ -450,7 +432,6 @@ form {
 .check-inline input[type='checkbox'] {
   accent-color: var(--color-primario-2, #cc7a88);
 }
-
 
 .opciones-configuracion {
   display: flex;

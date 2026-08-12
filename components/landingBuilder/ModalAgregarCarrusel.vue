@@ -15,6 +15,9 @@ function crearDiapositivaVacia() {
     texto: '',
     imagenUrl: null,
     imagenArchivo: null,
+    imagenTipo: 'imagen',
+    botonTexto: '',
+    botonUrl: '',
   };
 }
 
@@ -45,6 +48,20 @@ function manejarSeleccionImagen(id, archivo) {
 
   diapositiva.imagenArchivo = archivo;
   diapositiva.imagenUrl = URL.createObjectURL(archivo);
+  diapositiva.imagenTipo = archivo.type.startsWith('video/') ? 'video' : 'imagen';
+}
+
+function manejarSeleccionEnlace(id, { url, tipo }) {
+  const diapositiva = diapositivas.value.find((d) => d.id === id);
+  if (!diapositiva) return;
+
+  if (diapositiva.imagenUrl?.startsWith('blob:')) {
+    URL.revokeObjectURL(diapositiva.imagenUrl);
+  }
+
+  diapositiva.imagenArchivo = null;
+  diapositiva.imagenUrl = url;
+  diapositiva.imagenTipo = tipo === 'video' ? 'video' : 'imagen';
 }
 
 function alIniciarArrastre(id) {
@@ -71,7 +88,10 @@ function alSoltar(idDestino) {
 
 function abrirModal(carruselExistente) {
   diapositivas.value = carruselExistente?.length
-    ? carruselExistente.map((diapositiva) => ({ ...diapositiva }))
+    ? carruselExistente.map((diapositiva) => ({
+        ...crearDiapositivaVacia(),
+        ...diapositiva,
+      }))
     : [crearDiapositivaVacia()];
 
   modalCarrusel.value?.abrirModal();
@@ -167,7 +187,9 @@ defineExpose({
             <div class="modal-carrusel__campo">
               <LandingBuilderSelectorImagenCarrusel
                 :imagen-url="diapositiva.imagenUrl"
+                :imagen-tipo="diapositiva.imagenTipo"
                 @seleccionar-imagen="(archivo) => manejarSeleccionImagen(diapositiva.id, archivo)"
+                @seleccionar-enlace="(payload) => manejarSeleccionEnlace(diapositiva.id, payload)"
               />
             </div>
 
@@ -178,6 +200,28 @@ defineExpose({
                 v-model="diapositiva.texto"
                 type="text"
                 placeholder="Texto de la diapositiva"
+              />
+            </div>
+
+            <div class="modal-carrusel__campo">
+              <label :for="`carrusel-boton-texto-${diapositiva.id}`"
+                >Texto del botón (opcional)</label
+              >
+              <input
+                :id="`carrusel-boton-texto-${diapositiva.id}`"
+                v-model="diapositiva.botonTexto"
+                type="text"
+                placeholder="Ej: Ver más"
+              />
+            </div>
+
+            <div v-if="diapositiva.botonTexto" class="modal-carrusel__campo">
+              <label :for="`carrusel-boton-url-${diapositiva.id}`">Enlace del botón</label>
+              <input
+                :id="`carrusel-boton-url-${diapositiva.id}`"
+                v-model="diapositiva.botonUrl"
+                type="text"
+                placeholder="https://ejemplo.com o /ruta-interna"
               />
             </div>
           </li>

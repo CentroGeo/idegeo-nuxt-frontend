@@ -17,10 +17,6 @@ const props = defineProps({
     type: String,
     default: 'normal',
   },
-  color: {
-    type: String,
-    default: '#FFFFFF',
-  },
   tipoLista: {
     type: String,
     default: 'ninguna',
@@ -31,7 +27,6 @@ const emit = defineEmits([
   'update:negrita',
   'update:alineacion',
   'update:tamano',
-  'update:color',
   'update:tipoLista',
 ]);
 
@@ -121,10 +116,6 @@ function cambiarAlineacion(alineacion) {
   emit('update:alineacion', alineacion);
 }
 
-function cambiarColor(event) {
-  emit('update:color', event.target.value);
-}
-
 function cambiarTipoLista() {
   emit('update:tipoLista', listaActiva.value ? 'ninguna' : 'vinetas');
 }
@@ -205,28 +196,6 @@ function cambiarTipoLista() {
       </svg>
     </button>
 
-    <span class="barra-herramientas-texto__separador" aria-hidden="true" />
-
-    <label
-      class="barra-herramientas-texto__color"
-      :style="{
-        '--color-seleccionado': color || '#FFFFFF',
-      }"
-      title="Color del texto"
-    >
-      <span class="barra-herramientas-texto__etiqueta-oculta"> Color del texto </span>
-
-      <span class="barra-herramientas-texto__muestra-color" aria-hidden="true" />
-
-      <input
-        class="barra-herramientas-texto__entrada-color"
-        type="color"
-        :value="color || '#FFFFFF'"
-        aria-label="Color del texto"
-        @input="cambiarColor"
-      />
-    </label>
-
     <template v-if="tipo === 'parrafo'">
       <span class="barra-herramientas-texto__separador" aria-hidden="true" />
 
@@ -304,8 +273,7 @@ function cambiarTipoLista() {
     }
   }
 
-  &__boton,
-  &__color {
+  &__boton {
     display: inline-flex;
     width: 27px;
     height: 27px;
@@ -317,9 +285,6 @@ function cambiarTipoLista() {
     border-radius: 999px;
     background: transparent;
     color: rgb(255 255 255 / 76%);
-  }
-
-  &__boton {
     font: inherit;
     font-size: 0.8125rem;
     cursor: pointer;
@@ -351,38 +316,6 @@ function cambiarTipoLista() {
     width: 17px;
     height: 17px;
     flex-shrink: 0;
-  }
-
-  &__color {
-    position: relative;
-    cursor: pointer;
-
-    &:hover,
-    &:focus-within {
-      background: rgb(255 255 255 / 12%);
-    }
-  }
-
-  &__muestra-color {
-    display: block;
-    width: 15px;
-    height: 15px;
-    border: 2px solid rgb(255 255 255 / 72%);
-    border-radius: 999px;
-    background: var(--color-seleccionado);
-    box-shadow: 0 0 0 1px rgb(0 0 0 / 24%);
-    pointer-events: none;
-  }
-
-  &__entrada-color {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    border: 0;
-    opacity: 0;
-    cursor: pointer;
   }
 
   &__separador {

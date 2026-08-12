@@ -8,6 +8,7 @@ import { useAccesibilidadStore } from '~/stores/accesibilidad';
 const accesibilidadStore = useAccesibilidadStore();
 const route = useRoute();
 const currentPath = computed(() => route.fullPath);
+const { mostrarIdentidadGobMx } = useIdentidadGobMx();
 
 useHead(() => ({
   meta: [
@@ -20,7 +21,7 @@ useHead(() => ({
 <template>
   <div>
     <a href="#principal" class="ir-contenido-principal"> Ir a contenido principal </a>
-    <SisdaiNavegacionGobMx />
+    <SisdaiNavegacionGobMx v-if="mostrarIdentidadGobMx" />
 
     <MainNavegacion />
 
@@ -33,6 +34,6 @@ useHead(() => ({
     <client-only>
       <SisdaiMenuAccesibilidad :objeto-store="accesibilidadStore" perfil-color="sigic" />
     </client-only>
-    <SisdaiPiePaginaGobMx />
+    <SisdaiPiePaginaGobMx v-if="mostrarIdentidadGobMx" />
   </div>
 </template>

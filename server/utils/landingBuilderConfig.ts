@@ -1,3 +1,5 @@
+import { promises as fsp } from 'fs';
+
 export interface LandingBuilderTarjeta {
   id: string;
   titulo: string;
@@ -50,12 +52,21 @@ export interface LandingBuilderConfig {
   secciones?: LandingBuilderSection[];
   bloques?: LandingBuilderBloque[];
   paginas?: LandingBuilderPagina[];
+  paginaInicioId?: string | null;
   actualizadoEn: string;
 }
 
 export interface LandingBuilderBloque {
   id: string;
-  tipo: 'portada' | 'titulo' | 'parrafo' | 'texto-imagen' | 'texto' | 'carrusel' | 'tarjetas';
+  tipo:
+    | 'portada'
+    | 'titulo'
+    | 'parrafo'
+    | 'texto-imagen'
+    | 'texto'
+    | 'carrusel'
+    | 'tarjetas'
+    | 'mapa';
   etiqueta?: string;
   datos: Record<string, unknown>;
 }
@@ -133,6 +144,7 @@ export const CAMPO_IDENTIDAD_POR_SLOT: Record<
 };
 
 const CONFIG_KEY = 'config.json';
+const IDENTIDAD_GOBMX_KEY = 'identidad-gobmx.json';
 const LOGO_KEY = 'logo:archivo';
 const LOGO_META_KEY = 'logo:meta.json';
 const LOGO_SECUNDARIO_KEY = 'logo_secundario:archivo';
@@ -201,8 +213,24 @@ const configPorDefecto: LandingBuilderConfig = {
   secciones: [],
   bloques: [],
   paginas: [],
+  paginaInicioId: null,
   actualizadoEn: new Date(0).toISOString(),
 };
+
+// Ajuste global del sitio (no ligado a una página del constructor): oculta
+// o muestra la barra y el pie de página de identidad de Gobierno de México
+// en todo el sitio, en cualquier módulo, para todas las personas visitantes.
+export async function getMostrarIdentidadGobMx(): Promise<boolean> {
+  const storage = useStorage('landingBuilder');
+  const valor = await storage.getItem<{ mostrarIdentidadGobMx: boolean }>(IDENTIDAD_GOBMX_KEY);
+  return valor?.mostrarIdentidadGobMx !== false;
+}
+
+export async function setMostrarIdentidadGobMx(mostrar: boolean): Promise<boolean> {
+  const storage = useStorage('landingBuilder');
+  await storage.setItem(IDENTIDAD_GOBMX_KEY, { mostrarIdentidadGobMx: mostrar });
+  return mostrar;
+}
 
 export async function getLandingBuilderConfig(): Promise<LandingBuilderConfig> {
   const storage = useStorage('landingBuilder');
@@ -318,6 +346,7 @@ export async function saveLandingBuilderConfig(
     logoCuartoUrl,
     tarjetas,
     paginas: actual.paginas,
+    paginaInicioId: actual.paginaInicioId,
     actualizadoEn: new Date().toISOString(),
   };
   await storage.setItem(CONFIG_KEY, nuevaConfig);
@@ -433,6 +462,88 @@ export async function getLandingBuilderBloqueImagen(
   return { data, mimetype: meta.mimetype };
 }
 
+export const TIPOS_VIDEO_BLOQUE_PERMITIDOS = ['video/mp4', 'video/webm'];
+export const TIPOS_MEDIA_BLOQUE_PERMITIDOS = [
+  ...TIPOS_LOGO_PAGINA_PERMITIDOS,
+  ...TIPOS_VIDEO_BLOQUE_PERMITIDOS,
+];
+export const TAMANO_MAXIMO_IMAGEN_BLOQUE = 5 * 1024 * 1024; // 5MB
+export const TAMANO_MAXIMO_VIDEO_BLOQUE = 15 * 1024 * 1024; // 15MB
+
+// Procesa los campos `bloque_imagen::<bloqueId>::<tipo>::<itemId>` de un
+// formulario multipart: sube cada archivo y escribe la URL resultante en el
+// bloque correspondiente (portada, texto-imagen, diapositiva de carrusel o
+// tarjeta). Se usa tanto al guardar el borrador general como al editar una
+// página ya publicada, para que ambos flujos suban imágenes/videos igual.
+export async function procesarImagenesDeBloques(
+  files: Record<string, any>,
+  bloques: any[]
+): Promise<any[]> {
+  for (const key of Object.keys(files)) {
+    if (!key.startsWith('bloque_imagen::')) continue;
+
+    const [, bloqueId, tipoImagen, itemId] = key.split('::');
+    const archivoBloque = files[key]?.[0];
+    if (!archivoBloque) continue;
+
+    const mimetypeValido = validarYObtenerMimetypeImagen(
+      archivoBloque,
+      TIPOS_MEDIA_BLOQUE_PERMITIDOS
+    );
+    if (!mimetypeValido) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'El archivo del bloque debe ser PNG, JPEG, WEBP, SVG, MP4 o WEBM',
+      });
+    }
+    const esVideo = TIPOS_VIDEO_BLOQUE_PERMITIDOS.includes(mimetypeValido);
+    const limiteBloque = esVideo ? TAMANO_MAXIMO_VIDEO_BLOQUE : TAMANO_MAXIMO_IMAGEN_BLOQUE;
+    if (archivoBloque.size > limiteBloque) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: esVideo
+          ? 'El video del bloque no debe superar 15MB'
+          : 'La imagen del bloque no debe superar 5MB',
+      });
+    }
+
+    const data = await fsp.readFile(archivoBloque.filepath);
+    const url = await saveLandingBuilderBloqueImagen(
+      bloqueId,
+      tipoImagen,
+      itemId,
+      data,
+      mimetypeValido
+    );
+
+    const bloque = bloques.find((b: any) => b.id === bloqueId);
+
+    if (tipoImagen === 'portada') {
+      if (bloque?.datos?.fondo) {
+        bloque.datos.fondo.url = url;
+      }
+      continue;
+    }
+
+    if (tipoImagen === 'contenido') {
+      if (bloque?.datos?.imagen) {
+        bloque.datos.imagen.url = url;
+      }
+      continue;
+    }
+
+    const lista =
+      tipoImagen === 'diapositiva' ? bloque?.datos?.diapositivas : bloque?.datos?.tarjetas;
+    const item = lista?.find((i: any) => i.id === itemId);
+    if (item) {
+      item.imagenUrl = url;
+      item.imagenTipo = esVideo ? 'video' : 'imagen';
+    }
+  }
+
+  return bloques;
+}
+
 const paginaLogoKey = (paginaId: string, slot: string) => `pagina:${paginaId}:logo:${slot}:archivo`;
 const paginaLogoMetaKey = (paginaId: string, slot: string) =>
   `pagina:${paginaId}:logo:${slot}:meta.json`;
@@ -509,13 +620,66 @@ export async function crearLandingBuilderPagina(
   return nuevasPaginas;
 }
 
-export async function eliminarLandingBuilderPagina(id: string): Promise<LandingBuilderPagina[]> {
+export async function eliminarLandingBuilderPagina(
+  id: string
+): Promise<{ paginas: LandingBuilderPagina[]; paginaInicioId: string | null }> {
   const storage = useStorage('landingBuilder');
   const config = await getLandingBuilderConfig();
   const paginas = (config.paginas ?? []).filter((pagina) => pagina.id !== id);
+  const paginaInicioId = config.paginaInicioId === id ? null : (config.paginaInicioId ?? null);
 
-  await storage.setItem(CONFIG_KEY, { ...config, paginas });
-  return paginas;
+  await storage.setItem(CONFIG_KEY, { ...config, paginas, paginaInicioId });
+  return { paginas, paginaInicioId };
+}
+
+export async function getLandingBuilderPaginaInicio(): Promise<LandingBuilderPagina | null> {
+  const config = await getLandingBuilderConfig();
+  if (!config.paginaInicioId) return null;
+
+  const paginas = await getLandingBuilderPaginas();
+  return paginas.find((pagina) => pagina.id === config.paginaInicioId) ?? null;
+}
+
+export async function setLandingBuilderPaginaInicio(
+  id: string | null
+): Promise<{ paginaInicioId: string | null }> {
+  const storage = useStorage('landingBuilder');
+  const config = await getLandingBuilderConfig();
+
+  if (id !== null) {
+    const paginas = await getLandingBuilderPaginas();
+    if (!paginas.some((pagina) => pagina.id === id)) {
+      throw createError({ statusCode: 400, statusMessage: 'La página seleccionada no existe' });
+    }
+  }
+
+  await storage.setItem(CONFIG_KEY, { ...config, paginaInicioId: id });
+  return { paginaInicioId: id };
+}
+
+function slugify(texto: string): string {
+  const base = texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'pagina';
+}
+
+function generarSlugUnico(
+  nombre: string,
+  paginas: LandingBuilderPagina[],
+  idExcluir?: string
+): string {
+  const base = slugify(nombre);
+  let slug = base;
+  let contador = 2;
+  while (paginas.some((pagina) => pagina.slug === slug && pagina.id !== idExcluir)) {
+    slug = `${base}-${contador}`;
+    contador += 1;
+  }
+  return slug;
 }
 
 export async function renombrarLandingBuilderPagina(
@@ -532,6 +696,7 @@ export async function renombrarLandingBuilderPagina(
   }
 
   pagina.nombre = nombre;
+  pagina.slug = generarSlugUnico(nombre, paginas, id);
   await storage.setItem(CONFIG_KEY, { ...config, paginas });
   return paginas;
 }

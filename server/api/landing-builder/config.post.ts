@@ -1,11 +1,15 @@
 import formidable from 'formidable';
 import { promises as fsp } from 'fs';
 import type { LandingBuilderConfig, LandingBuilderTarjeta } from '../../utils/landingBuilderConfig';
-import { LIMITE_TARJETAS, validarYObtenerMimetypeImagen } from '../../utils/landingBuilderConfig';
+import {
+  LIMITE_TARJETAS,
+  validarYObtenerMimetypeImagen,
+  procesarImagenesDeBloques,
+  TAMANO_MAXIMO_VIDEO_BLOQUE,
+} from '../../utils/landingBuilderConfig';
 
 const TIPOS_LOGO_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
 const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024; // 2MB
-const TAMANO_MAXIMO_IMAGEN_BLOQUE = 5 * 1024 * 1024; // 5MB
 const CAMPOS_REQUERIDOS = [
   'titulo',
   'subtitulo',
@@ -15,7 +19,7 @@ const CAMPOS_REQUERIDOS = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_IMAGEN_BLOQUE });
+  const form = formidable({ multiples: true, maxFileSize: TAMANO_MAXIMO_VIDEO_BLOQUE });
   const { fields, files } = await new Promise<{
     fields: formidable.Fields;
     files: formidable.Files;
@@ -117,59 +121,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  for (const key of Object.keys(files)) {
-    if (!key.startsWith('bloque_imagen::')) continue;
-
-    const [, bloqueId, tipoImagen, itemId] = key.split('::');
-    const archivoBloque = files[key]?.[0];
-    if (!archivoBloque) continue;
-
-    const mimetypeValido = validarYObtenerMimetypeImagen(archivoBloque, TIPOS_LOGO_PERMITIDOS);
-    if (!mimetypeValido) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'La imagen del bloque debe ser PNG, JPEG, WEBP o SVG',
-      });
-    }
-    if (archivoBloque.size > TAMANO_MAXIMO_IMAGEN_BLOQUE) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'La imagen del bloque no debe superar 5MB',
-      });
-    }
-
-    const data = await fsp.readFile(archivoBloque.filepath);
-    const url = await saveLandingBuilderBloqueImagen(
-      bloqueId,
-      tipoImagen,
-      itemId,
-      data,
-      mimetypeValido
-    );
-
-    const bloque = bloques.find((b: any) => b.id === bloqueId);
-
-    if (tipoImagen === 'portada') {
-      if (bloque?.datos?.fondo) {
-        bloque.datos.fondo.url = url;
-      }
-      continue;
-    }
-
-    if (tipoImagen === 'contenido') {
-      if (bloque?.datos?.imagen) {
-        bloque.datos.imagen.url = url;
-      }
-      continue;
-    }
-
-    const lista =
-      tipoImagen === 'diapositiva' ? bloque?.datos?.diapositivas : bloque?.datos?.tarjetas;
-    const item = lista?.find((i: any) => i.id === itemId);
-    if (item) {
-      item.imagenUrl = url;
-    }
-  }
+  await procesarImagenesDeBloques(files, bloques);
 
   campos.bloques = bloques;
 
