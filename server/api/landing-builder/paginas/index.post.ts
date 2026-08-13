@@ -9,6 +9,8 @@ import {
   CAMPO_IDENTIDAD_POR_SLOT,
   IDENTIDAD_PAGINA_VACIA,
   validarYObtenerMimetypeImagen,
+  sanitizarColorTema,
+  sanitizarPiePagina,
 } from '../../../utils/landingBuilderConfig';
 import type { LandingBuilderPaginaIdentidad } from '../../../utils/landingBuilderConfig';
 
@@ -81,6 +83,8 @@ export default defineEventHandler(async (event) => {
       typeof identidadEntrante.logoCuartoRedirectUrl === 'string'
         ? identidadEntrante.logoCuartoRedirectUrl
         : null,
+    colorTema: sanitizarColorTema(identidadEntrante.colorTema),
+    piePagina: sanitizarPiePagina(identidadEntrante.piePagina),
   };
 
   for (const slot of SLOTS_LOGO_PAGINA) {
