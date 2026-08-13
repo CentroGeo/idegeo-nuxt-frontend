@@ -669,7 +669,8 @@ export async function getLandingBuilderPaginaPorSlug(
 export async function crearLandingBuilderPagina(
   bloques: LandingBuilderBloque[],
   identidad: LandingBuilderPaginaIdentidad = IDENTIDAD_PAGINA_VACIA,
-  idPredefinido?: string
+  idPredefinido?: string,
+  nombrePersonalizado?: string
 ): Promise<LandingBuilderPagina[]> {
   const storage = useStorage('landingBuilder');
   const config = await getLandingBuilderConfig();
@@ -683,10 +684,11 @@ export async function crearLandingBuilderPagina(
   }
 
   const numero = paginas.length + 1;
+  const nombre = nombrePersonalizado || `Página ${numero}`;
   const nuevaPagina: LandingBuilderPagina = {
     id: idPredefinido ?? `pagina-${Date.now()}`,
-    nombre: `Página ${numero}`,
-    slug: `pagina-${numero}`,
+    nombre,
+    slug: generarSlugUnico(nombre, paginas),
     bloques,
     identidad,
     creadaEn: new Date().toISOString(),

@@ -193,10 +193,14 @@ function adjuntarImagenesDeBloques(formData, bloques) {
   });
 }
 
-async function construirFormDataPagina(store, paginaId) {
+async function construirFormDataPagina(store, paginaId, nombre) {
   const formData = new FormData();
   formData.append('bloques', JSON.stringify(serializarBloquesParaEnvio(store.bloques)));
   adjuntarImagenesDeBloques(formData, store.bloques);
+
+  if (nombre) {
+    formData.append('nombre', nombre);
+  }
 
   const identidad = {
     nombrePlataforma: store.nombrePlataforma || '',
@@ -384,14 +388,14 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       return this.paginas.length < LIMITE_PAGINAS;
     },
 
-    async publicarPagina() {
+    async publicarPagina(nombre) {
       if (!this.puedeCrearPagina()) {
         this.error = `Ya tienes el máximo de ${LIMITE_PAGINAS} páginas. Elimina una para crear otra.`;
         return;
       }
 
       try {
-        const formData = await construirFormDataPagina(this, null);
+        const formData = await construirFormDataPagina(this, null, nombre);
         this.paginas = await $fetch('/api/landing-builder/paginas', {
           method: 'POST',
           body: formData,
@@ -418,7 +422,7 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       }
     },
 
-    async crearPagina() {
+    async crearPagina(nombre) {
       const editandoExistente = Boolean(this.paginaEditandoId);
 
       if (!editandoExistente && !this.puedeCrearPagina()) {
@@ -427,29 +431,25 @@ export const useLandingBuilderStore = defineStore('landingBuilder', () => {
       }
 
       this.isCreandoPagina = true;
-      if (!editandoExistente) {
-        await this.guardarConfiguracion();
+      this.error = null;
+      this.isPublicando = true;
+
+      if (editandoExistente) {
+        await this.actualizarPaginaExistente();
+      } else {
+        await this.publicarPagina(nombre);
+        if (!this.error) {
+          this.cancelarEdicionPagina();
+        }
       }
+      this.isPublicando = false;
 
       if (!this.error) {
-        this.isPublicando = true;
-        if (editandoExistente) {
-          await this.actualizarPaginaExistente();
-        } else {
-          await this.publicarPagina();
-          if (!this.error) {
-            this.cancelarEdicionPagina();
-          }
-        }
-        this.isPublicando = false;
-
-        if (!this.error) {
-          this.saveSuccess = true;
-          this.mensajeExito = editandoExistente
-            ? 'Los cambios de la página se guardaron correctamente.'
-            : 'Configuración guardada y página publicada.';
-          this.marcarBloquesComoGuardados();
-        }
+        this.saveSuccess = true;
+        this.mensajeExito = editandoExistente
+          ? 'Los cambios de la página se guardaron correctamente.'
+          : 'Página creada correctamente.';
+        this.marcarBloquesComoGuardados();
       }
 
       this.isCreandoPagina = false;
