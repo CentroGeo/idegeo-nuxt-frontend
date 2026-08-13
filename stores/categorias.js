@@ -1,78 +1,74 @@
 import { defineStore } from 'pinia';
 
-export const useCategoriasStore = defineStore('categorias', () => {
-  // --- Conjuntos de categorías ---
-  // Cada instancia puede tener varios conjuntos (ej. "Categorías SIGIC",
-  // "Atlas de riesgos", "Atlas de vulnerabilidad"), y cada conjunto agrupa
-  // sus propias categorías. Solo un conjunto está activo por instancia: es
-  // el que se ofrece en el catálogo y en el formulario de llenado de
-  // metadatos.
-  const conjuntos = reactive([
-    {
-      id: 'sigic',
-      nombre: 'Categorías SIGIC',
-      descripcion: 'Esquema de categorización estándar de la plataforma.',
-      protegido: true,
-      categorias: [
-        { id: 1, nombre: 'Zonas Climáticas', tipo: 'Geográfica', valores: 14, estado: 'Publicada' },
-        {
-          id: 2,
-          nombre: 'Áreas Naturales Protegidas',
-          tipo: 'Ambiental',
-          valores: 182,
-          estado: 'Publicada',
-        },
-        {
-          id: 3,
-          nombre: 'Cuencas Hidrológicas',
-          tipo: 'Hidrología',
-          valores: 37,
-          estado: 'Borrador',
-        },
-        {
-          id: 4,
-          nombre: 'Entidades Federativas',
-          tipo: 'Político-Administrativo',
-          valores: 32,
-          estado: 'Publicada',
-        },
-      ],
-    },
-    {
-      id: 'atlas-riesgos',
-      nombre: 'Atlas de riesgos',
-      descripcion: 'Categorías para clasificar recursos del atlas de riesgos.',
-      protegido: false,
-      categorias: [
-        { id: 5, nombre: 'Riesgo sísmico', tipo: 'Amenaza', valores: 6, estado: 'Publicada' },
-        {
-          id: 6,
-          nombre: 'Riesgo hidrometeorológico',
-          tipo: 'Amenaza',
-          valores: 9,
-          estado: 'Borrador',
-        },
-      ],
-    },
-    {
-      id: 'atlas-vulnerabilidad',
-      nombre: 'Atlas de vulnerabilidad',
-      descripcion: 'Categorías para clasificar recursos del atlas de vulnerabilidad social.',
-      protegido: false,
-      categorias: [
-        { id: 7, nombre: 'Vulnerabilidad social', tipo: 'Social', valores: 11, estado: 'Borrador' },
-      ],
-    },
-  ]);
+// Deriva un identifier tipo camelCase (sin acentos/espacios) a partir del
+// nombre capturado en el formulario, para no pedirle ese dato técnico al
+// usuario. Debe ser único en GeoNode (TopicCategory.identifier); si choca,
+// el backend responde con un error que se refleja en `error`.
+const ACENTOS = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u', ñ: 'n' };
 
-  const idConjuntoActivo = ref('sigic');
+function quitarAcentos(texto) {
+  return texto
+    .toLowerCase()
+    .split('')
+    .map((letra) => ACENTOS[letra] ?? letra)
+    .join('');
+}
+
+function generarIdentifier(nombre) {
+  const base = quitarAcentos(nombre || '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((palabra, indice) =>
+      indice === 0
+        ? palabra.charAt(0).toLowerCase() + palabra.slice(1)
+        : palabra.charAt(0).toUpperCase() + palabra.slice(1)
+    )
+    .join('');
+  return base || `categoria${Date.now()}`;
+}
+
+function extraerMensajeError(err) {
+  if (err?.message) return err.message;
+  if (typeof err === 'string') return err;
+  return 'Ocurrió un error inesperado.';
+}
+
+// Si la API responde 200 con un cuerpo de error de DRF (en vez de lanzar),
+// esto lo detecta para que el store lo refleje como error.
+function respuestaEsError(respuesta) {
+  if (!respuesta || typeof respuesta !== 'object') return false;
+  return Boolean(respuesta.detail || respuesta.non_field_errors || Array.isArray(respuesta));
+}
+
+function mensajeDeRespuestaError(respuesta) {
+  if (respuesta.detail) return respuesta.detail;
+  if (respuesta.non_field_errors) return respuesta.non_field_errors.join(' ');
+  const primerCampo = Object.keys(respuesta)[0];
+  if (primerCampo) {
+    const valor = respuesta[primerCampo];
+    return Array.isArray(valor) ? valor.join(' ') : String(valor);
+  }
+  return 'La solicitud no pudo completarse.';
+}
+
+export const useCategoriasStore = defineStore('categorias', () => {
+  const api = useCategoriasApi();
+  const { data } = useAuth();
+  const token = () => data.value?.accessToken;
+
+  const conjuntos = ref([]);
+  const cargando = ref(false);
+  const error = ref(null);
 
   const conjuntoActivo = computed(
-    () => conjuntos.find((conjunto) => conjunto.id === idConjuntoActivo.value) ?? null
+    () => conjuntos.value.find((conjunto) => conjunto.activo) ?? null
   );
+  const idConjuntoActivo = computed(() => conjuntoActivo.value?.id ?? null);
 
   function categoriasPublicadas(conjunto) {
-    return conjunto.categorias.filter((categoria) => categoria.estado === 'Publicada');
+    return (conjunto?.categorias ?? []).filter((categoria) => categoria.estado === 'Publicada');
   }
 
   // Lo que realmente alimenta el catálogo y el formulario de metadatos de
@@ -81,88 +77,163 @@ export const useCategoriasStore = defineStore('categorias', () => {
     conjuntoActivo.value ? categoriasPublicadas(conjuntoActivo.value) : []
   );
 
-  function activarConjunto(id) {
-    idConjuntoActivo.value = id;
-  }
-
   function claseEstado(estado) {
     return estado === 'Publicada'
       ? 'texto-color-confirmacion fondo-color-confirmacion borde borde-color-confirmacion'
       : 'texto-color-neutro fondo-color-neutro borde borde-color-neutro';
   }
 
-  // --- CRUD de conjuntos ---
-  let siguienteIdConjunto = 1;
-
-  function crearConjunto({ nombre, descripcion }) {
-    const id = `conjunto-${siguienteIdConjunto++}`;
-    conjuntos.push({
-      id,
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      protegido: false,
-      categorias: [],
-    });
-    return id;
+  function mapearCategoria(categoria) {
+    return {
+      id: categoria.id,
+      nombre: categoria.nombre,
+      identifier: categoria.identifier,
+      tipo: categoria.tipo,
+      estado: categoria.estado,
+    };
   }
 
-  function actualizarConjunto(id, { nombre, descripcion }) {
-    const conjunto = conjuntos.find((item) => item.id === id);
-    if (conjunto) {
-      conjunto.nombre = nombre.trim();
-      conjunto.descripcion = descripcion.trim();
+  function mapearConjunto(conjunto) {
+    return {
+      id: conjunto.id,
+      nombre: conjunto.nombre,
+      descripcion: conjunto.descripcion,
+      protegido: conjunto.protegido,
+      activo: conjunto.activo,
+      categorias: (conjunto.categorias ?? []).map(mapearCategoria),
+    };
+  }
+
+  async function cargarConjuntos() {
+    cargando.value = true;
+    error.value = null;
+    try {
+      const listado = await api.fetchConjuntos();
+      const detalles = await Promise.all(
+        (listado.results ?? []).map((item) => api.fetchConjunto(item.id))
+      );
+      conjuntos.value = detalles.map(mapearConjunto);
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+    } finally {
+      cargando.value = false;
     }
   }
 
-  function eliminarConjunto(id) {
-    const conjunto = conjuntos.find((item) => item.id === id);
-    if (!conjunto || conjunto.protegido || conjunto.id === idConjuntoActivo.value) return false;
-    const indice = conjuntos.findIndex((item) => item.id === id);
-    if (indice !== -1) conjuntos.splice(indice, 1);
-    return true;
+  // --- CRUD de conjuntos ---
+
+  async function activarConjunto(id) {
+    error.value = null;
+    try {
+      const respuesta = await api.activarConjunto(id, token());
+      if (respuestaEsError(respuesta)) throw new Error(mensajeDeRespuestaError(respuesta));
+      await cargarConjuntos();
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+    }
+  }
+
+  async function crearConjunto({ nombre, descripcion }) {
+    error.value = null;
+    try {
+      const respuesta = await api.crearConjunto(
+        { nombre: nombre.trim(), descripcion: descripcion.trim() },
+        token()
+      );
+      if (respuestaEsError(respuesta)) throw new Error(mensajeDeRespuestaError(respuesta));
+      await cargarConjuntos();
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+    }
+  }
+
+  async function actualizarConjunto(id, { nombre, descripcion }) {
+    error.value = null;
+    try {
+      const respuesta = await api.actualizarConjunto(
+        id,
+        { nombre: nombre.trim(), descripcion: descripcion.trim() },
+        token()
+      );
+      if (respuestaEsError(respuesta)) throw new Error(mensajeDeRespuestaError(respuesta));
+      await cargarConjuntos();
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+    }
+  }
+
+  async function eliminarConjunto(id) {
+    error.value = null;
+    try {
+      const ok = await api.eliminarConjunto(id, token());
+      if (ok) await cargarConjuntos();
+      return ok;
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+      return false;
+    }
   }
 
   // --- CRUD de categorías dentro de un conjunto ---
-  let siguienteIdCategoria = 8;
 
-  function crearCategoria(conjuntoId, { nombre, tipo, valores, estado }) {
-    const conjunto = conjuntos.find((item) => item.id === conjuntoId);
-    if (!conjunto) return;
-    conjunto.categorias.push({
-      id: siguienteIdCategoria++,
-      nombre: nombre.trim(),
-      tipo: tipo.trim(),
-      valores: Number(valores) || 0,
-      estado,
-    });
-  }
-
-  function actualizarCategoria(conjuntoId, categoriaId, { nombre, tipo, valores, estado }) {
-    const conjunto = conjuntos.find((item) => item.id === conjuntoId);
-    const categoria = conjunto?.categorias.find((item) => item.id === categoriaId);
-    if (categoria) {
-      categoria.nombre = nombre.trim();
-      categoria.tipo = tipo.trim();
-      categoria.valores = Number(valores) || 0;
-      categoria.estado = estado;
+  async function crearCategoria(conjuntoId, { nombre, tipo, estado }) {
+    error.value = null;
+    try {
+      const respuesta = await api.crearCategoria(
+        {
+          conjunto: conjuntoId,
+          tipo: tipo.trim(),
+          estado,
+          nueva_categoria: {
+            identifier: generarIdentifier(nombre),
+            gn_description: nombre.trim(),
+          },
+        },
+        token()
+      );
+      if (respuestaEsError(respuesta)) throw new Error(mensajeDeRespuestaError(respuesta));
+      await cargarConjuntos();
+    } catch (err) {
+      error.value = extraerMensajeError(err);
     }
   }
 
-  function eliminarCategoria(conjuntoId, categoriaId) {
-    const conjunto = conjuntos.find((item) => item.id === conjuntoId);
-    if (!conjunto) return;
-    const indice = conjunto.categorias.findIndex((item) => item.id === categoriaId);
-    if (indice !== -1) conjunto.categorias.splice(indice, 1);
+  async function actualizarCategoria(conjuntoId, categoriaId, { nombre, tipo, estado }) {
+    error.value = null;
+    try {
+      const respuesta = await api.actualizarCategoria(
+        categoriaId,
+        { tipo: tipo.trim(), estado, gn_description: nombre.trim() },
+        token()
+      );
+      if (respuestaEsError(respuesta)) throw new Error(mensajeDeRespuestaError(respuesta));
+      await cargarConjuntos();
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+    }
+  }
+
+  async function eliminarCategoria(conjuntoId, categoriaId) {
+    error.value = null;
+    try {
+      await api.eliminarCategoria(categoriaId, token());
+      await cargarConjuntos();
+    } catch (err) {
+      error.value = extraerMensajeError(err);
+    }
   }
 
   return {
     conjuntos,
+    cargando,
+    error,
     idConjuntoActivo,
     conjuntoActivo,
     categoriasPublicadas,
     categoriasVisiblesInstancia,
-    activarConjunto,
     claseEstado,
+    cargarConjuntos,
+    activarConjunto,
     crearConjunto,
     actualizarConjunto,
     eliminarConjunto,
