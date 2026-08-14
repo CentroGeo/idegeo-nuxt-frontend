@@ -146,7 +146,7 @@ onBeforeUnmount(() => clearTimeout(temporizadorBusqueda));
       <button
         v-if="busqueda || categoriaSeleccionada"
         type="button"
-        class="boton-secundario boton-chico"
+        class="boton boton-secundario boton-chico"
         @click="limpiarFiltros"
       >
         Limpiar filtros
@@ -234,7 +234,7 @@ onBeforeUnmount(() => clearTimeout(temporizadorBusqueda));
         <div v-if="totalPaginas > 1" class="selector-capa__paginacion">
           <button
             type="button"
-            class="boton-secundario boton-chico"
+            class="boton boton-secundario boton-chico"
             :disabled="pagina === 1"
             @click="irAPagina(pagina - 1)"
           >
@@ -243,7 +243,7 @@ onBeforeUnmount(() => clearTimeout(temporizadorBusqueda));
           <span class="texto-secundario">Página {{ pagina }} de {{ totalPaginas }}</span>
           <button
             type="button"
-            class="boton-secundario boton-chico"
+            class="boton boton-secundario boton-chico"
             :disabled="pagina === totalPaginas"
             @click="irAPagina(pagina + 1)"
           >
@@ -398,6 +398,12 @@ onBeforeUnmount(() => clearTimeout(temporizadorBusqueda));
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+
+    // Sin texto junto al ícono: anula el padding-left que sisdai reserva
+    // para separar ícono y texto, que aquí descentraba el pictograma.
+    [class*='pictograma-'] {
+      padding: 0;
     }
   }
 

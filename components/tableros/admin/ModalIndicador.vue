@@ -796,9 +796,22 @@ async function recalcularColores(id, token) {
                       </option>
                     </optgroup>
                   </select>
-                  <label class="check-inline m-t-1">
-                    <input v-model="formulario.reverse_colors" type="checkbox" />
-                    Invertir paleta
+                  <label
+                    class="opcion-toggle opcion-toggle--chica m-t-1"
+                    :class="{ 'opcion-toggle--activa': formulario.reverse_colors }"
+                  >
+                    <input
+                      v-model="formulario.reverse_colors"
+                      class="opcion-toggle__input"
+                      type="checkbox"
+                      role="switch"
+                    />
+                    <span class="opcion-toggle__contenido">
+                      <strong>Invertir paleta</strong>
+                    </span>
+                    <span class="opcion-toggle__estado" aria-hidden="true">
+                      {{ formulario.reverse_colors ? 'Activado' : 'Desactivado' }}
+                    </span>
                   </label>
                   <ul v-if="swatches.length" class="swatches" aria-label="Colores de la rampa">
                     <li
@@ -1371,6 +1384,13 @@ async function recalcularColores(id, token) {
     font-size: 0.75rem;
     font-weight: 700;
     pointer-events: none;
+  }
+
+  // Variante compacta: para opciones sin texto de ayuda (una sola línea),
+  // el alto mínimo de la tarjeta completa deja demasiado espacio vacío.
+  &--chica {
+    min-height: auto;
+    padding: 0.5rem 0.75rem;
   }
 }
 
