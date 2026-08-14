@@ -3,20 +3,29 @@ import SisdaiModal from '@centrogeomx/sisdai-componentes/src/componentes/modal/S
 
 const store = useCategoriasStore();
 
+onMounted(() => {
+  store.cargarConjuntos();
+});
+
 const estados = ['Publicada', 'Borrador'];
 
 // --- Navegación interna: general / detalle de conjunto ---
 const vista = ref('general');
-const conjuntoSeleccionado = ref(null);
+const conjuntoSeleccionadoId = ref(null);
+// Se deriva del store (no se guarda una copia) para que la vista de detalle
+// se mantenga al día cada vez que el store recarga tras una acción CRUD.
+const conjuntoSeleccionado = computed(
+  () => store.conjuntos.find((conjunto) => conjunto.id === conjuntoSeleccionadoId.value) ?? null
+);
 
 function verDetalleConjunto(conjunto) {
-  conjuntoSeleccionado.value = conjunto;
+  conjuntoSeleccionadoId.value = conjunto.id;
   vista.value = 'detalle';
 }
 
 function volverAVistaGeneral() {
   vista.value = 'general';
-  conjuntoSeleccionado.value = null;
+  conjuntoSeleccionadoId.value = null;
 }
 
 function contarPublicadas(conjunto) {
@@ -44,21 +53,21 @@ function abrirModalEditarConjunto(conjunto) {
   modalConjunto.value?.abrirModal();
 }
 
-function guardarConjunto() {
+async function guardarConjunto() {
   if (!formularioConjunto.nombre.trim()) return;
 
   if (modoModalConjunto.value === 'crear') {
-    store.crearConjunto({
+    await store.crearConjunto({
       nombre: formularioConjunto.nombre,
       descripcion: formularioConjunto.descripcion,
     });
   } else {
-    store.actualizarConjunto(formularioConjunto.id, {
+    await store.actualizarConjunto(formularioConjunto.id, {
       nombre: formularioConjunto.nombre,
       descripcion: formularioConjunto.descripcion,
     });
   }
-  modalConjunto.value?.cerrarModal();
+  if (!store.error) modalConjunto.value?.cerrarModal();
 }
 
 // --- Modal Eliminar conjunto ---
@@ -70,13 +79,13 @@ function abrirModalEliminarConjunto(conjunto) {
   modalEliminarConjunto.value?.abrirModal();
 }
 
-function confirmarEliminarConjunto() {
+async function confirmarEliminarConjunto() {
   const id = conjuntoAEliminar.value?.id;
-  const eliminado = store.eliminarConjunto(id);
-  if (eliminado && vista.value === 'detalle' && conjuntoSeleccionado.value?.id === id) {
+  const eliminado = await store.eliminarConjunto(id);
+  if (eliminado && vista.value === 'detalle' && conjuntoSeleccionadoId.value === id) {
     volverAVistaGeneral();
   }
-  modalEliminarConjunto.value?.cerrarModal();
+  if (eliminado) modalEliminarConjunto.value?.cerrarModal();
 }
 
 // --- Modal Nueva / Editar categoría (dentro del conjunto en detalle) ---
@@ -86,7 +95,6 @@ const formularioCategoria = reactive({
   id: null,
   nombre: '',
   tipo: '',
-  valores: 0,
   estado: 'Borrador',
 });
 
@@ -95,7 +103,6 @@ function abrirModalNuevaCategoria() {
   formularioCategoria.id = null;
   formularioCategoria.nombre = '';
   formularioCategoria.tipo = '';
-  formularioCategoria.valores = 0;
   formularioCategoria.estado = 'Borrador';
   modalCategoria.value?.abrirModal();
 }
@@ -105,30 +112,27 @@ function abrirModalEditarCategoria(categoria) {
   formularioCategoria.id = categoria.id;
   formularioCategoria.nombre = categoria.nombre;
   formularioCategoria.tipo = categoria.tipo;
-  formularioCategoria.valores = categoria.valores;
   formularioCategoria.estado = categoria.estado;
   modalCategoria.value?.abrirModal();
 }
 
-function guardarCategoria() {
+async function guardarCategoria() {
   if (!formularioCategoria.nombre.trim() || !formularioCategoria.tipo.trim()) return;
 
   if (modoModalCategoria.value === 'crear') {
-    store.crearCategoria(conjuntoSeleccionado.value.id, {
+    await store.crearCategoria(conjuntoSeleccionado.value.id, {
       nombre: formularioCategoria.nombre,
       tipo: formularioCategoria.tipo,
-      valores: formularioCategoria.valores,
       estado: formularioCategoria.estado,
     });
   } else {
-    store.actualizarCategoria(conjuntoSeleccionado.value.id, formularioCategoria.id, {
+    await store.actualizarCategoria(conjuntoSeleccionado.value.id, formularioCategoria.id, {
       nombre: formularioCategoria.nombre,
       tipo: formularioCategoria.tipo,
-      valores: formularioCategoria.valores,
       estado: formularioCategoria.estado,
     });
   }
-  modalCategoria.value?.cerrarModal();
+  if (!store.error) modalCategoria.value?.cerrarModal();
 }
 
 // --- Modal Eliminar categoría ---
@@ -140,14 +144,23 @@ function abrirModalEliminarCategoria(categoria) {
   modalEliminarCategoria.value?.abrirModal();
 }
 
-function confirmarEliminarCategoria() {
-  store.eliminarCategoria(conjuntoSeleccionado.value.id, categoriaAEliminar.value?.id);
-  modalEliminarCategoria.value?.cerrarModal();
+async function confirmarEliminarCategoria() {
+  await store.eliminarCategoria(conjuntoSeleccionado.value.id, categoriaAEliminar.value?.id);
+  if (!store.error) modalEliminarCategoria.value?.cerrarModal();
 }
 </script>
 
 <template>
   <div class="administracion-categorias">
+    <p
+      v-if="store.error"
+      class="p-3 borde-redondeado-8 fondo-color-alerta texto-color-alerta m-b-4"
+      role="alert"
+    >
+      {{ store.error }}
+    </p>
+    <p v-if="store.cargando" class="texto-color-secundario m-b-4">Cargando…</p>
+
     <!-- ============ VISTA GENERAL: CONJUNTOS ============ -->
     <section v-if="vista === 'general'" aria-label="Conjuntos de categorías">
       <p class="texto-color-secundario m-b-4">
@@ -302,7 +315,6 @@ function confirmarEliminarCategoria() {
             <tr>
               <th scope="col">Categoría</th>
               <th scope="col">Tipo</th>
-              <th scope="col">Valores</th>
               <th scope="col">Estado</th>
               <th scope="col">Acciones</th>
             </tr>
@@ -311,7 +323,6 @@ function confirmarEliminarCategoria() {
             <tr v-for="categoria in conjuntoSeleccionado.categorias" :key="categoria.id">
               <td>{{ categoria.nombre }}</td>
               <td>{{ categoria.tipo }}</td>
-              <td>{{ categoria.valores }} registros</td>
               <td>
                 <span class="p-1 borde-redondeado-8" :class="store.claseEstado(categoria.estado)">
                   {{ categoria.estado }}
@@ -338,7 +349,7 @@ function confirmarEliminarCategoria() {
               </td>
             </tr>
             <tr v-if="!conjuntoSeleccionado.categorias.length">
-              <td colspan="5" class="texto-color-secundario">
+              <td colspan="4" class="texto-color-secundario">
                 Este conjunto todavía no tiene categorías.
               </td>
             </tr>
@@ -426,15 +437,6 @@ function confirmarEliminarCategoria() {
 
           <label for="categoria-tipo">Tipo</label>
           <input id="categoria-tipo" v-model="formularioCategoria.tipo" type="text" class="m-b-2" />
-
-          <label for="categoria-valores">Número de valores</label>
-          <input
-            id="categoria-valores"
-            v-model="formularioCategoria.valores"
-            type="number"
-            min="0"
-            class="m-b-2"
-          />
 
           <label for="categoria-estado">Estado</label>
           <select id="categoria-estado" v-model="formularioCategoria.estado">
