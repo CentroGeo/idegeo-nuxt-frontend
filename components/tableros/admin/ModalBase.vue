@@ -221,6 +221,7 @@ defineExpose({ abrir, cerrar });
 
     .pictograma-cerrar {
       font-size: 1.1rem;
+      padding: 0;
     }
   }
 
