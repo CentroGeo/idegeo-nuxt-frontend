@@ -49,7 +49,7 @@ function CargaCompleta(idx, v) {
       <h2 class="h2">Leyendas</h2>
 
       <div v-if="leyendasCargadas.some((v) => !v)">
-        <img src="/img/loader.gif" alt="Cargando leyendas" />
+        <img :src="`${$config.app.baseURL}img/loader.gif`" alt="Cargando leyendas" />
 
         <p>Cargando leyendas</p>
       </div>
@@ -73,6 +73,10 @@ function CargaCompleta(idx, v) {
 
 <style lang="scss" scoped>
 .mapa-descarga {
+  .sisdai-mapa-leyenda {
+    word-break: break-all;
+    max-width: 100%;
+  }
   background-color: #fff;
   color: #000;
 }

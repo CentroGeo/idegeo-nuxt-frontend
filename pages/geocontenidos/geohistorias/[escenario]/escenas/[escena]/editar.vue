@@ -53,6 +53,10 @@ async function guardarCambios() {
   if (!datos_validos.value) return;
   mostrarModalCargando();
 
+  // El zoom puede venir del backend con más decimales de los que acepta al
+  // guardar; alMoverVista ya redondea, esto cubre el caso sin mover la vista.
+  escena.zoom = escena.zoom !== null ? Number(Number(escena.zoom).toFixed(1)) : null;
+
   const url = `scenes/${escena_id !== 'nuevo' ? `${escena_id}/` : ''}/`;
   const { base_layer, ...cuerpo } = escena;
   cuerpo.styles = { ...escena.styles, base_layer };

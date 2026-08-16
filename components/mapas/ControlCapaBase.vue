@@ -1,12 +1,12 @@
 <script setup>
 import { ref } from 'vue';
 
-// const props = defineProps({
-//   modelValue: {
-//     type: String,
-//     default: 'osm',
-//   },
-// });
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: 'osm',
+  },
+});
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -38,7 +38,7 @@ function alternar() {
           <button
             type="button"
             class="capa-base-opcion"
-            :class="{ activa: op.valor === modelValue }"
+            :class="{ activa: op.valor === props.modelValue }"
             @click="elegir(op.valor)"
           >
             {{ op.etiqueta }}
@@ -55,7 +55,7 @@ function alternar() {
       title="Capa base"
       @click="alternar"
     >
-      <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+      <span class="pictograma-capas" aria-hidden="true" />
     </button>
   </div>
 </template>
@@ -94,10 +94,11 @@ function alternar() {
 
 .capa-base-panel {
   width: 180px;
-  background-color: rgba(255, 255, 255, 0.96);
-  color: #222;
+  background-color: var(--fondo);
+  color: var(--texto-primario);
+  border: 1px solid var(--borde-secundario);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--color-neutro-7-rgb), 0.25);
   padding: 8px 10px;
 }
 
@@ -125,11 +126,11 @@ function alternar() {
   padding: 6px 8px;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #222;
+  color: var(--texto-primario);
 
   &:hover,
   &:focus-visible {
-    background-color: #f0f0f0;
+    background-color: var(--estado-cursor);
   }
 
   &.activa {

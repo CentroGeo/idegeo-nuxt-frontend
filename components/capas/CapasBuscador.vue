@@ -14,6 +14,7 @@ const props = defineProps({
 
 const emit = defineEmits(['select-layer']);
 
+const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
 const { data: session } = useAuth();
 const api = config.public.geonodeApi;
@@ -43,7 +44,7 @@ function headers() {
 async function cargarCategorias() {
   cargandoCategorias.value = true;
   try {
-    const res = await fetch(`${api}/categories/?page_size=200`, { headers: headers() });
+    const res = await gnoxyFetch(`${api}/categories/?page_size=200`, { headers: headers() });
     if (!res.ok) throw new Error('error');
     const data = await res.json();
     const lista = data.categories || data.results || [];
@@ -78,7 +79,7 @@ async function cargarCapas() {
   }
 
   try {
-    const res = await fetch(`${api}/datasets/?${params.toString()}`, { headers: headers() });
+    const res = await gnoxyFetch(`${api}/datasets/?${params.toString()}`, { headers: headers() });
     if (!res.ok) throw new Error('error');
     const data = await res.json();
     capas.value = data.datasets || data.results || [];
@@ -168,15 +169,17 @@ onMounted(async () => {
         <div class="caja-categorias">
           <p v-if="cargandoCategorias" class="texto-secundario p-1">Cargando…</p>
           <ul v-else-if="categorias.length" class="lista-categorias">
-            <li
-              v-for="cat in categorias"
-              :key="cat.identifier"
-              class="item-categoria"
-              :class="{ activa: categoriaSeleccionada?.identifier === cat.identifier }"
-              @click="elegirCategoria(cat)"
-            >
-              <span class="cat-nombre">{{ nombreCategoria(cat) }}</span>
-              <span class="cat-contador">{{ cat.count ?? 0 }}</span>
+            <li v-for="cat in categorias" :key="cat.identifier">
+              <button
+                type="button"
+                class="item-categoria"
+                :class="{ activa: categoriaSeleccionada?.identifier === cat.identifier }"
+                :aria-pressed="categoriaSeleccionada?.identifier === cat.identifier"
+                @click="elegirCategoria(cat)"
+              >
+                <span class="cat-nombre">{{ nombreCategoria(cat) }}</span>
+                <span class="cat-contador">{{ cat.count ?? 0 }}</span>
+              </button>
             </li>
           </ul>
           <p v-else class="texto-secundario p-1">Sin categorías.</p>
@@ -193,42 +196,45 @@ onMounted(async () => {
           <p v-else-if="errorCapas" class="texto-error p-1">{{ errorCapas }}</p>
           <p v-else-if="!capas.length" class="texto-secundario p-1">Sin resultados.</p>
           <ul v-else class="lista-capas">
-            <li
-              v-for="capa in capas"
-              :key="capa.pk"
-              class="item-capa"
-              :class="{
-                'en-mapa': estaEnMapa(capa.pk),
-                seleccionada: estaSeleccionada(capa.pk),
-              }"
-              @click="clickCapa(capa)"
-            >
-              <div class="capa-thumb">
-                <img v-if="capa.thumbnail_url" :src="capa.thumbnail_url" :alt="capa.title" />
-                <span v-else class="pictograma-imagen" aria-hidden="true" />
-              </div>
-              <div class="capa-info">
-                <div class="capa-titulo-fila flex flex-contenido-separado">
-                  <strong>{{ capa.title || capa.alternate }}</strong>
-                  <span v-if="estaEnMapa(capa.pk)" class="etiqueta etiqueta-ok">Agregada</span>
-                  <span v-else-if="estaSeleccionada(capa.pk)" class="etiqueta etiqueta-sel"
-                    >Seleccionada</span
-                  >
+            <li v-for="capa in capas" :key="capa.pk">
+              <button
+                type="button"
+                class="item-capa"
+                :class="{
+                  'en-mapa': estaEnMapa(capa.pk),
+                  seleccionada: estaSeleccionada(capa.pk),
+                }"
+                :disabled="estaEnMapa(capa.pk)"
+                :aria-pressed="estaSeleccionada(capa.pk)"
+                @click="clickCapa(capa)"
+              >
+                <div class="capa-thumb">
+                  <img v-if="capa.thumbnail_url" :src="capa.thumbnail_url" :alt="capa.title" />
+                  <span v-else class="pictograma-imagen" aria-hidden="true" />
                 </div>
-                <p class="capa-descripcion texto-secundario m-0">
-                  {{ limpiarHtml(capa.abstract) || 'Sin descripción.' }}
-                </p>
-                <div class="capa-meta flex">
-                  <span class="etiqueta">{{ capa.subtype }}</span>
-                  <span
-                    class="etiqueta"
-                    :class="capa.is_published ? 'etiqueta-publica' : 'etiqueta-privada'"
-                  >
-                    {{ capa.is_published ? 'Pública' : 'Privada' }}
-                  </span>
-                  <span class="texto-secundario">{{ capa.workspace }}</span>
+                <div class="capa-info">
+                  <div class="capa-titulo-fila flex flex-contenido-separado">
+                    <strong class="capa-titulo">{{ capa.title || capa.alternate }}</strong>
+                    <span v-if="estaEnMapa(capa.pk)" class="etiqueta etiqueta-ok">Agregada</span>
+                    <span v-else-if="estaSeleccionada(capa.pk)" class="etiqueta etiqueta-sel"
+                      >Seleccionada</span
+                    >
+                  </div>
+                  <p class="capa-descripcion texto-secundario m-0">
+                    {{ limpiarHtml(capa.abstract) || 'Sin descripción.' }}
+                  </p>
+                  <div class="capa-meta flex">
+                    <span class="etiqueta">{{ capa.subtype }}</span>
+                    <span
+                      class="etiqueta"
+                      :class="capa.is_published ? 'etiqueta-publica' : 'etiqueta-privada'"
+                    >
+                      {{ capa.is_published ? 'Pública' : 'Privada' }}
+                    </span>
+                    <span class="texto-secundario">{{ capa.workspace }}</span>
+                  </div>
                 </div>
-              </div>
+              </button>
             </li>
           </ul>
         </div>
@@ -279,6 +285,10 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 2fr;
   gap: 12px;
+
+  > * {
+    min-width: 0;
+  }
 }
 
 .titulo-col {
@@ -303,6 +313,7 @@ onMounted(async () => {
   margin: 0;
 }
 
+// Botón de categoría (ocupa todo el renglón de la lista).
 .item-categoria {
   display: flex;
   justify-content: space-between;
@@ -312,6 +323,13 @@ onMounted(async () => {
   border-left: 3px solid transparent;
   border-bottom: 1px solid var(--color-neutro-1);
   font-size: 0.85rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-top: none;
+  border-right: none;
+  color: inherit;
+  font-family: inherit;
 }
 
 .item-categoria:hover {
@@ -333,7 +351,7 @@ onMounted(async () => {
 
 .cat-contador {
   background-color: var(--color-neutro-3);
-  color: #fff;
+  color: var(--texto-inverso);
   font-size: 0.7rem;
   padding: 2px 6px;
   border-radius: 6px;
@@ -345,6 +363,7 @@ onMounted(async () => {
   margin: 0;
 }
 
+// Botón de capa (tarjeta completa clicable y enfocable con teclado).
 .item-capa {
   display: flex;
   gap: 10px;
@@ -354,6 +373,13 @@ onMounted(async () => {
   margin-bottom: 8px;
   cursor: pointer;
   transition: border-color 0.2s;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
 }
 
 .item-capa:hover {
@@ -394,6 +420,10 @@ onMounted(async () => {
   min-width: 0;
 }
 
+.capa-titulo {
+  min-width: 0;
+}
+
 .capa-descripcion {
   font-size: 0.8rem;
   display: -webkit-box;
@@ -419,18 +449,18 @@ onMounted(async () => {
 }
 
 .etiqueta-ok {
-  background-color: #d8f5dc;
-  color: #16703c;
+  background-color: var(--fondo-confirmacion);
+  color: var(--texto-confirmacion);
 }
 
 .etiqueta-publica {
-  background-color: #d8f5dc;
-  color: #16703c;
+  background-color: var(--fondo-confirmacion);
+  color: var(--texto-confirmacion);
 }
 
 .etiqueta-privada {
-  background-color: #fde2e1;
-  color: #c0392b;
+  background-color: var(--fondo-error);
+  color: var(--texto-error);
 }
 
 .etiqueta-sel {
@@ -439,7 +469,7 @@ onMounted(async () => {
 }
 
 .texto-error {
-  color: var(--color-error, #c0392b);
+  color: var(--texto-error);
 }
 
 .flex {

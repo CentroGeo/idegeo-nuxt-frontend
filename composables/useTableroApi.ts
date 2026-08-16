@@ -1,5 +1,5 @@
 export function useTableroApi() {
-  const { gnoxyFetch } = useGnoxyUrl();
+  const { gnoxyFetch, gnoxyUrl } = useGnoxyUrl();
   const config = useRuntimeConfig();
   const baseUrl = `${config.public.geonodeApi}/dashboard`;
 
@@ -28,9 +28,8 @@ export function useTableroApi() {
     try {
       return JSON.parse(text);
     } catch {
-      throw new Error(
-        `Respuesta inesperada del servidor (${respuesta.status}): ${text.slice(0, 100)}`
-      );
+      console.error(`[useTableroApi] Error de respuesta (status: ${respuesta.status}):`, text);
+      throw new Error(`Respuesta inesperada del servidor (${respuesta.status})`);
     }
   }
 
@@ -45,9 +44,8 @@ export function useTableroApi() {
     try {
       return JSON.parse(text);
     } catch {
-      throw new Error(
-        `Respuesta inesperada del servidor (${respuesta.status}): ${text.slice(0, 100)}`
-      );
+      console.error(`[useTableroApi] Error de respuesta (status: ${respuesta.status}):`, text);
+      throw new Error(`Respuesta inesperada del servidor (${respuesta.status})`);
     }
   }
 
@@ -118,6 +116,8 @@ export function useTableroApi() {
     fetchDatasetAttributes: (id: number) =>
       fetchJson(`${config.public.geonodeApi}/datasets/${id}/`),
 
+    fetchCategorias: () => fetchJson(`${config.public.geonodeApi}/categories/?page_size=200`),
+
     syncDatasetAttributes: (id: number, token?: string | null) =>
       jsonRequest(
         `${config.public.geonodeApi}/sigic-remote-datasets/${id}/sync-attributes/`,
@@ -134,6 +134,9 @@ export function useTableroApi() {
 
     // ---------- Logos ----------
     fetchLogosDeSitio: (siteId: number) => fetchJson(`${baseUrl}/sites/${siteId}/logos/`),
+
+    sincronizarLogosSitio: (siteId: number, form: FormData, token?: string | null) =>
+      formRequest(`${baseUrl}/sites/${siteId}/sync-logos/`, 'POST', form, token),
 
     crearLogo: (form: FormData, token?: string | null) =>
       formRequest(`${baseUrl}/site-logos/`, 'POST', form, token),
@@ -152,6 +155,9 @@ export function useTableroApi() {
 
     actualizarTopBar: (siteId: number, datos: unknown, token?: string | null) =>
       jsonRequest(`${baseUrl}/top-bars/${siteId}/`, 'PATCH', datos, token),
+
+    sincronizarConfiguracionTopBar: (siteId: number, form: FormData, token?: string | null) =>
+      formRequest(`${baseUrl}/top-bars/${siteId}/sync-configuration/`, 'POST', form, token),
 
     crearLogoTopBar: (form: FormData, token?: string | null) =>
       formRequest(`${baseUrl}/top-bar-logos/`, 'POST', form, token),
@@ -239,6 +245,22 @@ export function useTableroApi() {
 
     recalcularIndicador: (id: number, token?: string | null) =>
       jsonRequest(`${baseUrl}/indicators/${id}/recompute/`, 'POST', {}, token),
+
+    /**
+     * Calcula la tematización de una configuración sin persistirla.
+     * Sirve igual al crear (aún no hay id) que al editar.
+     */
+    previsualizarIndicador: (datos: unknown, token?: string | null) =>
+      jsonRequest(`${baseUrl}/indicators/preview/`, 'POST', datos, token),
+
+    /**
+     * URL del GeoJSON de una capa para pintarla en el mapa de previsualización.
+     * Se devuelve la URL —no el contenido— porque `SisdaiCapaVectorial` recibe
+     * una `fuente`. El proxy gnoxy le inyecta el Bearer de la sesión, así que el
+     * fetch anónimo del componente llega autenticado al backend.
+     */
+    urlCapaFeatures: (layerPk: number | string) =>
+      gnoxyUrl(`${baseUrl}/indicators/layer-features/?layer=${layerPk}`),
 
     construirDatosIndicador: (id: number, datos: unknown, token?: string | null) =>
       jsonRequest(`${baseUrl}/indicators/${id}/build-data/`, 'POST', datos, token),

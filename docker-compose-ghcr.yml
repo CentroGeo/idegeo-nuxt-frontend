@@ -19,6 +19,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    volumes:
+      - landing_builder_data:/app/.data
     environment:
       NODE_ENV: ${NODE_ENV}
       NUXT_PUBLIC_BASE_URL: ${NUXT_PUBLIC_BASE_URL}
@@ -58,3 +60,7 @@ networks:
     driver: bridge
     driver_opts:
       com.docker.network.driver.mtu: 1400
+
+volumes:
+  landing_builder_data:
+    name: ${COMPOSE_PROJECT_NAME}-landing_builder_data

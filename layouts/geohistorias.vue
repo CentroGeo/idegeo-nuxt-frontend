@@ -1,4 +1,9 @@
 <script setup>
+import SisdaiMenuAccesibilidad from '@centrogeomx/sisdai-componentes/src/componentes/menu-accesibilidad/SisdaiMenuAccesibilidad.vue';
+import { useAccesibilidadStore } from '~/stores/accesibilidad';
+
+const accesibilidadStore = useAccesibilidadStore();
+
 // Font Awesome 6 para los iconos (fa-solid) de los controles del visor de mapa
 // (MapasControlInfo, MapasControlCapaBase). El resto de layouts ya lo cargan.
 useHead({
@@ -13,9 +18,15 @@ useHead({
 
 <template>
   <div>
-    <div class="contenido vista-geohistorias">
+    <a href="#principal" class="ir-contenido-principal">Ir a contenido principal</a>
+
+    <div id="principal" class="contenido vista-geohistorias">
       <slot />
     </div>
+
+    <client-only>
+      <SisdaiMenuAccesibilidad :objeto-store="accesibilidadStore" perfil-color="sigic" />
+    </client-only>
   </div>
 </template>
 

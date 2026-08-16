@@ -9,7 +9,6 @@ export class GestionMarcadores {
   }
   get almacenados() {
     return this.almacenados_;
-    //.filter(({ geonode_id }) => !this.eliminarIds.includes(geonode_id));
   }
 
   almacenar = [];
@@ -30,6 +29,5 @@ export class GestionMarcadores {
 
   get hayCambios() {
     return this.actualizar.length || this.almacenar.length;
-    // || this.eliminar.length;
   }
 }

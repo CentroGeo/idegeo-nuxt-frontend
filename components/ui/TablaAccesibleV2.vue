@@ -678,7 +678,8 @@ async function volverAEditar() {
             <div v-if="variable === 'categoria'">
               {{
                 datum[variable] !== null
-                  ? categoriesInSpanish[datum[variable].gn_description]
+                  ? (categoriesInSpanish[datum[variable].gn_description] ??
+                    datum[variable].gn_description)
                   : 'Sin Clasificar'
               }}
             </div>

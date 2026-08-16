@@ -88,6 +88,7 @@ async function guardarCambios() {
 
   mostrarModalExito();
   await wait(1500);
+  modal.visible = false;
 
   if (accion_guardar.value === 'recargar') {
     if (escenario_id === 'nuevo') {

@@ -26,19 +26,42 @@ async function cargarSitios() {
   }
 }
 
-async function borrarSitio(id) {
-  const { confirmar, alerta } = useDialogo();
-  const confirmado = await confirmar({
-    mensaje: '¿Eliminar este tablero? Esta acción no se puede deshacer.',
-    textoAceptar: 'Eliminar',
-    variante: 'peligro',
-  });
-  if (!confirmado) return;
-  const ok = await eliminarSitio(id, userData.value?.accessToken);
-  if (ok) {
-    sitios.value = sitios.value.filter((s) => s.id !== id);
-  } else {
-    await alerta('No se pudo eliminar el tablero.');
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const sitioToDelete = ref(null);
+const isBeingDeleted = ref(false);
+const wasDeletionSuccesful = ref(null);
+
+function abrirModalEliminar(sitio) {
+  sitioToDelete.value = sitio;
+  wasDeletionSuccesful.value = null;
+  modalEliminar.value?.abrir();
+}
+
+function cancelarEliminar() {
+  sitioToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!sitioToDelete.value) return;
+  isBeingDeleted.value = true;
+  try {
+    const ok = await eliminarSitio(sitioToDelete.value.id, userData.value?.accessToken);
+    if (ok) {
+      wasDeletionSuccesful.value = true;
+      sitios.value = sitios.value.filter((s) => s.id !== sitioToDelete.value.id);
+      setTimeout(() => {
+        modalEliminar.value?.cerrar();
+      }, 1200);
+    } else {
+      wasDeletionSuccesful.value = false;
+    }
+  } catch (e) {
+    console.error('Error al eliminar sitio:', e);
+    wasDeletionSuccesful.value = false;
+  } finally {
+    isBeingDeleted.value = false;
   }
 }
 
@@ -50,8 +73,7 @@ async function togglearPublico(sitio) {
     }
   } catch (e) {
     console.error('Error al cambiar visibilidad:', e);
-    const { alerta } = useDialogo();
-    await alerta('No se pudo cambiar la visibilidad del tablero.');
+    alert('No se pudo cambiar la visibilidad del tablero.');
   }
 }
 
@@ -74,7 +96,7 @@ watch(estaLogueado, (v) => {
   <div>
     <!-- Sesión requerida -->
     <div v-if="noAutenticado" class="sesion-requerida">
-      <span class="pictograma-candado sesion-requerida__icono" aria-hidden="true" />
+      <span class="pictograma-privado sesion-requerida__icono" aria-hidden="true" />
       <h2 class="sesion-requerida__titulo">Acceso restringido</h2>
       <p class="sesion-requerida__desc">
         Para ver y gestionar tus tableros necesitas iniciar sesión con tu cuenta institucional.
@@ -96,16 +118,22 @@ watch(estaLogueado, (v) => {
           mapas, gráficas y tarjetas de resumen, organizados en grupos y subgrupos.
         </p>
 
-        <div v-if="estaLogueado" class="flex brecha-2 m-b-4">
-          <NuxtLink to="/geocontenidos/tableros/nuevo" class="boton boton-primario">
+        <div v-if="estaLogueado" class="flex brecha-2 m-b-2">
+          <NuxtLink to="/geocontenidos/tableros/nuevo" class="boton boton-secundario">
             <span class="pictograma-agregar m-r-1" />
             Crear Tablero
           </NuxtLink>
-          <NuxtLink to="/geocontenidos/importar-datos" class="boton boton-secundario">
+          <NuxtLink to="/geocontenidos/importar-datos" class="boton boton-primario">
             <span class="pictograma-archivo-subir m-r-1" />
-            Desde mis datos
+            Importar datos
           </NuxtLink>
         </div>
+
+        <p v-if="estaLogueado" class="formulario-ayuda m-b-4">
+          <strong>Importar datos</strong> publica un archivo tuyo (CSV, XLSX, XLS o JSON) como capa
+          y genera un tablero nuevo con sus indicadores. Usa <strong>Crear Tablero</strong> si
+          prefieres partir de capas que ya están en el catálogo.
+        </p>
       </div>
 
       <GeocontenidosLoader v-if="estaCargando" />
@@ -162,7 +190,7 @@ watch(estaLogueado, (v) => {
                   Editar
                 </NuxtLink>
 
-                <button class="boton boton-chico boton-primario" @click="borrarSitio(sitio.id)">
+                <button class="boton boton-chico boton-primario" @click="abrirModalEliminar(sitio)">
                   <span class="pictograma-eliminar m-r-1" />
                   Eliminar
                 </button>
@@ -174,12 +202,62 @@ watch(estaLogueado, (v) => {
 
       <div v-else class="texto-centrado">
         <p class="h3">No hay tableros disponibles.</p>
-      </div> </template
+      </div>
+
+      <ClientOnly>
+        <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
+          <template #encabezado>
+            <h2 class="m-t-0">Eliminar tablero</h2>
+          </template>
+
+          <p
+            v-if="wasDeletionSuccesful === null || isBeingDeleted"
+            class="alerta-advertencia-modal"
+          >
+            El tablero <strong style="font-weight: bold">{{ sitioToDelete?.name }}</strong> será
+            eliminado permanentemente del servidor y no será posible recuperarlo.
+          </p>
+
+          <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
+            <span class="pictograma-aprobado m-r-1" />
+            El tablero fue eliminado correctamente.
+          </p>
+
+          <p v-else class="texto-color-error">No se pudo eliminar el tablero. Intenta de nuevo.</p>
+
+          <template #pie>
+            <div class="flex brecha-2 flex-contenido-final">
+              <button
+                class="boton boton-secundario"
+                :disabled="isBeingDeleted"
+                @click="cancelarEliminar"
+              >
+                Cancelar
+              </button>
+              <button
+                v-if="wasDeletionSuccesful === null"
+                class="boton boton-primario"
+                :disabled="isBeingDeleted"
+                @click="confirmarEliminar"
+              >
+                <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
+                Eliminar
+              </button>
+            </div>
+          </template>
+        </GeocontenidosSisdaiModal>
+      </ClientOnly> </template
     ><!-- /v-else autenticado -->
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .sesion-requerida {
   display: flex;
   flex-direction: column;

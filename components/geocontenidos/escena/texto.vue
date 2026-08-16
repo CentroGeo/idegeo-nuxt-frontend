@@ -1,4 +1,6 @@
 <script setup>
+import DOMPurify from 'dompurify';
+
 const props = defineProps({
   contenido: { type: String, required: true },
   marcador: { type: Object, default: null },
@@ -26,13 +28,16 @@ const estiloBoton = computed(() => {
   const [inicio, fin] = props.gradiente;
   return inicio && fin ? { background: `linear-gradient(to right, ${inicio}, ${fin})` } : {};
 });
+
+const contenidoSeguro = computed(() => DOMPurify.sanitize(props.contenido));
+const contenidoMarcadorSeguro = computed(() => DOMPurify.sanitize(props.marcador?.content || ''));
 </script>
 
 <template>
   <div class="escena-texto">
     <div class="escena-texto__contenido">
       <!-- eslint-disable vue/no-v-html -->
-      <div v-if="!marcador" v-html="contenido" />
+      <div v-if="!marcador" v-html="contenidoSeguro" />
 
       <div v-else>
         <button class="boton-primario boton-chico" @click="$emit('alCerrar')">
@@ -49,7 +54,7 @@ const estiloBoton = computed(() => {
           <img v-if="marcador.image_url" :src="marcador.image_url" :alt="marcador.title" />
 
           <!-- eslint-disable vue/no-v-html -->
-          <div v-html="marcador.content" />
+          <div v-html="contenidoMarcadorSeguro" />
         </div>
       </div>
     </div>
@@ -62,7 +67,7 @@ const estiloBoton = computed(() => {
         :disabled="!escenaAnterior"
         @click="$emit('alNavegar', escenaAnterior.id)"
       >
-        <i class="fa-solid fa-chevron-left" aria-hidden="true" />
+        <span class="pictograma-flecha-izquierda" aria-hidden="true" />
         <span>Anterior</span>
       </button>
 
@@ -76,7 +81,7 @@ const estiloBoton = computed(() => {
         @click="$emit('alNavegar', escenaSiguiente.id)"
       >
         <span>Siguiente</span>
-        <i class="fa-solid fa-chevron-right" aria-hidden="true" />
+        <span class="pictograma-flecha-derecha" aria-hidden="true" />
       </button>
     </nav>
   </div>

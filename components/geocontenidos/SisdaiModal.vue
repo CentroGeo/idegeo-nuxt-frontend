@@ -85,13 +85,7 @@ defineExpose({
 </script>
 
 <template>
-  <dialog
-    :id="id_aleatorio"
-    ref="trapRef"
-    class="modal"
-    :class="tamanioModal"
-    aria-labelledby="titulo_modal"
-  >
+  <dialog :id="id_aleatorio" ref="trapRef" class="modal" :class="tamanioModal">
     <div class="modal-contenedor">
       <div class="modal-cabecera">
         <slot name="encabezado">
@@ -109,7 +103,6 @@ defineExpose({
 
       <button
         type="button"
-        role="button"
         class="boton-pictograma boton-sin-contenedor-secundario modal-cerrar"
         aria-label="Cerrar"
         :disabled="!permitirCerrar"

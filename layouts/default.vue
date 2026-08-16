@@ -1,48 +1,20 @@
 <script setup>
-/**
- * Layout principal con identidad IDEGeo.
- *
- * Reemplaza:
- * - SisdaiNavegacionGobMx → IdegeoBarraSuperior
- * - SisdaiNavegacionPrincipal + MainNavegacion → IdegeoNavegacionPrincipal
- * - SisdaiPiePaginaGobMx → IdegeoPiePagina
- *
- * Mantiene:
- * - SisdaiMenuAccesibilidad (funcionalidad de accesibilidad intacta)
- */
-import SisdaiMenuAccesibilidad from '@centrogeomx/sisdai-componentes/src/componentes/menu-accesibilidad/SisdaiMenuAccesibilidad.vue';
-import IdegeoBarraSuperior from '~/components/base/IdegeoBarraSuperior.vue';
-import IdegeoNavegacionPrincipal from '~/components/base/IdegeoNavegacionPrincipal.vue';
-import IdegeoPiePagina from '~/components/base/IdegeoPiePagina.vue';
+import SisdaiMenuAccesibilidad from '~/components/base/SisdaiMenuAccesibilidad.vue';
+import SisdaiNavegacionGobMx from '@centrogeomx/sisdai-componentes/src/componentes/navegacion-gob-mx/SisdaiNavegacionGobMx.vue';
+import SisdaiPiePaginaGobMx from '~/components/base/SisdaiPiePaginaGobMxCustom.vue';
+import MainNavegacion from '~/components/base/MainNavegacion.vue';
+import MainPiePagina from '~/components/base/MainPiePagina.vue';
 import { useAccesibilidadStore } from '~/stores/accesibilidad';
 
 const accesibilidadStore = useAccesibilidadStore();
 const route = useRoute();
 const currentPath = computed(() => route.fullPath);
+const { mostrarIdentidadGobMx } = useIdentidadGobMx();
 
 useHead(() => ({
   meta: [
     { property: 'og:url', content: currentPath.value, key: 'og-url' },
     { name: 'twitter:url', content: currentPath.value, key: 'twitter-url' },
-  ],
-  link: [
-    {
-      rel: 'preconnect',
-      href: 'https://fonts.googleapis.com',
-    },
-    {
-      rel: 'preconnect',
-      href: 'https://fonts.gstatic.com',
-      crossorigin: '',
-    },
-    {
-      rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap',
-    },
-    {
-      rel: 'stylesheet',
-      href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css',
-    },
   ],
 }));
 </script>
@@ -50,18 +22,21 @@ useHead(() => ({
 <template>
   <div>
     <a href="#principal" class="ir-contenido-principal"> Ir a contenido principal </a>
+    <SisdaiNavegacionGobMx v-if="mostrarIdentidadGobMx" />
 
-    <IdegeoBarraSuperior />
-    <IdegeoNavegacionPrincipal />
+    <MainNavegacion />
 
-    <div id="principal" class="contenido">
+    <div class="contenido">
       <slot />
     </div>
 
+    <MainPiePagina />
+
+    <!-- parece que botón flotante agrega un id al elemento html que no
+    coincide al hacer server side rendering -->
     <client-only>
       <SisdaiMenuAccesibilidad :objeto-store="accesibilidadStore" perfil-color="sigic" />
     </client-only>
-
-    <IdegeoPiePagina />
+    <SisdaiPiePaginaGobMx v-if="mostrarIdentidadGobMx" />
   </div>
 </template>

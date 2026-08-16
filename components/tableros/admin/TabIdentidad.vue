@@ -9,6 +9,7 @@ const props = defineProps({
 const emit = defineEmits(['guardar', 'actualizar']);
 
 const modalVisual = ref(null);
+const subidorLogos = ref(null);
 
 const form = reactive({
   name: '',
@@ -74,21 +75,35 @@ function abrirModalVisual() {
   modalVisual.value?.abrir();
 }
 
+async function guardarLogos() {
+  if (!subidorLogos.value?.guardar) return true;
+
+  return await subidorLogos.value.guardar();
+}
+
 function alSubmit() {
   validarUrl();
   if (errorUrl.value) return;
+
   emit('actualizar', { ...form });
   emit('guardar');
 }
+
+defineExpose({
+  guardarLogos,
+});
 </script>
 
 <template>
   <form class="tab-identidad" @submit.prevent="alSubmit">
     <section class="m-b-4">
       <h3>Datos del sitio</h3>
+      <p class="formulario-ayuda m-b-3">
+        Los campos marcados con <span class="requerido">*</span> son obligatorios.
+      </p>
 
       <div class="m-b-3">
-        <label for="tab-identidad-nombre">Nombre del sitio</label>
+        <label for="tab-identidad-nombre">Nombre del sitio <span class="requerido">*</span></label>
         <input
           id="tab-identidad-nombre"
           v-model="nombre"
@@ -99,7 +114,7 @@ function alSubmit() {
       </div>
 
       <div class="m-b-3">
-        <label for="tab-identidad-url">URL del sitio (slug)</label>
+        <label for="tab-identidad-url">URL del sitio (slug) <span class="requerido">*</span></label>
         <input
           id="tab-identidad-url"
           v-model="form.url"
@@ -116,7 +131,7 @@ function alSubmit() {
       </div>
 
       <div class="m-b-3">
-        <label for="tab-identidad-titulo">Título del sitio</label>
+        <label for="tab-identidad-titulo">Título del sitio <span class="requerido">*</span></label>
         <input
           id="tab-identidad-titulo"
           v-model="form.title"
@@ -127,7 +142,7 @@ function alSubmit() {
       </div>
 
       <div class="m-b-3">
-        <label for="tab-identidad-subtitulo">Subtítulo</label>
+        <label for="tab-identidad-subtitulo">Subtítulo <span class="requerido">*</span></label>
         <input
           id="tab-identidad-subtitulo"
           v-model="form.subtitle"
@@ -150,7 +165,11 @@ function alSubmit() {
 
     <section v-if="sitio.id" class="m-b-4">
       <h3>Logos del sitio</h3>
-      <TablerosAdminSubidorLogos :site-id="sitio.id" />
+      <TablerosAdminSubidorLogos
+        ref="subidorLogos"
+        :site-id="sitio.id"
+        :site-title="form.title || sitio.title"
+      />
     </section>
 
     <section class="flex flex-contenido-separado m-b-4">

@@ -12,22 +12,31 @@ const props = defineProps({
   opciones: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(['update:abierto', 'guardado']);
+const emit = defineEmits(['update:abierto', 'guardado', 'abrir-marcadores', 'abrir-narrativa']);
 
 const op = computed(() => ({
   titulo: 'Agregar capas',
   contexto: 'mapa', // 'mapa' | 'escena' (para textos)
   mostrarOpacidad: false,
   mostrarEstilo: true,
+  mostrarMarcadores: false,
+  mostrarNarrativas: false,
   posiciones: null, // p.ej. [{ value:'left', label:'Izquierdo' }, …] para swipe/dual
   permitirDuplicados: false,
   nombreCategoria: undefined,
   ...props.opciones,
 }));
 
-const nombreContexto = computed(() => (op.value.contexto === 'escena' ? 'la escena' : 'el mapa'));
-const nombreContextoEsta = computed(() =>
-  op.value.contexto === 'escena' ? 'esta escena' : 'este mapa'
+const nombresContexto = {
+  escena: ['la escena', 'esta escena'],
+  tematica: ['la temática', 'esta temática'],
+  mapa: ['el mapa', 'este mapa'],
+};
+const nombreContexto = computed(
+  () => (nombresContexto[op.value.contexto] ?? nombresContexto.mapa)[0]
+);
+const nombreContextoEsta = computed(
+  () => (nombresContexto[op.value.contexto] ?? nombresContexto.mapa)[1]
 );
 
 const modal = ref(null);
@@ -36,7 +45,13 @@ const guardando = ref(false);
 const error = ref('');
 const posicionDefecto = ref('left');
 
-const capasExistentes = computed(() => [...(props.adaptador.layersOrdered.value ?? [])].reverse());
+// Ordenado por stack_order descendente (la capa que se dibuja encima aparece
+// primero). No basta con invertir el array: tras reordenar, el adaptador
+// actualiza el stack_order de cada capa in-place sin recolocarla en el
+// array, así que hay que ordenar explícitamente en cada render.
+const capasExistentes = computed(() =>
+  [...(props.adaptador.layersOrdered.value ?? [])].sort((a, b) => b.stack_order - a.stack_order)
+);
 const cargando = computed(() => props.adaptador.isLoading?.value ?? false);
 
 const idsSeleccionadas = computed(() => seleccionadas.value.map((l) => l.pk));
@@ -243,15 +258,37 @@ onBeforeUnmount(() => {
                         @update:style="actualizarEstilo"
                       />
                       <button
+                        v-if="op.mostrarMarcadores"
+                        class="boton-pictograma boton-sin-contenedor-secundario"
+                        type="button"
+                        aria-label="Marcadores"
+                        title="Marcadores"
+                        @click="emit('abrir-marcadores', capa)"
+                      >
+                        <span class="pictograma-mapa-generador" aria-hidden="true" />
+                      </button>
+                      <button
+                        v-if="op.mostrarNarrativas"
+                        class="boton-pictograma boton-sin-contenedor-secundario"
+                        type="button"
+                        aria-label="Narrativa"
+                        title="Narrativa"
+                        @click="emit('abrir-narrativa', capa)"
+                      >
+                        <span class="pictograma-escribir" aria-hidden="true" />
+                      </button>
+                      <button
                         class="boton-pictograma boton-sin-contenedor-secundario"
                         type="button"
                         aria-label="Eliminar capa"
+                        title="Eliminar capa"
                         @click="eliminarExistente(capa)"
                       >
                         <span class="pictograma-eliminar" aria-hidden="true" />
                       </button>
                       <button
-                        aria-label="Mostrar"
+                        :aria-label="capa.visible ? 'Ocultar' : 'Mostrar'"
+                        :title="capa.visible ? 'Ocultar' : 'Mostrar'"
                         type="button"
                         class="boton-pictograma boton-sin-contenedor-secundario"
                         @click="alternarVisible(capa)"
@@ -281,6 +318,7 @@ onBeforeUnmount(() => {
                         :disabled="idx === 0"
                         type="button"
                         aria-label="Subir capa"
+                        title="Subir capa"
                         @click="moverArriba(idx)"
                       >
                         <span class="pictograma-angulo-arriba" aria-hidden="true" />
@@ -290,6 +328,7 @@ onBeforeUnmount(() => {
                         :disabled="idx === capasExistentes.length - 1"
                         type="button"
                         aria-label="Bajar capa"
+                        title="Bajar capa"
                         @click="moverAbajo(idx)"
                       >
                         <span class="pictograma-angulo-abajo" aria-hidden="true" />
@@ -336,9 +375,10 @@ onBeforeUnmount(() => {
                         class="boton-pictograma boton-sin-contenedor-secundario"
                         type="button"
                         aria-label="Quitar"
+                        title="Quitar"
                         @click="removerSeleccionada(layer.pk)"
                       >
-                        <span class="pictograma-tache" aria-hidden="true" />
+                        <span class="pictograma-cerrar" aria-hidden="true" />
                       </button>
                     </div>
                   </li>
@@ -386,7 +426,7 @@ onBeforeUnmount(() => {
 }
 
 .modal::backdrop {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(var(--color-neutro-7-rgb), 0.8);
 }
 
 .dos-columnas {
@@ -394,6 +434,13 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
+
+  // Los items de grid tienen min-width:auto: sin esto, el contenido que no
+  // quiere achicarse (nombres de capa largos y sin espacios) ensancha su
+  // columna en vez de ajustar el texto, forzando scroll horizontal del modal.
+  > * {
+    min-width: 0;
+  }
 }
 
 .seccion-titulo {
@@ -430,10 +477,12 @@ onBeforeUnmount(() => {
   padding: 8px;
   margin-bottom: 6px;
   background-color: var(--fondo-acento);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .item-bloque.existente {
-  border-left: 3px solid #16703c;
+  border-left: 3px solid var(--texto-confirmacion);
 }
 
 .item-bloque.pendiente {
@@ -460,13 +509,13 @@ onBeforeUnmount(() => {
 }
 
 .etiqueta-visibilidad.es-publica {
-  background-color: #d8f5dc;
-  color: #16703c;
+  background-color: var(--fondo-confirmacion);
+  color: var(--texto-confirmacion);
 }
 
 .etiqueta-visibilidad.es-privada {
-  background-color: #fde2e1;
-  color: #c0392b;
+  background-color: var(--fondo-error);
+  color: var(--texto-error);
 }
 
 .opacidad,
@@ -485,13 +534,13 @@ onBeforeUnmount(() => {
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 0.85rem;
-  background-color: #fff4e5;
+  background-color: var(--fondo-alerta);
   color: #8a5a00;
   border: 1px solid #f0c674;
 }
 
 .texto-error {
-  color: var(--color-error, #c0392b);
+  color: var(--texto-error);
 }
 
 .flex {

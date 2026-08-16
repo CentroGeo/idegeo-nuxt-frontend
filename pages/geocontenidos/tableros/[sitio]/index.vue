@@ -17,6 +17,7 @@ const idRuta = computed(() => route.params.sitio);
 const esNuevo = computed(() => idRuta.value === 'nuevo');
 
 const modalStatus = ref(null);
+const tabIdentidad = ref(null);
 const estatusAlGuardar = reactive({
   cargando: false,
   estado: undefined,
@@ -81,9 +82,13 @@ function aplicarCambios(cambios) {
 
 async function guardar() {
   modalStatus.value?.abrirModal();
+
   estatusAlGuardar.cargando = true;
-  estatusAlGuardar.textoCargando = esNuevo.value ? 'Creando tablero...' : 'Guardando cambios...';
+  estatusAlGuardar.textoCargando = esNuevo.value
+    ? 'Creando tablero...'
+    : 'Guardando datos del tablero...';
   estatusAlGuardar.estado = undefined;
+  estatusAlGuardar.mensaje = '';
 
   const payload = {
     name: sitio.name,
@@ -96,28 +101,55 @@ async function guardar() {
 
   try {
     const token = userData.value?.accessToken;
+
     const data = esNuevo.value
       ? await crearSitio(payload, token)
       : await actualizarSitio(sitio.id, payload, token);
 
-    if (data?.id) {
-      estatusAlGuardar.cargando = false;
-      estatusAlGuardar.estado = true;
-      sitio.id = data.id;
-
-      setTimeout(() => {
-        modalStatus.value?.cerrarModal();
-        if (esNuevo.value) navigateTo(`/geocontenidos/tableros/${data.id}`);
-      }, 1200);
-    } else {
+    if (!data?.id) {
       estatusAlGuardar.cargando = false;
       estatusAlGuardar.estado = false;
-      estatusAlGuardar.mensaje = data?.detail || JSON.stringify(data);
+      estatusAlGuardar.mensaje =
+        data?.detail || JSON.stringify(data) || 'No fue posible guardar el tablero.';
+      return;
     }
+
+    sitio.id = data.id;
+
+    /*
+     * En un tablero existente, el editor de logos ya está disponible.
+     * Los logos se guardan solamente después de guardar los datos generales.
+     */
+    if (!esNuevo.value) {
+      estatusAlGuardar.textoCargando = 'Guardando logos del tablero...';
+
+      const logosGuardados = await tabIdentidad.value?.guardarLogos?.();
+
+      if (logosGuardados === false) {
+        estatusAlGuardar.cargando = false;
+        estatusAlGuardar.estado = false;
+        estatusAlGuardar.mensaje =
+          'Los datos generales del tablero se guardaron, pero no fue posible guardar los logos. Revisa el mensaje mostrado en la sección “Logos del sitio” y vuelve a intentarlo.';
+        return;
+      }
+    }
+
+    estatusAlGuardar.cargando = false;
+    estatusAlGuardar.estado = true;
+
+    setTimeout(() => {
+      modalStatus.value?.cerrarModal();
+
+      if (esNuevo.value) {
+        navigateTo(`/geocontenidos/tableros/${data.id}`);
+      }
+    }, 1200);
   } catch (e) {
+    console.error('Error al guardar el tablero:', e);
+
     estatusAlGuardar.cargando = false;
     estatusAlGuardar.estado = false;
-    estatusAlGuardar.mensaje = e?.message || 'Error desconocido';
+    estatusAlGuardar.mensaje = e?.message || 'Ocurrió un error desconocido al guardar.';
   }
 }
 
@@ -125,8 +157,21 @@ const pestanias = computed(() => [
   { id: 'identidad', titulo: 'Identidad del sitio' },
   { id: 'banda', titulo: 'Banda institucional', deshabilitada: esNuevo.value },
   { id: 'estructura', titulo: 'Estructura', deshabilitada: esNuevo.value },
-  { id: 'datos', titulo: 'Datos estáticos', deshabilitada: esNuevo.value },
+  { id: 'datos', titulo: 'Cuadros de datos', deshabilitada: esNuevo.value },
 ]);
+
+const activeTab = ref(route.query.tab?.toString() || 'identidad');
+
+function cambiarPestania(tabId) {
+  activeTab.value = tabId;
+  navigateTo(
+    {
+      path: route.path,
+      query: { ...route.query, tab: tabId },
+    },
+    { replace: true }
+  );
+}
 
 cargarSitio();
 </script>
@@ -135,7 +180,7 @@ cargarSitio();
   <section>
     <!-- Sesión requerida -->
     <div v-if="noAutenticado" class="sesion-requerida">
-      <span class="pictograma-candado sesion-requerida__icono" aria-hidden="true" />
+      <span class="pictograma-privado sesion-requerida__icono" aria-hidden="true" />
       <h2 class="sesion-requerida__titulo">Acceso restringido</h2>
       <p class="sesion-requerida__desc">
         Para editar este tablero necesitas iniciar sesión con tu cuenta institucional.
@@ -157,19 +202,19 @@ cargarSitio();
           class="boton boton-secundario boton-chico"
           target="_blank"
         >
-          <span class="pictograma-visualizar m-r-1" />
+          <span class="pictograma-previsualizar m-r-1" />
           Ver tablero
         </NuxtLink>
 
         <button
           type="button"
-          class="boton boton-chico"
+          class="boton"
           :class="sitio.is_public ? 'boton-secundario' : 'boton-primario'"
           :disabled="togglandoPublico"
           @click="togglearPublico"
         >
           <span
-            :class="sitio.is_public ? 'pictograma-ojo' : 'pictograma-ojo-cerrado'"
+            :class="sitio.is_public ? 'pictograma-ojo-ver' : 'pictograma-ojo-ocultar'"
             class="m-r-1"
           />
           {{
@@ -184,9 +229,16 @@ cargarSitio();
 
       <GeocontenidosLoader v-if="cargandoSitio" mensaje="Cargando tablero..." />
 
-      <GeocontenidosPestanias v-else :pestanias="pestanias" id-seleccion="identidad">
+      <GeocontenidosPestanias
+        v-else
+        :pestanias="pestanias"
+        :id-seleccion="activeTab"
+        @cambiar="cambiarPestania"
+      >
         <template #contenido-identidad>
           <TablerosAdminTabIdentidad
+            v-if="activeTab === 'identidad'"
+            ref="tabIdentidad"
             :sitio="sitio"
             @actualizar="aplicarCambios"
             @guardar="guardar"
@@ -194,15 +246,21 @@ cargarSitio();
         </template>
 
         <template #contenido-banda>
-          <TablerosAdminTabBandaInstitucional v-if="sitio.id" :site-id="sitio.id" />
+          <TablerosAdminTabBandaInstitucional
+            v-if="sitio.id && activeTab === 'banda'"
+            :site-id="sitio.id"
+          />
         </template>
 
         <template #contenido-estructura>
-          <TablerosAdminTabEstructura v-if="sitio.id" :site-id="sitio.id" />
+          <TablerosAdminTabEstructura
+            v-if="sitio.id && activeTab === 'estructura'"
+            :site-id="sitio.id"
+          />
         </template>
 
         <template #contenido-datos>
-          <TablerosAdminTabDatos v-if="sitio.id" :site-id="sitio.id" />
+          <TablerosAdminTabDatos v-if="sitio.id && activeTab === 'datos'" :site-id="sitio.id" />
         </template>
       </GeocontenidosPestanias>
 

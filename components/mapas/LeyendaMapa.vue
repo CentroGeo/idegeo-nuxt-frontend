@@ -44,7 +44,7 @@ function alternar() {
       <div class="leyenda-encabezado flex flex-contenido-separado">
         <strong>Leyenda</strong>
         <button class="leyenda-cerrar" type="button" aria-label="Cerrar leyenda" @click="alternar">
-          <span class="pictograma-tache" aria-hidden="true" />
+          <span class="pictograma-cerrar" aria-hidden="true" />
         </button>
       </div>
       <p v-if="!capasConLeyenda.length" class="leyenda-vacia">Este mapa no tiene capas.</p>
@@ -68,7 +68,7 @@ function alternar() {
       title="Leyenda"
       @click="alternar"
     >
-      <i class="fa-solid fa-list" aria-hidden="true"></i>
+      <span class="pictograma-vista-simplificada" aria-hidden="true" />
     </button>
   </div>
 </template>
@@ -109,10 +109,11 @@ function alternar() {
   width: 240px;
   max-height: calc(var(--altura-visor, 60vh) - 80px);
   overflow-y: auto;
-  background-color: rgba(255, 255, 255, 0.96);
-  color: #222;
+  background-color: var(--fondo);
+  color: var(--texto-primario);
+  border: 1px solid var(--borde-secundario);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--color-neutro-7-rgb), 0.25);
   padding: 8px 10px;
 }
 
@@ -133,7 +134,7 @@ function alternar() {
 .leyenda-vacia {
   margin: 0;
   font-size: 0.8rem;
-  color: #666;
+  color: var(--texto-secundario);
 }
 
 .leyenda-lista {

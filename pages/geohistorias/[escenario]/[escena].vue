@@ -77,8 +77,8 @@ function irAEscena(id) {
         :title="isTextPanelCollapsed ? 'Mostrar panel de texto' : 'Ocultar panel de texto'"
         @click="toggleTextPanel"
       >
-        <i
-          :class="`fa-solid fa-chevron-${isTextPanelCollapsed ? 'right' : 'left'}`"
+        <span
+          :class="`pictograma-flecha-${isTextPanelCollapsed ? 'derecha' : 'izquierda'}`"
           aria-hidden="true"
         />
       </button>
@@ -104,8 +104,8 @@ function irAEscena(id) {
         :title="isTextPanelCollapsed ? 'Mostrar panel de texto' : 'Ocultar panel de texto'"
         @click="toggleTextPanel"
       >
-        <i
-          :class="`fa-solid fa-chevron-${isTextPanelCollapsed ? 'left' : 'right'}`"
+        <span
+          :class="`pictograma-flecha-${isTextPanelCollapsed ? 'izquierda' : 'derecha'}`"
           aria-hidden="true"
         />
       </button>

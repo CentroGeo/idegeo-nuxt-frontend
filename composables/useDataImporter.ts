@@ -58,6 +58,10 @@ export interface CreateTableroPayload {
   layer_license?: string;
   layer_category?: string;
   layer_attribution?: string;
+  layer_date?: string;
+  layer_date_type?: string;
+  layer_language?: string;
+  layer_category_sigic?: string;
   style_specs?: StyleSpec[];
   default_style_col?: string;
 }

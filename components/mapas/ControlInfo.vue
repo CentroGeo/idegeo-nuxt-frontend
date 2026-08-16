@@ -23,7 +23,7 @@ function alternar() {
       title="Información del mapa"
       @click="alternar"
     >
-      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <span class="pictograma-informacion" aria-hidden="true" />
     </button>
 
     <div v-if="abierto" class="info-panel">
@@ -67,15 +67,16 @@ function alternar() {
 .info-panel {
   max-width: 320px;
   padding: 8px 12px;
-  background-color: #fff;
+  background-color: var(--fondo);
+  border: 1px solid var(--borde-secundario);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--color-neutro-7-rgb), 0.25);
 }
 
 .info-titulo {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #111;
+  color: var(--texto-primario);
 }
 </style>

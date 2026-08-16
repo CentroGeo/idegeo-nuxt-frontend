@@ -2,7 +2,7 @@
  * Determina si la persona autenticada es administradora (is_superuser de GeoNode).
  * Reutiliza el userInfo del store de catálogo y lo carga bajo demanda.
  *
- * Nota: es una verificación de UX. El backend (DRF) debe seguir siendo la
+ * Nota: es una verificación de UX. El backend (DRF) sigue siendo la
  * autoridad real sobre quién puede editar un recurso.
  */
 export function useEsAdmin() {

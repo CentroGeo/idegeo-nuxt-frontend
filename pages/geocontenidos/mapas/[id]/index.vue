@@ -79,6 +79,11 @@ async function cambiarOpacidad({ id, opacity }) {
   await mapasStore.actualizarCapa(id, { opacity });
 }
 
+// Mover una capa entre los paneles de un mapa swipe/dual.
+async function cambiarPosicion({ id, map_position: mapPosition }) {
+  await mapasStore.actualizarCapa(id, { map_position: mapPosition });
+}
+
 async function reordenar(orden) {
   await mapasStore.reordenarCapas(orden);
 }
@@ -241,6 +246,7 @@ onUnmounted(() => {
           @reordenar="reordenar"
           @eliminar="eliminarCapa"
           @agregar="abrirAgregarCapas"
+          @posicion="cambiarPosicion"
           @vista="cambiarVista"
           @guardar-vista="guardarVista"
         />

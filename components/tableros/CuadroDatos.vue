@@ -57,14 +57,6 @@ const valorFormateado = computed(() => {
       ...estiloBorde,
     }"
   >
-    <div class="cuadro-datos__contenido">
-      <p class="cuadro-datos__nombre">{{ cuadro.name }}</p>
-      <p class="cuadro-datos__valor">
-        {{ valorFormateado }}
-        <span v-if="cuadro.is_percentage" class="cuadro-datos__porcentaje">%</span>
-      </p>
-    </div>
-
     <div class="cuadro-datos__icono">
       <img
         v-if="cuadro.icon_custom"
@@ -74,6 +66,14 @@ const valorFormateado = computed(() => {
       />
       <span v-else-if="cuadro.icon" :class="cuadro.icon" />
     </div>
+
+    <div class="cuadro-datos__contenido">
+      <p class="cuadro-datos__nombre">{{ cuadro.name }}</p>
+      <p class="cuadro-datos__valor">
+        {{ valorFormateado }}
+        <span v-if="cuadro.is_percentage" class="cuadro-datos__porcentaje">%</span>
+      </p>
+    </div>
   </div>
 </template>
 
@@ -81,7 +81,6 @@ const valorFormateado = computed(() => {
 .cuadro-datos {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 1rem 1.25rem;
   border-radius: 8px;
   gap: 1rem;
@@ -120,7 +119,12 @@ const valorFormateado = computed(() => {
   }
 
   &__icono {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
     font-size: 1.5rem;
     opacity: 0.7;
   }

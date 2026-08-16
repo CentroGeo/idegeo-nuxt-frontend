@@ -1,9 +1,15 @@
 <script setup>
 import { SisdaiCapaVectorial, SisdaiCapaXyz, SisdaiMapa } from '@centrogeomx/sisdai-mapas';
+import { fuenteBasemap } from '~/utils/geocontenidos/basemapsPanorama';
 
 const config = useRuntimeConfig();
+const { gnoxyUrl } = useGnoxyUrl();
 
 const props = defineProps({
+  indicadorId: {
+    type: [Number, String],
+    default: null,
+  },
   mapValues: {
     type: Object,
     default: null,
@@ -36,22 +42,100 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  /** Id de mapa base del catálogo `basemapsPanorama`. */
+  basemap: {
+    type: String,
+    default: 'gray',
+  },
+  /**
+   * Vista configurada del indicador: `{ zoom, centerLat, centerLong, bbox }`.
+   * Lo que falte cae al siguiente respaldo (ver el computed `vista`).
+   */
+  vistaConfigurada: {
+    type: Object,
+    default: null,
+  },
+  /**
+   * Fuente GeoJSON alternativa. La usa la previsualización del panel de
+   * administración, donde todavía no hay indicador guardado al que apuntar.
+   */
+  featuresUrl: {
+    type: String,
+    default: null,
+  },
+  /** Reemitir la vista al navegar el mapa. Solo lo necesita el editor. */
+  emitirVista: {
+    type: Boolean,
+    default: false,
+  },
+  /**
+   * Contador que el editor incrementa cuando quiere reencuadrar el mapa.
+   * `vistaConfigurada` cambia también cuando es el propio mapa quien dicta la
+   * vista, y remontarlo entonces solo lo devolvería donde ya está; por eso el
+   * reencuadre se pide explícitamente y no se deduce de los valores.
+   */
+  revisionVista: {
+    type: Number,
+    default: 0,
+  },
 });
 
-const emit = defineEmits(['hover-rango']);
+const emit = defineEmits(['hover-rango', 'vista']);
 
 const leyendaMinimizada = ref(false);
 
 const VISTA_DEFAULT = { centro: [-99.1332, 19.4326], acercamiento: 5 };
 
-const mapaKey = computed(() => `${props.layerName || 'sin-capa'}-${(props.bbox || []).join(',')}`);
+/** Bbox `[minLon, minLat, maxLon, maxLat]` numérico y finito, o null. */
+function extensionValida(bbox) {
+  if (!Array.isArray(bbox) || bbox.length < 4) return null;
+  const numeros = bbox.slice(0, 4).map(Number);
+  return numeros.every((n) => isFinite(n)) ? numeros : null;
+}
 
+// `SisdaiMapa` y `SisdaiCapaXyz` fijan vista y fuente al crearse, así que
+// cualquier cambio de fondo o de encuadre pide remontar. Cuando eso ocurre, se
+// lee `vistaConfigurada` tal como esté en ese momento, de modo que el mapa
+// reaparece donde el usuario lo dejó.
+const mapaKey = computed(() =>
+  [
+    props.indicadorId || 'sin-indicador',
+    props.layerName || 'sin-capa',
+    props.featuresUrl || '',
+    (props.bbox || []).join(','),
+    props.basemap || '',
+    props.revisionVista,
+  ].join('|')
+);
+
+/**
+ * Resolución de la vista, de lo más específico a lo más genérico:
+ * centro + zoom configurados → bbox configurado → extensión de la capa → default.
+ */
 const vista = computed(() => {
-  if (!props.bbox || props.bbox.length < 4) return VISTA_DEFAULT;
-  const [minLon, minLat, maxLon, maxLat] = props.bbox;
-  if (!isFinite(minLon) || !isFinite(minLat) || !isFinite(maxLon) || !isFinite(maxLat)) {
-    return VISTA_DEFAULT;
+  const cfg = props.vistaConfigurada || {};
+
+  const lat = Number(cfg.centerLat);
+  const lon = Number(cfg.centerLong);
+  if (
+    cfg.centerLat !== null &&
+    cfg.centerLat !== undefined &&
+    cfg.centerLong !== null &&
+    cfg.centerLong !== undefined &&
+    isFinite(lat) &&
+    isFinite(lon)
+  ) {
+    const zoom = Number(cfg.zoom);
+    return { centro: [lon, lat], acercamiento: isFinite(zoom) && zoom > 0 ? zoom : 5 };
   }
+
+  const bboxConfigurado = extensionValida(cfg.bbox);
+  if (bboxConfigurado) return { extension: bboxConfigurado.join(',') };
+
+  const bboxCapa = extensionValida(props.bbox);
+  if (!bboxCapa) return VISTA_DEFAULT;
+
+  const [minLon, minLat, maxLon, maxLat] = bboxCapa;
   const centro = [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
   const maxDiff = Math.max(maxLon - minLon, maxLat - minLat);
   const acercamiento =
@@ -59,16 +143,49 @@ const vista = computed(() => {
   return { centro, acercamiento };
 });
 
-const wfsUrl = computed(() => {
-  if (!props.layerName) return null;
-  const base = config.public.geoserverUrl;
-  return (
-    `${base}/ows?service=WFS&version=1.0.0&request=GetFeature` +
-    `&typeName=${props.layerName}` +
-    `&outputFormat=application%2Fjson` +
-    `&srsName=EPSG%3A4326`
-  );
+const fuenteMapaBase = computed(() => fuenteBasemap(props.basemap));
+
+const mapFeaturesUrl = computed(() => {
+  if (props.featuresUrl) return props.featuresUrl;
+  if (!props.indicadorId) return null;
+
+  const endpoint =
+    `${config.public.geonodeApi}/dashboard/indicators/` + `${props.indicadorId}/map-features/`;
+
+  return gnoxyUrl(endpoint);
 });
+
+// Al montarse, el mapa emite la vista que acaba de recibir. Ese eco no es una
+// navegación del usuario: quien escucha lo tomaría como "eligió esta vista" y la
+// fijaría. Se descarta solo si de verdad coincide con lo que se le pidió pintar,
+// para no perder un movimiento temprano.
+let primeraEmision = true;
+watch(mapaKey, () => {
+  primeraEmision = true;
+});
+
+function esLaVistaQueSePidio({ centro, acercamiento }) {
+  const pedida = vista.value;
+  // Encuadre por extensión: el centro y el zoom resultantes los calcula el mapa,
+  // así que no hay con qué compararlos y la primera emisión siempre es el eco.
+  if (pedida.extension) return true;
+  if (!Array.isArray(centro) || !Array.isArray(pedida.centro)) return false;
+  return (
+    Math.abs(centro[0] - pedida.centro[0]) < 1e-6 &&
+    Math.abs(centro[1] - pedida.centro[1]) < 1e-6 &&
+    Math.abs(Number(acercamiento) - Number(pedida.acercamiento)) < 0.05
+  );
+}
+
+function alMoverVista(evento) {
+  if (!props.emitirVista || !evento) return;
+
+  const esInicial = primeraEmision;
+  primeraEmision = false;
+  if (esInicial && esLaVistaQueSePidio(evento)) return;
+
+  emit('vista', evento);
+}
 
 function hexToRgba(hex, alpha) {
   const clean = (hex || '#cccccc').replace('#', '');
@@ -81,6 +198,13 @@ function hexToRgba(hex, alpha) {
 const estiloVectorial = computed(() => {
   if (!props.mapValues || !props.layerIdField) {
     return {
+      // Símbolo para Point y MultiPoint.
+      'circulo-radio': 6,
+      'circulo-relleno-color': 'rgba(180,180,180,0.75)',
+      'circulo-contorno-color': '#ffffff',
+      'circulo-contorno-grosor': 1,
+
+      // Compatibilidad con Polygon, MultiPolygon y líneas.
       'relleno-color': 'rgba(180,180,180,0.4)',
       'contorno-color': '#888888',
       'contorno-grosor': 1,
@@ -88,25 +212,55 @@ const estiloVectorial = computed(() => {
   }
 
   const estilosCategorias = {};
+
   for (const [featureId, info] of Object.entries(props.mapValues)) {
-    const isActive = !props.rangoActivoColor || info.color === props.rangoActivoColor;
+    const color = info.color || '#cccccc';
+    const isActive = !props.rangoActivoColor || color === props.rangoActivoColor;
+    const thematicColor = isActive ? color : hexToRgba(color, 0.45);
+    const borderColor = isActive && props.rangoActivoColor ? '#333333' : '#ffffff';
+    const borderWidth = isActive && props.rangoActivoColor ? 2 : 0.8;
+
     estilosCategorias[String(featureId)] = {
-      'relleno-color': isActive ? info.color || '#cccccc' : hexToRgba(info.color, 0.45),
-      'contorno-color': isActive && props.rangoActivoColor ? '#333333' : '#ffffff',
-      'contorno-grosor': isActive && props.rangoActivoColor ? 2 : 0.8,
+      // Estilo para geometrías puntuales.
+      'circulo-radio': isActive && props.rangoActivoColor ? 8 : 6,
+      'circulo-relleno-color': thematicColor,
+      'circulo-contorno-color': borderColor,
+      'circulo-contorno-grosor': borderWidth,
+
+      // Conserva el soporte para capas poligonales.
+      'relleno-color': thematicColor,
+      'contorno-color': borderColor,
+      'contorno-grosor': borderWidth,
     };
   }
 
   return {
+    // Estilo general para Point y MultiPoint.
+    'circulo-radio': 6,
+    'circulo-relleno-color': 'rgba(180,180,180,0.75)',
+    'circulo-contorno-color': '#ffffff',
+    'circulo-contorno-grosor': 1,
+
+    // Estilo general para Polygon y MultiPolygon.
     'relleno-color': 'rgba(180,180,180,0.3)',
     'contorno-color': '#aaaaaa',
     'contorno-grosor': 1,
+
     categorias: {
       atributo: props.layerIdField,
       estilo: estilosCategorias,
     },
   };
 });
+
+/**
+ * Sin `mapValues` (o sin el campo que los liga a las geometrías) el mapa se dibuja completo
+ * con los grises de respaldo de `estiloVectorial`, lo que se lee como un error de estilo y no
+ * como lo que es: el indicador nunca fue recalculado, o su último recálculo falló.
+ */
+const sinColoresCalculados = computed(
+  () => !props.layerIdField || !props.mapValues || Object.keys(props.mapValues).length === 0
+);
 
 const globoInformativo = computed(() => {
   if (!props.mapValues) return undefined;
@@ -123,20 +277,28 @@ const globoInformativo = computed(() => {
 <template>
   <ClientOnly>
     <div class="mapa-indicador">
-      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista">
-        <SisdaiCapaXyz :posicion="0" />
+      <SisdaiMapa :key="mapaKey" class="gema" :vista="vista" @al-mover-vista="alMoverVista">
+        <SisdaiCapaXyz :fuente="fuenteMapaBase" :posicion="0" />
 
         <SisdaiCapaVectorial
-          v-if="wfsUrl"
-          :fuente="wfsUrl"
+          v-if="mapFeaturesUrl"
+          :fuente="mapFeaturesUrl"
           :estilo="estiloVectorial"
           :globo-informativo="globoInformativo"
           :posicion="1"
         />
       </SisdaiMapa>
 
+      <p v-if="sinColoresCalculados" class="mapa-indicador__aviso" role="status">
+        Este indicador no tiene colores calculados, por eso el mapa se muestra en gris. Recalcúlalo
+        desde el repositorio de indicadores del tablero.
+      </p>
+
       <div v-if="plotConfig?.ranges" class="mapa-indicador__leyenda">
+        <!-- `type` explícito: dentro del editor este mapa vive en un <form>, y un
+             botón sin tipo lo enviaría al plegar la leyenda. -->
         <button
+          type="button"
           class="mapa-indicador__leyenda-toggle"
           :aria-expanded="!leyendaMinimizada"
           @click="leyendaMinimizada = !leyendaMinimizada"
@@ -172,6 +334,23 @@ const globoInformativo = computed(() => {
   .gema {
     width: 100%;
     height: 520px;
+  }
+
+  &__aviso {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(90%, 34rem);
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.95);
+    border-left: 4px solid #b45309;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-size: 0.8rem;
+    color: #1f2937;
+    z-index: 10;
   }
 
   &__leyenda {

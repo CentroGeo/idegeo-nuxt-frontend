@@ -21,12 +21,14 @@ const props = defineProps({
 const emit = defineEmits(['crear', 'eliminar']);
 
 const { data: userData } = useAuth();
-const { eliminarIndicador, recalcularIndicador } = useTableroApi();
+const { eliminarIndicador, recalcularIndicador, fetchIndicador } = useTableroApi();
 
 const filtro = ref('');
 const filtroGrupo = ref('');
 const mostrarModalNuevo = ref(false);
 const indicadorEditando = ref(null);
+const abriendoEdicionId = ref(null);
+const errorEdicion = ref('');
 const recalculandoId = ref(null);
 const mensajeRecalculo = ref('');
 
@@ -40,26 +42,87 @@ const filtrados = computed(() => {
   return lista.filter((i) => i.name?.toLowerCase().includes(t));
 });
 
-async function quitar(id) {
-  const { confirmar } = useDialogo();
-  const confirmado = await confirmar({
-    mensaje: '¿Eliminar este indicador?',
-    textoAceptar: 'Eliminar',
-    variante: 'peligro',
-  });
-  if (!confirmado) return;
-  const ok = await eliminarIndicador(id, userData.value?.accessToken);
-  if (ok) emit('eliminar');
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const indToDelete = ref(null);
+const isBeingDeleted = ref(false);
+const wasDeletionSuccesful = ref(null);
+
+function abrirModalEliminar(ind) {
+  indToDelete.value = ind;
+  wasDeletionSuccesful.value = null;
+  modalEliminar.value?.abrir();
 }
 
-function alCrear() {
+function cancelarEliminar() {
+  indToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!indToDelete.value) return;
+  isBeingDeleted.value = true;
+  try {
+    const ok = await eliminarIndicador(indToDelete.value.id, userData.value?.accessToken);
+    if (ok) {
+      wasDeletionSuccesful.value = true;
+      emit('eliminar');
+      setTimeout(() => {
+        modalEliminar.value?.cerrar();
+      }, 1200);
+    } else {
+      wasDeletionSuccesful.value = false;
+    }
+  } catch (e) {
+    console.error('Error al eliminar indicador:', e);
+    wasDeletionSuccesful.value = false;
+  } finally {
+    isBeingDeleted.value = false;
+  }
+}
+
+function alCrear(indicador) {
   mostrarModalNuevo.value = false;
+  mostrarAviso(indicador?.avisoRecalculo);
   emit('crear');
 }
 
-function alGuardarEdicion() {
+function alGuardarEdicion(indicador) {
   indicadorEditando.value = null;
+  // El formulario recalcula los colores al guardar; si eso falló, la paleta sí quedó
+  // guardada pero el mapa sigue con los colores anteriores. Hay que decirlo.
+  mostrarAviso(indicador?.avisoRecalculo);
   emit('crear'); // recarga la lista
+}
+
+function mostrarAviso(mensaje) {
+  if (!mensaje) return;
+  mensajeRecalculo.value = `Se guardó la configuración, pero no se recalcularon los colores: ${mensaje}`;
+  setTimeout(() => {
+    mensajeRecalculo.value = '';
+  }, 8000);
+}
+
+/**
+ * La lista viene de `IndicatorListSerializer`, que no incluye la capa ni los
+ * campos: abrir el editor con ese objeto dejaba media configuración vacía. Se
+ * pide el detalle antes de abrir.
+ */
+async function abrirEdicion(ind) {
+  abriendoEdicionId.value = ind.id;
+  errorEdicion.value = '';
+  try {
+    const detalle = await fetchIndicador(ind.id);
+    if (!detalle?.id) {
+      errorEdicion.value = 'No se pudo cargar la configuración del indicador.';
+      return;
+    }
+    indicadorEditando.value = detalle;
+  } catch (e) {
+    errorEdicion.value = e?.message || 'No se pudo cargar la configuración del indicador.';
+  } finally {
+    abriendoEdicionId.value = null;
+  }
 }
 
 async function recalcular(ind) {
@@ -129,11 +192,11 @@ async function recalcular(ind) {
         <div class="repo-indicadores__nombre">
           <strong>{{ ind.name }}</strong>
           <span
-            v-if="ind.plot_values || ind.map_values"
+            v-if="ind.is_configured"
             class="repo-indicadores__estado repo-indicadores__estado--ok"
-            >configurado</span
+            >Configurado</span
           >
-          <span v-else class="repo-indicadores__estado">sin datos</span>
+          <span v-else class="repo-indicadores__estado">Sin datos</span>
         </div>
         <div class="repo-indicadores__acciones">
           <button
@@ -152,11 +215,19 @@ async function recalcular(ind) {
             type="button"
             class="boton boton-secundario boton-chico"
             title="Editar indicador"
-            @click="indicadorEditando = ind"
+            :disabled="abriendoEdicionId === ind.id"
+            @click="abrirEdicion(ind)"
           >
-            <span class="pictograma-editar" />
+            <span
+              class="pictograma-editar"
+              :class="{ 'repo-indicadores__spin': abriendoEdicionId === ind.id }"
+            />
           </button>
-          <button type="button" class="boton boton-secundario boton-chico" @click="quitar(ind.id)">
+          <button
+            type="button"
+            class="boton boton-secundario boton-chico"
+            @click="abrirModalEliminar(ind)"
+          >
             <span class="pictograma-eliminar" />
           </button>
         </div>
@@ -164,24 +235,73 @@ async function recalcular(ind) {
     </ul>
 
     <p v-if="mensajeRecalculo" class="repo-indicadores__feedback">{{ mensajeRecalculo }}</p>
+    <p v-if="errorEdicion" class="repo-indicadores__feedback">{{ errorEdicion }}</p>
 
-    <TablerosAdminModalNuevoIndicador
+    <TablerosAdminModalIndicador
       v-if="mostrarModalNuevo"
       :site-id="siteId"
       @creado="alCrear"
       @cerrar="mostrarModalNuevo = false"
     />
 
-    <TablerosAdminFormularioIndicador
+    <TablerosAdminModalIndicador
       v-if="indicadorEditando"
+      :key="indicadorEditando.id"
+      :site-id="siteId"
       :indicador="indicadorEditando"
       @guardado="alGuardarEdicion"
       @cerrar="indicadorEditando = null"
     />
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
+        <template #encabezado>
+          <h2 class="m-t-0">Eliminar indicador</h2>
+        </template>
+
+        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="alerta-advertencia-modal">
+          El indicador <strong style="font-weight: bold">{{ indToDelete?.name }}</strong> será
+          eliminado permanentemente del servidor y no será posible recuperarlo.
+        </p>
+
+        <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
+          <span class="pictograma-aprobado m-r-1" />
+          El indicador fue eliminado correctamente.
+        </p>
+
+        <p v-else class="texto-color-error">No se pudo eliminar el indicador. Intenta de nuevo.</p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button
+              class="boton boton-secundario"
+              :disabled="isBeingDeleted"
+              @click="cancelarEliminar"
+            >
+              Cancelar
+            </button>
+            <button
+              v-if="wasDeletionSuccesful === null"
+              class="boton boton-primario"
+              :disabled="isBeingDeleted"
+              @click="confirmarEliminar"
+            >
+              <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .repo-indicadores {
   &__toolbar {
     display: flex;
@@ -211,11 +331,11 @@ async function recalcular(ind) {
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.4rem;
-    background: var(--color-fondo-1, #ffffff);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 6px;
     cursor: grab;
-    color: #111;
+    color: inherit;
 
     &:hover {
       border-color: var(--color-primario, #691c32);
@@ -241,17 +361,34 @@ async function recalcular(ind) {
     display: flex;
     gap: 0.25rem;
     flex-shrink: 0;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+
+      // Sin texto junto al ícono: anula el padding-left que sisdai reserva
+      // para separar ícono y texto, que aquí descentraba el pictograma.
+      [class*='pictograma-'] {
+        padding: 0;
+      }
+    }
   }
 
   &__estado {
     font-size: 0.75rem;
+    font-weight: 600;
     padding: 0.1rem 0.4rem;
     border-radius: 3px;
-    background: var(--color-neutro-2, #e0e0e0);
+    background: var(--color-neutro-4, #666666);
+    color: #ffffff;
 
     &--ok {
       background: #2e7d32;
-      color: white;
+      color: #ffffff;
     }
   }
 
@@ -260,7 +397,7 @@ async function recalcular(ind) {
     font-size: 0.85rem;
     padding: 0.4rem 0.75rem;
     border-radius: 4px;
-    background: var(--color-fondo-2, #f5f5f5);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
   }
 

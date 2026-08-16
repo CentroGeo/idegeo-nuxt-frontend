@@ -32,11 +32,11 @@ const detalle = ref(null);
 const cargandoDetalle = ref(false);
 
 const editandoGrupo = ref(false);
-const formularioGrupo = reactive({ name: '', description: '' });
+const formularioGrupo = reactive({ name: '', description: '', info_text: '' });
 const guardandoGrupo = ref(false);
 
 const subgrupoEditandoId = ref(null);
-const formularioSubgrupo = reactive({ name: '', icon: '' });
+const formularioSubgrupo = reactive({ name: '', icon: '', info_text: '' });
 const guardandoSubgrupo = ref(false);
 
 async function cargarDetalle() {
@@ -94,22 +94,49 @@ async function agregarSubgrupo() {
   }
 }
 
-async function borrarSubgrupo(id) {
-  const { confirmar } = useDialogo();
-  const confirmado = await confirmar({
-    mensaje: '¿Eliminar este subgrupo?',
-    textoAceptar: 'Eliminar',
-    variante: 'peligro',
-  });
-  if (!confirmado) return;
-  const ok = await eliminarSubgrupo(id, userData.value?.accessToken);
-  if (ok) {
-    await cargarDetalle();
-    emit('cambio');
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const subgrupoToDelete = ref(null);
+const isBeingDeleted = ref(false);
+const wasDeletionSuccesful = ref(null);
+
+function abrirModalEliminar(sg) {
+  subgrupoToDelete.value = sg;
+  wasDeletionSuccesful.value = null;
+  modalEliminar.value?.abrir();
+}
+
+function cancelarEliminar() {
+  subgrupoToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!subgrupoToDelete.value) return;
+  isBeingDeleted.value = true;
+  try {
+    const ok = await eliminarSubgrupo(subgrupoToDelete.value.id, userData.value?.accessToken);
+    if (ok) {
+      wasDeletionSuccesful.value = true;
+      await cargarDetalle();
+      emit('cambio');
+      setTimeout(() => {
+        modalEliminar.value?.cerrar();
+      }, 1200);
+    } else {
+      wasDeletionSuccesful.value = false;
+    }
+  } catch (e) {
+    console.error('Error al eliminar subgrupo:', e);
+    wasDeletionSuccesful.value = false;
+  } finally {
+    isBeingDeleted.value = false;
   }
 }
 
 async function onDropGrupo(ev) {
+  ev.stopPropagation();
+
   const indicadorId = ev.dataTransfer.getData('indicator-id');
   if (!indicadorId) return;
   await actualizarIndicador(
@@ -122,6 +149,10 @@ async function onDropGrupo(ev) {
 }
 
 async function onDropSubgrupo(ev, subgrupoId) {
+  // Sin esto el 'drop' burbujea al contenedor del grupo (arbol-grupo__drop) y
+  // onDropGrupo también se dispara, sobreescribiendo esta asignación con subgroup: null.
+  ev.stopPropagation();
+
   const indicadorId = ev.dataTransfer.getData('indicator-id');
   if (!indicadorId) return;
   await actualizarIndicador(
@@ -146,6 +177,7 @@ async function desasignar(indicadorId) {
 function abrirEdicionGrupo() {
   formularioGrupo.name = props.grupo.name || '';
   formularioGrupo.description = props.grupo.description || '';
+  formularioGrupo.info_text = props.grupo.info_text || '';
   editandoGrupo.value = true;
 }
 
@@ -166,6 +198,7 @@ async function guardarGrupo() {
 function abrirEdicionSubgrupo(sg) {
   formularioSubgrupo.name = sg.name || '';
   formularioSubgrupo.icon = sg.icon || '';
+  formularioSubgrupo.info_text = sg.info_text || '';
   subgrupoEditandoId.value = sg.id;
 }
 
@@ -175,6 +208,7 @@ async function guardarSubgrupo(sgId) {
   const form = new FormData();
   form.append('name', formularioSubgrupo.name);
   if (formularioSubgrupo.icon) form.append('icon', formularioSubgrupo.icon);
+  form.append('info_text', formularioSubgrupo.info_text || '');
   try {
     await actualizarSubgrupo(sgId, form, userData.value?.accessToken);
     subgrupoEditandoId.value = null;
@@ -215,7 +249,12 @@ onMounted(cargarDetalle);
         >
           + Subgrupo
         </button>
-        <button type="button" class="boton boton-primario boton-chico" @click="emit('eliminar')">
+        <button
+          type="button"
+          class="boton boton-primario boton-chico"
+          title="Eliminar grupo"
+          @click="emit('eliminar')"
+        >
           <span class="pictograma-eliminar" />
         </button>
       </div>
@@ -228,6 +267,11 @@ onMounted(cargarDetalle);
           v-model="formularioGrupo.description"
           type="text"
           placeholder="Descripción (opcional)"
+        />
+        <textarea
+          v-model="formularioGrupo.info_text"
+          rows="2"
+          placeholder="Info (texto que aparece como ayuda del grupo, opcional)"
         />
         <div class="arbol-grupo__edit-acciones">
           <button
@@ -256,6 +300,7 @@ onMounted(cargarDetalle);
             placeholder="Nombre del subgrupo"
             required
           />
+          <input v-model="nuevoSubgrupo.info_text" type="text" placeholder="Info (opcional)" />
           <TablerosAdminPickerIcono v-model="nuevoSubgrupo.icon" />
           <input type="submit" class="boton boton-primario boton-chico" value="Crear" />
         </form>
@@ -296,6 +341,11 @@ onMounted(cargarDetalle);
                     placeholder="Nombre del subgrupo"
                     required
                   />
+                  <input
+                    v-model="formularioSubgrupo.info_text"
+                    type="text"
+                    placeholder="Info (opcional)"
+                  />
                   <TablerosAdminPickerIcono v-model="formularioSubgrupo.icon" />
                   <input
                     type="submit"
@@ -327,7 +377,8 @@ onMounted(cargarDetalle);
                 <button
                   type="button"
                   class="boton boton-primario boton-chico"
-                  @click="borrarSubgrupo(sg.id)"
+                  title="Eliminar subgrupo"
+                  @click="abrirModalEliminar(sg)"
                 >
                   <span class="pictograma-eliminar" />
                 </button>
@@ -358,16 +409,62 @@ onMounted(cargarDetalle);
         </p>
       </div>
     </div>
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
+        <template #encabezado>
+          <h2 class="m-t-0">Eliminar subgrupo</h2>
+        </template>
+
+        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="alerta-advertencia-modal">
+          El subgrupo <strong style="font-weight: bold">{{ subgrupoToDelete?.name }}</strong> será
+          eliminado permanentemente del servidor y no será posible recuperarlo.
+        </p>
+
+        <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
+          <span class="pictograma-aprobado m-r-1" />
+          El subgrupo fue eliminado correctamente.
+        </p>
+
+        <p v-else class="texto-color-error">No se pudo eliminar el subgrupo. Intenta de nuevo.</p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button
+              class="boton boton-secundario"
+              :disabled="isBeingDeleted"
+              @click="cancelarEliminar"
+            >
+              Cancelar
+            </button>
+            <button
+              v-if="wasDeletionSuccesful === null"
+              class="boton boton-primario"
+              :disabled="isBeingDeleted"
+              @click="confirmarEliminar"
+            >
+              <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .arbol-grupo {
-  background: var(--color-fondo-1, #ffffff);
+  background: transparent;
   border: 1px solid var(--color-neutro-2, #e0e0e0);
   border-radius: 6px;
   margin-bottom: 0.75rem;
-  color: #111;
+  color: inherit;
 
   &__header {
     display: flex;
@@ -389,6 +486,39 @@ onMounted(cargarDetalle);
   &__acciones {
     display: flex;
     gap: 0.25rem;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      &:has(.pictograma-eliminar),
+      &:has(.pictograma-editar) {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+
+        // El botón no lleva texto junto al ícono: sin esto hereda el
+        // padding-left que sisdai reserva para separar ícono y texto,
+        // y el pictograma queda descentrado dentro del cuadro.
+        [class*='pictograma-'] {
+          padding: 0;
+        }
+      }
+    }
+  }
+
+  button[title='Eliminar subgrupo'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+
+    [class*='pictograma-'] {
+      padding: 0;
+    }
   }
 
   &__drop {
@@ -423,7 +553,7 @@ onMounted(cargarDetalle);
   &__edit-form {
     padding: 0.5rem 0.75rem;
     border-top: 1px dashed var(--color-neutro-2, #e0e0e0);
-    background: var(--color-fondo-2, #fafafa);
+    background: transparent;
 
     form {
       display: flex;
@@ -441,10 +571,10 @@ onMounted(cargarDetalle);
   &__subgrupo {
     margin-top: 0.5rem;
     padding: 0.5rem;
-    background: var(--color-fondo-2, #fafafa);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 4px;
-    color: #111;
+    color: inherit;
 
     &-cab {
       display: flex;

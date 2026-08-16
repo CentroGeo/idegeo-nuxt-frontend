@@ -4,6 +4,11 @@ import pictogramas from '~/utils/geocontenidos/pictogramas.json';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
+  // Por defecto el v-model es el glifo (usado en capas vectoriales de mapas,
+  // p.ej. marcadores de escenas/panoramas). Con esta prop el v-model pasa a
+  // ser el nombre del pictograma (usado en clases CSS `pictograma-<nombre>`,
+  // p.ej. el icono de una temática).
+  porNombre: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -30,7 +35,9 @@ const opcionesFiltradas = computed(() => {
   return opciones.filter((o) => o.etiqueta.toLowerCase().includes(q));
 });
 
-const seleccionada = computed(() => opciones.find((o) => o.glifo === props.modelValue));
+const seleccionada = computed(() =>
+  opciones.find((o) => (props.porNombre ? o.nombre : o.glifo) === props.modelValue)
+);
 
 function calcularDireccion() {
   if (!raiz.value) return;
@@ -50,8 +57,12 @@ function alternar() {
 }
 
 function elegir(opcion) {
-  emit('update:modelValue', opcion.glifo);
+  emit('update:modelValue', props.porNombre ? opcion.nombre : opcion.glifo);
   abierto.value = false;
+}
+
+function esOpcionActiva(opcion) {
+  return (props.porNombre ? opcion.nombre : opcion.glifo) === props.modelValue;
 }
 
 function cerrar() {
@@ -101,9 +112,9 @@ onBeforeUnmount(() => document.removeEventListener('click', alClickFuera));
           <button
             type="button"
             class="opcion"
-            :class="{ activa: opcion.glifo === modelValue }"
+            :class="{ activa: esOpcionActiva(opcion) }"
             role="option"
-            :aria-selected="opcion.glifo === modelValue"
+            :aria-selected="esOpcionActiva(opcion)"
             @click="elegir(opcion)"
           >
             <span class="glifo" aria-hidden="true">{{ opcion.glifo }}</span>

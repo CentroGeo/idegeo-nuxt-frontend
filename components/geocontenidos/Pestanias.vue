@@ -1,5 +1,7 @@
 <script setup>
-const emits = defineEmits(['alActualizarSeleccion']);
+// 'cambiar' es el evento que consumen los tableros; 'alActualizarSeleccion' se
+// mantiene por compatibilidad con el nombre previo del mismo evento.
+const emit = defineEmits(['alActualizarSeleccion', 'cambiar']);
 const props = defineProps({
   pestanias: {
     type: Array,
@@ -28,7 +30,11 @@ const { pestanias, idSeleccion } = toRefs(props);
 
 const seleccion = ref(idSeleccion.value || pestanias.value[0].id);
 watch(idSeleccion, (nv) => (seleccion.value = nv));
-watch(seleccion, (nv) => emits('alActualizarSeleccion', nv));
+
+watch(seleccion, (nv) => {
+  emit('alActualizarSeleccion', nv);
+  emit('cambiar', nv);
+});
 
 function calcularNuevoIndex(movimiento) {
   const idx_actual = pestanias.value.findIndex((p) => p.id === seleccion.value);

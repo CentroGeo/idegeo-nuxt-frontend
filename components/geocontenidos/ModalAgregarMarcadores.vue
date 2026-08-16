@@ -110,13 +110,13 @@ async function guardarCambios() {
 
   try {
     for await (const marcador of gMarcadores.value.actualizar) {
-      const datos = await API(`scene-markers/${marcador.id}//`, 'PUT', marcador);
+      const datos = await API(`scene-markers/${marcador.id}/`, 'PATCH', marcador);
       if (datos?.success === false) return fallo(datos);
     }
 
     if (gMarcadores.value.almacenar.length) {
       const datos = await API(
-        `scene-markers/bulk-add/${escenaActual.value}//`,
+        `scene-markers/bulk-add/${escenaActual.value}/`,
         'POST',
         gMarcadores.value.almacenar
       );

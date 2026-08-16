@@ -25,6 +25,15 @@ const props = defineProps({
   marcadores: { type: Array, default: () => [] },
   baseLayer: { type: String, default: 'osm' },
   opciones: { type: Object, default: () => ({}) },
+  // Mapas base adicionales/alternos, p.ej. [{ id, fuente }, ...]. Se combinan
+  // con los 4 predefinidos (osm/carto/carto_dark/satellite); mismo id sobreescribe.
+  basemaps: { type: Array, default: () => [] },
+  // (url, capa) => contenido HTML | Promise<string> para el cuadro de info al
+  // hacer click en una capa WMS (GetFeatureInfo). Opcional.
+  cuadroInformativo: { type: Function, default: null },
+  // (propiedadesFeature) => contenido HTML del globo al pasar el cursor sobre
+  // un marcador. Por defecto solo muestra el titulo.
+  globoMarcador: { type: Function, default: null },
 });
 
 const emit = defineEmits(['vista', 'clickVista', 'clickMarcador']);
@@ -90,7 +99,13 @@ watch(
     baseLayerActual.value = v || 'osm';
   }
 );
-const baseLayerUrl = computed(() => baseLayerUrls[baseLayerActual.value] || baseLayerUrls.osm);
+const baseLayerUrlsCombinado = computed(() => ({
+  ...baseLayerUrls,
+  ...Object.fromEntries(props.basemaps.map((b) => [b.id, b.fuente])),
+}));
+const baseLayerUrl = computed(
+  () => baseLayerUrlsCombinado.value[baseLayerActual.value] || baseLayerUrls.osm
+);
 
 // ── Marcadores ───────────────────────────────────────────────────────────────
 
@@ -150,13 +165,26 @@ function alMoverVista({ acercamiento, centro }) {
   emit('vista', { acercamiento, centro });
 }
 
-function alClickVista({ coordenadas, capa, vector }) {
+// La instalacion publicada de @centrogeomx/sisdai-mapas no anota el evento
+// clickVista con la capa/feature bajo el cursor (a diferencia del fork
+// fix/capa-vectorial), asi que se resuelve aqui con la API nativa de OL:
+// coordenada -> pixel -> feature de la capa de marcadores en ese pixel.
+function alClickVista({ coordenadas }) {
   emit('clickVista', { coordenadas });
-  if (!capa || capa.id !== idMarcadores) return;
-  emit(
-    'clickMarcador',
-    props.marcadores.find(({ id }) => vector.id === id)
+
+  const map = mapaRef.value?.mapa;
+  if (!map || !props.marcadores.length) return;
+
+  const pixel = map.getPixelFromCoordinate(coordenadas);
+  if (!pixel) return;
+
+  const feature = map.forEachFeatureAtPixel(pixel, (f, layer) =>
+    layer?.get('id') === idMarcadores ? f : undefined
   );
+  if (!feature) return;
+
+  const marcador = props.marcadores.find(({ id }) => id === feature.get('id'));
+  if (marcador) emit('clickMarcador', marcador);
 }
 
 // ── Controles (escala, coordenadas del cursor) ───────────────────────────────
@@ -255,6 +283,9 @@ const estiloControles = computed(() => {
             :visible="capa.visible"
             :posicion="capa.stack_order"
             :mosaicos="true"
+            :cuadro-informativo="
+              cuadroInformativo ? (url) => cuadroInformativo(url, capa) : undefined
+            "
           />
         </template>
 
@@ -263,7 +294,7 @@ const estiloControles = computed(() => {
           :id="idMarcadores"
           :estilo="estiloMarcador"
           :fuente="capaMarcadores"
-          :globo-informativo="(marcador) => marcador.title"
+          :globo-informativo="globoMarcador || ((marcador) => marcador.title)"
           :posicion="capasOrdenadas.length + 2"
         />
 
@@ -306,8 +337,9 @@ const estiloControles = computed(() => {
   z-index: 2;
   font-size: 0.75rem;
   font-family: monospace;
-  background-color: rgba(255, 255, 255, 0.85);
-  color: #222;
+  background-color: var(--fondo);
+  color: var(--texto-primario);
+  border: 1px solid var(--borde-secundario);
   padding: 4px 8px;
   border-radius: 6px;
   pointer-events: none;

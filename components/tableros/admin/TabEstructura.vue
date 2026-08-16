@@ -59,16 +59,43 @@ async function agregarGrupo() {
   }
 }
 
-async function borrarGrupo(id) {
-  const { confirmar } = useDialogo();
-  const confirmado = await confirmar({
-    mensaje: '¿Eliminar este grupo y todos sus subgrupos/indicadores asociados?',
-    textoAceptar: 'Eliminar',
-    variante: 'peligro',
-  });
-  if (!confirmado) return;
-  const ok = await eliminarGrupo(id, userData.value?.accessToken);
-  if (ok) grupos.value = grupos.value.filter((g) => g.id !== id);
+// --- Modal de confirmación de eliminación ---
+const modalEliminar = ref(null);
+const grupoToDelete = ref(null);
+const isBeingDeleted = ref(false);
+const wasDeletionSuccesful = ref(null);
+
+function abrirModalEliminar(grupo) {
+  grupoToDelete.value = grupo;
+  wasDeletionSuccesful.value = null;
+  modalEliminar.value?.abrir();
+}
+
+function cancelarEliminar() {
+  grupoToDelete.value = null;
+  modalEliminar.value?.cerrar();
+}
+
+async function confirmarEliminar() {
+  if (!grupoToDelete.value) return;
+  isBeingDeleted.value = true;
+  try {
+    const ok = await eliminarGrupo(grupoToDelete.value.id, userData.value?.accessToken);
+    if (ok) {
+      wasDeletionSuccesful.value = true;
+      grupos.value = grupos.value.filter((g) => g.id !== grupoToDelete.value.id);
+      setTimeout(() => {
+        modalEliminar.value?.cerrar();
+      }, 1200);
+    } else {
+      wasDeletionSuccesful.value = false;
+    }
+  } catch (e) {
+    console.error('Error al eliminar grupo:', e);
+    wasDeletionSuccesful.value = false;
+  } finally {
+    isBeingDeleted.value = false;
+  }
 }
 
 function recargarTodo() {
@@ -141,16 +168,64 @@ onMounted(recargarTodo);
           <TablerosAdminArbolGrupo
             :grupo="grupo"
             :indicadores-sitio="indicadoresSitio"
-            @eliminar="borrarGrupo(grupo.id)"
+            @eliminar="abrirModalEliminar(grupo)"
             @cambio="recargarTodo"
           />
         </li>
       </ul>
     </div>
+
+    <ClientOnly>
+      <GeocontenidosSisdaiModal ref="modalEliminar" :permitir-cerrar="!isBeingDeleted">
+        <template #encabezado>
+          <h2 class="m-t-0">Eliminar grupo</h2>
+        </template>
+
+        <p v-if="wasDeletionSuccesful === null || isBeingDeleted" class="alerta-advertencia-modal">
+          El grupo <strong style="font-weight: bold">{{ grupoToDelete?.name }}</strong> y todos sus
+          subgrupos e indicadores asociados serán eliminados permanentemente del servidor y no será
+          posible recuperarlos.
+        </p>
+
+        <p v-else-if="wasDeletionSuccesful === true" class="texto-color-exito">
+          <span class="pictograma-aprobado m-r-1" />
+          El grupo fue eliminado correctamente.
+        </p>
+
+        <p v-else class="texto-color-error">No se pudo eliminar el grupo. Intenta de nuevo.</p>
+
+        <template #pie>
+          <div class="flex brecha-2 flex-contenido-final">
+            <button
+              class="boton boton-secundario"
+              :disabled="isBeingDeleted"
+              @click="cancelarEliminar"
+            >
+              Cancelar
+            </button>
+            <button
+              v-if="wasDeletionSuccesful === null"
+              class="boton boton-primario"
+              :disabled="isBeingDeleted"
+              @click="confirmarEliminar"
+            >
+              <span v-if="isBeingDeleted" class="cargador cargador-chico m-r-1" />
+              Eliminar
+            </button>
+          </div>
+        </template>
+      </GeocontenidosSisdaiModal>
+    </ClientOnly>
   </div>
 </template>
 
 <style lang="scss" scoped>
+.alerta-advertencia-modal {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-neutro-5);
+  margin-bottom: 24px;
+}
 .tab-estructura {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -164,8 +239,8 @@ onMounted(recargarTodo);
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 8px;
     padding: 1rem;
-    background: var(--color-fondo-2, #fafafa);
-    color: #111;
+    background: transparent;
+    color: inherit;
   }
 
   &__header {
@@ -182,7 +257,7 @@ onMounted(recargarTodo);
   &__form {
     padding: 1rem;
     margin-bottom: 1rem;
-    background: var(--color-fondo-1, #ffffff);
+    background: transparent;
     border: 1px solid var(--color-neutro-2, #e0e0e0);
     border-radius: 6px;
   }

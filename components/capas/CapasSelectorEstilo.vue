@@ -7,39 +7,40 @@ const props = defineProps({
 
 const emit = defineEmits(['update:style']);
 
+const { gnoxyFetch } = useGnoxyUrl();
 const config = useRuntimeConfig();
-const { data: session } = useAuth();
 
 const estilos = ref([]);
 const cargando = ref(false);
 const estiloSeleccionado = ref(props.capa.style || '');
 
-function headers() {
-  const token = session.value?.accessToken;
-  const h = { 'Content-Type': 'application/json' };
-  if (token) h.Authorization = `Bearer ${token}`;
-  return h;
-}
-
 async function cargarEstilos() {
-  if (!props.capa.geonode_id && !props.capa.name) return;
+  if (!props.capa.geonode_id) return;
   cargando.value = true;
   try {
-    const url = props.capa.geonode_id
-      ? `${config.public.geonodeApi}/datasets/${props.capa.geonode_id}/`
-      : `${config.public.geonodeApi}/datasets/?filter{alternate}=${encodeURIComponent(props.capa.name)}`;
-    const res = await fetch(url, { headers: headers() });
+    // GeoNode expone los estilos disponibles de un dataset via /sldstyles/,
+    // no en el detalle del dataset (ver useResourcesSupplements.js#getSLDs).
+    const url = `${config.public.geonodeApi}/datasets/${props.capa.geonode_id}/sldstyles/?t=${Date.now()}`;
+    const res = await gnoxyFetch(url);
     if (!res.ok) throw new Error('error');
     const data = await res.json();
-    const ds = data.dataset ?? data.datasets?.[0];
-    if (ds?.styles && Array.isArray(ds.styles)) {
-      estilos.value = ds.styles.map((e) => ({
-        name: e.workspace ? `${e.workspace}:${e.name}` : e.name,
-        sld_title: e.sld_title || e.name,
-      }));
-    } else {
-      estilos.value = [];
+    const titulos = data.style_titles || {};
+
+    const lista = [];
+    (data.styles || []).forEach((identificador) => {
+      const partes = identificador.split(':');
+      const nombre = partes.length > 1 ? partes[1] : partes[0];
+      if (!lista.some((e) => e.name === nombre)) {
+        lista.push({ name: nombre, sld_title: titulos[nombre] || nombre });
+      }
+    });
+    if (data.default_style && !lista.some((e) => e.name === data.default_style)) {
+      lista.push({
+        name: data.default_style,
+        sld_title: titulos[data.default_style] || data.default_style,
+      });
     }
+    estilos.value = lista;
   } catch {
     estilos.value = [];
   } finally {

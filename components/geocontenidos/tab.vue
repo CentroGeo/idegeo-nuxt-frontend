@@ -24,7 +24,7 @@ const fondoDegradado = computed(
 <template>
   <div class="timeline-container-horizontal p-4" :style="{ background: fondoDegradado }">
     <div class="linea-tiempo flex flex-contenido-centrado p-2">
-      <div class="timeline-line"></div>
+      <div class="timeline-line" />
       <button
         v-for="({ id, name }, idx) in tabs"
         :key="`menu-tab-opcion-${id}`"

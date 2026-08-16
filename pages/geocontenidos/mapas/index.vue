@@ -53,7 +53,52 @@ function alCrear(mapa) {
   navigateTo(`/geocontenidos/mapas/${mapa.id}/editar`);
 }
 
-watch(paginaActual, (p) => cargar(p));
+// Selección para borrado masivo (solo tarjetas propias/admin muestran checkbox).
+const seleccionados = ref([]);
+const eliminando = ref(false);
+const modalConfirmar = ref(null);
+
+function alternarSeleccion(mapaId, marcado) {
+  if (marcado) {
+    if (!seleccionados.value.includes(mapaId)) seleccionados.value.push(mapaId);
+  } else {
+    seleccionados.value = seleccionados.value.filter((id) => id !== mapaId);
+  }
+}
+
+async function eliminarSeleccionados() {
+  const ids = [...seleccionados.value];
+  if (!ids.length) return;
+  const cuantos = ids.length === 1 ? '1 mapa' : `${ids.length} mapas`;
+  const ok = await modalConfirmar.value?.abrir({
+    titulo: 'Eliminar mapas',
+    mensaje: `¿Eliminar ${cuantos}? Esta acción no se puede deshacer.`,
+    textoConfirmar: 'Eliminar',
+  });
+  if (!ok) return;
+
+  eliminando.value = true;
+  const resultados = await Promise.all(ids.map((id) => mapasStore.eliminarMapa(id)));
+  eliminando.value = false;
+
+  const fallidos = ids.filter((_, i) => !resultados[i]);
+  seleccionados.value = fallidos;
+  await cargar(paginaActual.value);
+
+  if (fallidos.length) {
+    await modalConfirmar.value?.abrir({
+      titulo: 'Error al eliminar',
+      mensaje: `No se pudieron eliminar ${fallidos.length} de ${ids.length} mapas.`,
+      soloAviso: true,
+    });
+  }
+}
+
+watch(paginaActual, (p) => {
+  // La selección es por página cargada; se limpia al cambiar de página.
+  seleccionados.value = [];
+  cargar(p);
+});
 
 onMounted(() => {
   cargar(paginaActual.value);
@@ -69,9 +114,24 @@ onMounted(() => {
       <button v-if="estaLogueado" class="boton-primario" type="button" @click="modalCrear?.abrir()">
         Crear Mapa
       </button>
+      <button
+        v-if="estaLogueado"
+        class="boton-secundario"
+        type="button"
+        :disabled="seleccionados.length === 0 || eliminando"
+        @click="eliminarSeleccionados"
+      >
+        <span class="pictograma-eliminar" aria-hidden="true" />
+        {{
+          eliminando
+            ? 'Eliminando…'
+            : `Eliminar seleccionados${seleccionados.length ? ` (${seleccionados.length})` : ''}`
+        }}
+      </button>
     </div>
 
     <MapasModalCrearMapa ref="modalCrear" @creado="alCrear" />
+    <GeocontenidosModalConfirmar ref="modalConfirmar" />
 
     <!-- <NuxtLink
       v-if="estaLogueado"
@@ -162,7 +222,13 @@ onMounted(() => {
     <template v-if="mapasFiltrados.length !== 0 && !mapasStore.isLoading">
       <ClientOnly>
         <div class="flex flex-contenido-inicio">
-          <MapasTarjetaMapa v-for="mapa in mapasFiltrados" :key="mapa.id" :mapa="mapa" />
+          <MapasTarjetaMapa
+            v-for="mapa in mapasFiltrados"
+            :key="mapa.id"
+            :mapa="mapa"
+            :seleccionado="seleccionados.includes(mapa.id)"
+            @seleccionar="alternarSeleccion(mapa.id, $event)"
+          />
         </div>
 
         <UiPaginador
