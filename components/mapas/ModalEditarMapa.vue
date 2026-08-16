@@ -180,7 +180,7 @@ defineExpose({ abrir, cerrar });
 }
 
 .modal::backdrop {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(var(--color-neutro-7-rgb), 0.8);
 }
 
 .campo-color {
@@ -201,7 +201,7 @@ defineExpose({ abrir, cerrar });
 }
 
 .texto-error {
-  color: var(--color-error, #c0392b);
+  color: var(--texto-error);
 }
 
 .flex {

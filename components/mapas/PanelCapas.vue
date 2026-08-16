@@ -20,9 +20,15 @@ const emit = defineEmits([
   'reordenar',
   'eliminar',
   'agregar',
+  'posicion',
   'vista',
   'guardar-vista',
 ]);
+
+// Solo los mapas con dos paneles (swipe/dual) usan map_position.
+const tieneLados = computed(
+  () => props.mapa?.map_type === 'swipe' || props.mapa?.map_type === 'dual'
+);
 
 const vista = reactive({
   zoom: 5,
@@ -128,6 +134,11 @@ function moverAbajo(index) {
   ]);
 }
 
+function cambiarPosicion(capa, valor) {
+  if (valor === capa.map_position) return;
+  emit('posicion', { id: capa.id, map_position: valor });
+}
+
 async function eliminar(capa) {
   const { confirmar } = useDialogo();
   const confirmado = await confirmar({
@@ -225,7 +236,7 @@ async function eliminar(capa) {
             >
               {{ capa.dataset_is_published ? 'Pública' : 'Privada' }}
             </span>
-            <span v-if="capa.map_position" class="etiqueta-pos">
+            <span v-if="tieneLados && capa.map_position" class="etiqueta-pos">
               {{ capa.map_position === 'left' ? 'Izq' : 'Der' }}
             </span>
             <button
@@ -254,6 +265,18 @@ async function eliminar(capa) {
             :disabled="!editable"
             @input="cambiarOpacidad(capa, $event.target.value)"
           />
+        </div>
+
+        <div v-if="editable && tieneLados" class="capa-posicion m-t-1">
+          <label :for="`pos-${capa.id}`" class="texto-secundario">Panel</label>
+          <select
+            :id="`pos-${capa.id}`"
+            :value="capa.map_position"
+            @change="cambiarPosicion(capa, $event.target.value)"
+          >
+            <option value="left">Panel izquierdo</option>
+            <option value="right">Panel derecho</option>
+          </select>
         </div>
 
         <div v-if="editable" class="capa-acciones flex flex-contenido-final m-t-1">
@@ -340,18 +363,24 @@ async function eliminar(capa) {
 }
 
 .etiqueta-visibilidad.es-publica {
-  background-color: #d8f5dc;
-  color: #16703c;
+  background-color: var(--fondo-confirmacion);
+  color: var(--texto-confirmacion);
 }
 
 .etiqueta-visibilidad.es-privada {
-  background-color: #fde2e1;
-  color: #c0392b;
+  background-color: var(--fondo-error);
+  color: var(--texto-error);
 }
 
 .capa-cabecera-acciones {
   align-items: center;
   gap: 6px;
+}
+
+.capa-posicion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .boton-eliminar-capa {
@@ -362,13 +391,13 @@ async function eliminar(capa) {
   border-radius: 6px;
   padding: 4px 6px;
   cursor: pointer;
-  color: #ff0000;
+  color: var(--texto-error);
   background-color: var(--boton-primario-cursor-fondo);
   transition: background-color 0.15s ease;
 
   &:hover,
   &:focus-visible {
-    background-color: #ffffff;
+    background-color: var(--fondo);
   }
 }
 

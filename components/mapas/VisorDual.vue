@@ -297,8 +297,9 @@ const estiloControles = computed(() => {
   z-index: 2;
   font-size: 0.75rem;
   font-family: monospace;
-  background-color: rgba(255, 255, 255, 0.85);
-  color: #222;
+  background-color: var(--fondo);
+  color: var(--texto-primario);
+  border: 1px solid var(--borde-secundario);
   padding: 4px 8px;
   border-radius: 6px;
   pointer-events: none;

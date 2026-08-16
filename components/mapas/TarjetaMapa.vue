@@ -4,7 +4,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  seleccionado: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(['seleccionar']);
 
 const config = useRuntimeConfig();
 const { rutaApp } = useUrlAbsoluta();
@@ -65,8 +71,19 @@ function visualizarMapa() {
         </span>
       </div>
 
-      <div class="tarjeta-titulo">
+      <div class="tarjeta-titulo flex flex-contenido-separado">
         <p class="m-0" style="font-weight: bold">{{ mapa.name }}</p>
+        <!-- Solo quien puede configurar el mapa (dueño/admin) puede seleccionarlo para borrar. -->
+        <div v-if="mostrarConfiguracion" class="seleccion-mapa">
+          <input
+            :id="`seleccionar-mapa-${mapa.id}`"
+            type="checkbox"
+            :checked="seleccionado"
+            :aria-label="`Seleccionar ${mapa.name}`"
+            @change="emit('seleccionar', $event.target.checked)"
+          />
+          <label :for="`seleccionar-mapa-${mapa.id}`">Seleccionar</label>
+        </div>
       </div>
 
       <div class="meta flex">
@@ -137,12 +154,22 @@ function visualizarMapa() {
   position: absolute;
   top: 8px;
   left: 8px;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: #fff;
+  // Sobre imagen arbitraria: overlay neutro translúcido con tokens sisdai.
+  background-color: var(--opacidad-fuerte);
+  color: var(--texto-inverso);
   font-size: 0.75rem;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.seleccion-mapa {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .meta {

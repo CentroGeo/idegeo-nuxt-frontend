@@ -9,7 +9,7 @@ defineProps({
 
 <template>
   <div class="loader flex flex-contenido-centrado">
-    <img src="/img/loader.gif" :alt="mensaje" />
+    <img :src="`${$config.app.baseURL}img/loader.gif`" :alt="mensaje" />
     <p>{{ mensaje }}</p>
   </div>
 </template>

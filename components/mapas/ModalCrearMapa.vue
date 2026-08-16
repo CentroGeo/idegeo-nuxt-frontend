@@ -154,7 +154,7 @@ defineExpose({ abrir, cerrar });
 // Fondo (backdrop) más oscuro solo para este modal. El <dialog> hereda el
 // scope-id del componente, por lo que la regla aplica únicamente aquí.
 .modal::backdrop {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(var(--color-neutro-7-rgb), 0.8);
 }
 
 .campo-color {
@@ -168,7 +168,7 @@ defineExpose({ abrir, cerrar });
 }
 
 .texto-error {
-  color: var(--color-error, #c0392b);
+  color: var(--texto-error);
 }
 
 .flex {

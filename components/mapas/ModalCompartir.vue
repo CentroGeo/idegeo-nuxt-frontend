@@ -95,29 +95,49 @@ defineExpose({ abrir, cerrar });
           </div>
         </div>
 
-        <div class="tabs flex m-b-2">
+        <div class="tabs flex m-b-2" role="tablist" aria-label="Formas de compartir">
           <button
+            id="tab-compartir-enlace"
             type="button"
             class="tab-boton"
             :class="{ activa: tab === 'enlace' }"
+            role="tab"
+            :aria-selected="tab === 'enlace'"
+            aria-controls="panel-compartir-enlace"
             @click="tab = 'enlace'"
           >
             <i class="fa-solid fa-link" aria-hidden="true"></i> Enlace
           </button>
           <button
+            id="tab-compartir-embed"
             type="button"
             class="tab-boton"
             :class="{ activa: tab === 'embed' }"
+            role="tab"
+            :aria-selected="tab === 'embed'"
+            aria-controls="panel-compartir-embed"
             @click="tab = 'embed'"
           >
             <i class="fa-solid fa-code" aria-hidden="true"></i> Embed
           </button>
         </div>
 
-        <div v-if="tab === 'enlace'" class="panel-tab">
-          <label class="campo-etiqueta">Enlace público</label>
+        <div
+          v-if="tab === 'enlace'"
+          id="panel-compartir-enlace"
+          class="panel-tab"
+          role="tabpanel"
+          aria-labelledby="tab-compartir-enlace"
+        >
+          <label class="campo-etiqueta" for="entrada-enlace-publico">Enlace público</label>
           <div class="flex campo-copia">
-            <input :value="urlVisualizar" readonly type="text" class="entrada-copia" />
+            <input
+              id="entrada-enlace-publico"
+              :value="urlVisualizar"
+              readonly
+              type="text"
+              class="entrada-copia"
+            />
             <button
               type="button"
               class="boton-secundario boton-chico"
@@ -129,7 +149,13 @@ defineExpose({ abrir, cerrar });
           <p class="texto-secundario m-t-1">Cualquier persona con este enlace puede ver el mapa.</p>
         </div>
 
-        <div v-else-if="tab === 'embed'" class="panel-tab">
+        <div
+          v-else-if="tab === 'embed'"
+          id="panel-compartir-embed"
+          class="panel-tab"
+          role="tabpanel"
+          aria-labelledby="tab-compartir-embed"
+        >
           <div class="flex dimensiones">
             <label>
               <span class="campo-etiqueta">Ancho (px)</span>
@@ -141,8 +167,14 @@ defineExpose({ abrir, cerrar });
             </label>
           </div>
 
-          <label class="campo-etiqueta m-t-2">Código embed</label>
-          <textarea :value="snippetEmbed" readonly rows="4" class="textarea-copia" />
+          <label class="campo-etiqueta m-t-2" for="entrada-codigo-embed">Código embed</label>
+          <textarea
+            id="entrada-codigo-embed"
+            :value="snippetEmbed"
+            readonly
+            rows="4"
+            class="textarea-copia"
+          />
           <div class="flex flex-contenido-final m-t-1">
             <button
               type="button"
@@ -152,7 +184,7 @@ defineExpose({ abrir, cerrar });
               {{ copiado === 'embed' ? '¡Copiado!' : 'Copiar código' }}
             </button>
           </div>
-          <p class="texto-secundario m-t-1">Pegá este código en cualquier sitio web.</p>
+          <p class="texto-secundario m-t-1">Pega este código en cualquier sitio web.</p>
         </div>
       </template>
 
@@ -171,14 +203,15 @@ defineExpose({ abrir, cerrar });
 }
 
 .modal::backdrop {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(var(--color-neutro-7-rgb), 0.8);
 }
 
 .aviso-privado {
   padding: 8px 12px;
   border-radius: 6px;
-  background-color: var(--color-secundario-2, #fff4d6);
-  color: var(--color-primario-4, #604a00);
+  background-color: var(--fondo-alerta);
+  color: var(--texto-alerta);
+  border: 1px solid var(--borde-alerta);
   display: flex;
   gap: 8px;
   align-items: flex-start;
